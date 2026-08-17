@@ -1394,7 +1394,7 @@ export function analyzeMingJuPattern(chart: BaZiChart, monthQi: MonthQiResult, y
   };
 }
 
-// 富贵贫贱判断
+// 富贵贫贱判断（新格局评分标准：0-100 纯数值打分，60 分及格线）
 export function analyzeWealthNobility(
   chart: BaZiChart,
   monthQi: MonthQiResult,
@@ -1402,11 +1402,14 @@ export function analyzeWealthNobility(
   elementPower: { wood: number; fire: number; earth: number; metal: number; water: number },
   nianYueTaiJi?: NianYueTaiJiResult,
 ): {
-  wealthLevel: string;
+  wealthScore: number;    // 财富分（0-100）
+  wealthLevel: string;    // 财富档位（保留文案方便 UI）
   wealthDesc: string;
-  nobilityLevel: string;
+  nobilityScore: number;  // 贵寿分（0-100）
+  nobilityLevel: string;  // 贵寿档位（保留文案方便 UI）
   nobilityDesc: string;
-  overallLevel: string;
+  overallScore: number;   // 格局综合分（0-100，≥60 及格）
+  overallLevel: string;   // 综合档位（保留旧五档名兼容，UI 可优先用分数）
   overallDesc: string;
 } {
   // 阳气状态→财富程度（木火为阳气，主富）
@@ -1430,10 +1433,6 @@ export function analyzeWealthNobility(
   const yinTotallyInvisible = yinPower <= 3;     // 阴彻底消失
 
   // 气息是否冲突：
-  //   - 无冲突（既济）：力量差 ≤ 25 且用神力量 ≥ 20
-  //   - 基本不冲突（稍拉扯）：25 < 差 ≤ 45 且用神 ≥ 15
-  //   - 明显冲突：差 > 45 或 用神极弱 (<12)
-  //   - 严重冲突：差 ≥ 55 或 一方彻底隐形 或 当令无制(用神<6)
   let qiConflict: '无冲突' | '微冲突' | '明显冲突' | '严重冲突';
   if (powerDiff >= 55 || yangTotallyInvisible || yinTotallyInvisible || yongShenPower < 6) {
     qiConflict = '严重冲突';
@@ -1445,127 +1444,160 @@ export function analyzeWealthNobility(
     qiConflict = '无冲突';
   }
 
-  // 判断财富层次
+  // ================ 财富分（0-100）：基础分 50，按阳气力量与用神情况浮动 ================
+  let wealthScore: number;
   let wealthLevel: string;
   let wealthDesc: string;
   if (monthQi.usageDirection === 'yin') {
-    // 阳气旺（当令），财富基础好
+    // 阳气旺（当令），财富基础好：阳 55→96，阳 35→76，阳 0→30
     if (yangPower >= 55) {
+      wealthScore = 90 + Math.min(10, Math.round((yangPower - 55) * 0.4));
       wealthLevel = '富';
-      wealthDesc = '阳气当令且力量充足，财气旺盛，物质基础好。命局自带富贵之基，求财相对容易，资源丰厚。';
     } else if (yangPower >= 35) {
+      wealthScore = 70 + Math.round((yangPower - 35) / (55 - 35) * 20); // 70~90
       wealthLevel = '小康';
-      wealthDesc = '阳气有一定力量，财运中等，小康无忧。需努力经营方可得财，财来财去，积蓄需要节制。';
+    } else if (yangPower >= 15) {
+      wealthScore = 50 + Math.round((yangPower - 15) / (35 - 15) * 20); // 50~70
+      wealthLevel = '小康偏下';
     } else {
+      wealthScore = Math.max(10, 30 + Math.round((yangPower - 15) * 1.2)); // 10~50
       wealthLevel = '贫';
-      wealthDesc = '阳气力量偏弱，财运较薄。求财辛苦，容易因财生灾，宜守不宜攻，建议以技艺谋生。';
     }
   } else {
-    // 阴气旺（当令），阳气为用神
+    // 阴气旺（当令），阳气为用神：用神得力则高分
     if (yangPower >= 35) {
+      wealthScore = 75 + Math.min(15, Math.round((yangPower - 35) * 0.5)); // 75~90
       wealthLevel = '小康';
-      wealthDesc = '阴气当令，阳气为用且有力。用神得力，得财有道，虽非大富，但生活富足，事业有可为。';
     } else if (yangPower >= 20) {
+      wealthScore = 58 + Math.round((yangPower - 20) / (35 - 20) * 17); // 58~75
       wealthLevel = '小康偏下';
-      wealthDesc = '阳气作为用神力量稍弱，财运一般。需要等待大运流年助阳之时方可得财，平时宜积蓄。';
+    } else if (yangPower >= 10) {
+      wealthScore = 40 + Math.round((yangPower - 10) / (20 - 10) * 18); // 40~58
+      wealthLevel = '偏贫';
     } else {
+      wealthScore = Math.max(8, 40 - Math.round((10 - yangPower) * 2.5)); // 8~40
       wealthLevel = '贫';
-      wealthDesc = '阳气极弱，用神不得力。财运较差，求财艰难，不宜冒险投资，宜以稳为主、技艺立身。';
     }
   }
+  wealthScore = Math.max(0, Math.min(100, wealthScore));
+  const wealthScoreText = `【${wealthScore}分】`;
+  wealthDesc = `${wealthScoreText} 阳气(木火)${yangPower}% — ${
+    wealthScore >= 85 ? '财气旺盛、物质基础扎实，命局自带富贵之基，求财相对易得，资源丰厚。'
+    : wealthScore >= 70 ? '财运中上，小康无忧，经营得当可稳步积累，生活富足。'
+    : wealthScore >= 60 ? '财运一般，稳步求进可保衣食无忧，宜积蓄节制不宜冒进。'
+    : wealthScore >= 45 ? '财运偏弱，求财需付出更多努力，宜以技艺立身，忌投机冒险。'
+    : '财运较薄，求财辛苦，容易因财生灾，宜守不宜攻，以稳为主、勤勉积福。'
+  }`;
 
-  // 判断贵寿层次
+  // ================ 贵寿分（0-100）：基础分 50，按阴气力量与用神情况浮动 ================
+  let nobilityScore: number;
   let nobilityLevel: string;
   let nobilityDesc: string;
   if (monthQi.usageDirection === 'yang') {
-    // 阴气旺（当令），贵寿基础好
+    // 阴气旺（当令），贵寿基础好：阴 50→95，阴 30→72，阴 0→28
     if (yinPower >= 50) {
+      nobilityScore = 88 + Math.min(12, Math.round((yinPower - 50) * 0.5));
       nobilityLevel = '贵寿';
-      nobilityDesc = '阴气当令且力量充足，贵气深厚，寿命绵长。社会地位较高，名声好，受人尊敬，健康长寿。';
     } else if (yinPower >= 30) {
+      nobilityScore = 68 + Math.round((yinPower - 30) / (50 - 30) * 20); // 68~88
       nobilityLevel = '平常';
-      nobilityDesc = '阴气力量中等，贵气平常。社会地位一般，需靠个人努力提升，健康状况尚可，注意保养。';
+    } else if (yinPower >= 15) {
+      nobilityScore = 50 + Math.round((yinPower - 15) / (30 - 15) * 18); // 50~68
+      nobilityLevel = '平常';
     } else {
+      nobilityScore = Math.max(12, 32 + Math.round((yinPower - 15) * 1.3)); // 12~50
       nobilityLevel = '夭';
-      nobilityDesc = '阴气偏弱，寿元有损。身体底子较弱，容易患病，需特别注意养生，忌过度操劳。';
     }
   } else {
     // 阳气旺（当令），阴气为用神
     if (yinPower >= 30) {
+      nobilityScore = 74 + Math.min(16, Math.round((yinPower - 30) * 0.5)); // 74~90
       nobilityLevel = '贵';
-      nobilityDesc = '阴气为用且有力，贵气可得。用神得力，事业有位，名声不错，健康方面注意节制即可。';
     } else if (yinPower >= 15) {
+      nobilityScore = 56 + Math.round((yinPower - 15) / (30 - 15) * 18); // 56~74
       nobilityLevel = '平常';
-      nobilityDesc = '阴气用神力量一般，贵气中等。事业平稳，职位不高但稳定，健康状况总体可以。';
+    } else if (yinPower >= 8) {
+      nobilityScore = 40 + Math.round((yinPower - 8) / (15 - 8) * 16); // 40~56
+      nobilityLevel = '偏弱';
     } else {
+      nobilityScore = Math.max(10, 40 - Math.round((8 - yinPower) * 3)); // 10~40
       nobilityLevel = '夭';
-      nobilityDesc = '阴气极弱，用神不得力。健康方面需格外注意，容易有隐疾，建议定期检查，注意身心调养。';
     }
   }
+  nobilityScore = Math.max(0, Math.min(100, nobilityScore));
+  const nobilityScoreText = `【${nobilityScore}分】`;
+  nobilityDesc = `${nobilityScoreText} 阴气(金水)${yinPower}% — ${
+    nobilityScore >= 85 ? '贵气深厚，寿命绵长。社会地位较高，名声好，受人尊敬，健康长寿。'
+    : nobilityScore >= 70 ? '贵气不错，事业有位可得，名声良好，健康方面注意节制即可。'
+    : nobilityScore >= 60 ? '贵气中等，事业平稳，职位不高但稳定，健康总体尚可，需靠个人努力。'
+    : nobilityScore >= 45 ? '贵气偏弱，健康需要注意保养，事业地位一般，宜循序渐进。'
+    : '寿元有损，身体底子较弱，需特别注意养生，忌过度操劳，定期检查调养。'
+  }`;
 
-  // 整体定调：以「阴阳二气是否显现」+「阴阳气息是否冲突」为唯一标尺，分 5 档
-  //   夯       → 二气充分显现，气息无冲突（水火既济）
-  //   人上人   → 二气都有显现，气息微冲突或不冲突（用神得力，阴阳皆活）
-  //   npc      → 一显一弱（弱的不完全隐形），气息微冲突（芸芸众生，平常人）
-  //   拉       → 一边几乎隐形，气息明显冲突（一方压死另一方，失衡严重）
-  //   拉完了   → 一方彻底隐形 / 气息严重冲突（偏枯极致，阴阳隔绝）
-  let overallLevel: string;
-  let overallDesc: string;
+  // ================ 格局综合分 overallScore（0-100，60 及格） ================
+  // 基础分：阴阳二气"显现"程度 + 气息冲突度
+  let baseOverall = 50;
+  // 显现加成（±40）
+  if (yangStronglyApparent && yinStronglyApparent) baseOverall += 35;
+  else if (yangApparent && yinApparent) baseOverall += 22;
+  else if (!yangAlmostInvisible && !yinAlmostInvisible) baseOverall += 8;
+  else if (yangTotallyInvisible || yinTotallyInvisible) baseOverall -= 35;
+  else if (yangAlmostInvisible || yinAlmostInvisible) baseOverall -= 18;
+  // 气息冲突修正（-30 ~ +8）
+  if (qiConflict === '无冲突') baseOverall += 8;
+  else if (qiConflict === '微冲突') baseOverall -= 3;
+  else if (qiConflict === '明显冲突') baseOverall -= 15;
+  else baseOverall -= 28;
+  // 用神达标加成：用神力量 ≥20 → +10；<6 → -10
+  if (yongShenPower >= 20) baseOverall += 10;
+  else if (yongShenPower < 6) baseOverall -= 10;
+  let overallScore = Math.max(0, Math.min(100, baseOverall));
 
-  const apparentReport = `阳气(木火)${yangPower}%，阴气(金水)${yinPower}%，月气当令${monthQi.usageDirection === 'yin' ? '阳' : '阴'}，需补${monthQi.usageDirection === 'yin' ? '阴(金水)' : '阳(木火)'}用神力量${yongShenPower}%，气息${qiConflict}`;
-
-  if (
-    yangStronglyApparent && yinStronglyApparent &&
-    qiConflict === '无冲突'
-  ) {
-    overallLevel = '夯';
-    overallDesc = `【夯】—— 阴阳二气俱足且充分显现，气息无冲突，水火既济之象。${apparentReport}。老阳老阴各得其所，少阳少阴升降有序，气机从心所欲不逾矩，能量密度极大，稳得住、顶得起、扛得下。主根基扎实、爆发力与续航力兼备，事业家庭财富健康皆可「夯」实到底，是命局中最有底气的一档。`;
-  } else if (
-    yangApparent && yinApparent &&
-    (qiConflict === '无冲突' || qiConflict === '微冲突')
-  ) {
-    overallLevel = '人上人';
-    overallDesc = `【人上人】—— 阴阳二气都有显现，气息基本不冲突，用神可调度。${apparentReport}。二气皆活、互根互用，可上可下、可进可退；做事有章法、处世有余地，在人群中天然压得住场面、拿得到资源。主出身不差、努力有回报、贵人有支撑，事业高度和生活层次明显高于常人。`;
-  } else if (
-    !yangAlmostInvisible && !yinAlmostInvisible &&
-    (qiConflict === '微冲突' || qiConflict === '明显冲突')
-  ) {
-    overallLevel = 'npc';
-    overallDesc = `【npc】—— 阴阳二气一显一弱，但弱的一方没有彻底隐形；气息有拉扯，不至于崩塌。${apparentReport}。有偏科但不极端，有短板但不致命；命运给的剧本不拿主角卡，是芸芸众生里的普通人。主一辈子按部就班、随大流走，靠平台/家庭/时代红利度日，无大起大落，属于「饿不死也翻不了天」的平常之命。`;
-  } else if (
-    (yangAlmostInvisible || yinAlmostInvisible) &&
-    !(yangTotallyInvisible || yinTotallyInvisible) &&
-    (qiConflict === '明显冲突' || qiConflict === '微冲突')
-  ) {
-    overallLevel = '拉';
-    overallDesc = `【拉】—— 阴阳二气有一边几乎隐形，气息明显冲突，阴阳拉扯得难受。${apparentReport}。命局的能量被单边拽着走：不是阳燥拉崩了阴液，就是阴寒冰封了阳气；做事常两头不讨好、进退两难。主一生多有「想做做不成、想放放不下」的拉扯感，财富健康事业总有一项在持续「拉」低人生总分。`;
-  } else {
-    overallLevel = '拉完了';
-    overallDesc = `【拉完了】—— 阴阳二气一边彻底隐形，或气息严重冲战到隔绝，偏枯至极。${apparentReport}。一边彻底被压死、毫无翻身之力；气机堵塞、能量枯竭、用神无依、忌神横行。主根基被抽、底盘被掀，人生大事（健康/家庭/事业/财富）往往不止一项「拉」到破局，需要比常人付出数倍的修身立德、积善养气、勤勉精进，方能转圜。`;
-  }
-
-  // 年月太极修正（《太极阴阳法》：吉凶唯一依据为阴阳二气的存缺、损伤、平衡状态）
-  // 两仪保全则升档、两仪绝境则降档；先天年吉·落地受阻者提示人生起伏
+  // 年月太极修正（纯数值加减 ±12）：两仪完整加分、两仪绝境扣分
+  let taijiNote = '';
   if (nianYueTaiJi) {
     const t = nianYueTaiJi;
-    let adjusted = false;
     if (t.state === '两仪完整') {
-      if (overallLevel === '人上人') { overallLevel = '夯'; adjusted = true; }
-      else if (overallLevel === 'npc') { overallLevel = '人上人'; adjusted = true; }
+      const delta = Math.min(12, Math.round(12 - overallScore / 15)); // 越高分加越少，防溢出
+      overallScore = Math.min(100, overallScore + delta);
+      taijiNote = `年月太极：${t.taijiName}（两仪完整，综合分 +${delta}）。${t.verdict}`;
     } else if (t.state === '两仪绝境') {
-      if (overallLevel === '人上人') { overallLevel = 'npc'; adjusted = true; }
-      else if (overallLevel === 'npc') { overallLevel = '拉'; adjusted = true; }
+      const delta = Math.min(18, Math.round(10 + overallScore / 20)); // 越低分扣越狠
+      overallScore = Math.max(0, overallScore - delta);
+      taijiNote = `年月太极：${t.taijiName}（两仪绝境，综合分 −${delta}）。${t.verdict}`;
+    } else {
+      taijiNote = `年月太极：${t.taijiName}（${t.state}）。${t.verdict}`;
     }
-    overallDesc += ` 年月太极：${t.taijiName}（${t.state}${adjusted ? '，经两仪修正档位' : ''}）。${t.verdict}`;
   }
+  overallScore = Math.max(0, Math.min(100, overallScore));
+
+  // 综合档位（兼容旧命名，UI 可直接用 overallScore 渲染进度条）
+  let overallLevel: string;
+  if (overallScore >= 88) overallLevel = '夯';
+  else if (overallScore >= 72) overallLevel = '人上人';
+  else if (overallScore >= 60) overallLevel = 'npc';
+  else if (overallScore >= 38) overallLevel = '拉';
+  else overallLevel = '拉完了';
+
+  const passTag = overallScore >= 60 ? '及格' : '未及格';
+  const apparentReport = `阳气(木火)${yangPower}%，阴气(金水)${yinPower}%，月气当令${monthQi.usageDirection === 'yin' ? '阳' : '阴'}，需补${monthQi.usageDirection === 'yin' ? '阴(金水)' : '阳(木火)'}用神力量${yongShenPower}%，气息${qiConflict}`;
+
+  const overallScoreText = `【${overallScore}分·${passTag}】`;
+  let overallDescHead = '';
+  if (overallScore >= 90) overallDescHead = '阴阳二气俱足且充分显现，气息无冲突，水火既济之象。气机从心所欲不逾矩，能量密度极大，稳得住、顶得起、扛得下，事业家庭财富健康皆可夯实到底。';
+  else if (overallScore >= 78) overallDescHead = '阴阳二气皆活、互根互用，可上可下、可进可退；做事有章法、处世有余地，在人群中天然压得住场面、拿得到资源。主出身不差、努力有回报、贵人有支撑。';
+  else if (overallScore >= 68) overallDescHead = '阴阳二气都有显现，气息基本不冲突，用神可调度。事业稳步向上，生活层次中上。';
+  else if (overallScore >= 60) overallDescHead = '阴阳二气一显一弱，但弱的一方没有彻底隐形；气息有拉扯，不至于崩塌。属于"饿不死也翻不了天"的平常之命，按部就班、随大流走，靠平台/家庭/时代红利度日。';
+  else if (overallScore >= 48) overallDescHead = '阴阳二气略有失衡，气息有冲突。命局能量被单边拽着走，做事两头不讨好、进退两难。财富健康事业会有一项持续偏低，宜修身养性、勤勉积累。';
+  else if (overallScore >= 35) overallDescHead = '阴阳二气有一边几乎隐形，气息明显冲突。人生多有"想做做不成、想放放不下"的拉扯感，宜守不宜攻，多积德行善、养气修身以待天时。';
+  else overallDescHead = '阴阳二气一边彻底隐形，或气息严重冲战到隔绝，偏枯至极。气机堵塞、能量枯竭、用神无依、忌神横行。需要比常人付出数倍的修身立德、积善养气、勤勉精进，方能转圜。';
+
+  const overallDesc = `${overallScoreText} ${overallDescHead} ${apparentReport}。${taijiNote ? taijiNote : ''}`;
 
   return {
-    wealthLevel,
-    wealthDesc,
-    nobilityLevel,
-    nobilityDesc,
-    overallLevel,
-    overallDesc,
+    wealthScore, wealthLevel, wealthDesc,
+    nobilityScore, nobilityLevel, nobilityDesc,
+    overallScore, overallLevel, overallDesc,
   };
 }
 
@@ -2001,65 +2033,114 @@ export const SAN_HUI_GROUPS: Array<{ members: string[]; element: string; name: s
 export const HUA_ELEMENT_TO_NAME: Record<string, string> = {
   wood: '木', fire: '火', earth: '土', metal: '金', water: '水',
 };
+// 旧五档类型（保留兼容，仅用于内部迁移；UI 新数据结构使用 LetterLevel）
 export type WuDangLevel = '夯' | '人上人' | 'npc' | '拉' | '拉完了';
 
-/**
- * 将原始 score（典型范围 -26 ~ +26，由 scoreGanZhiImpact 产出）压缩到
- * 用户新档位要求的"可读分 scale"：[-6 ~ +7] 量级，便于依据以下规则判定：
- *   - 分值  > +5            → 夯
- *   - 分值 ∈ (+2, +5]       → 人上人
- *   - 分值 ∈ [-2, +2]       → npc
- *   - 分值  < -2 且 ≥ -8    → 拉
- *   - 分值  < -8            → 拉完了（极拉一档，兼容 WuDangLevel 类型）
- */
+// ============ 新九档字母等级系统（S+ S A+ A B+ B- C C- D） ============
+export type LetterLevel = 'S+' | 'S' | 'A+' | 'A' | 'B+' | 'B-' | 'C' | 'C-' | 'D';
+
 const RAW_SCORE_DIVISOR = 3.6;
 export function compressScore(rawScore: number): number {
   return Math.round((rawScore / RAW_SCORE_DIVISOR) * 10) / 10;
 }
 
-// 五档共用文案（命盘 / 大运 / 流年统一）
-const WU_DANG_BAND: Record<WuDangLevel, string> = {
-  夯:       '大吉之运：气机鼎盛、夯实到底，可成大事',
-  人上人:   '吉运：事业台阶明显向上，助缘深厚',
-  npc:      '平常运：无功无过，稳中求进即可',
-  拉:       '凶运：加剧偏枯或逆月令喜用，宜守不宜攻',
-  拉完了:   '大凶之运：用神被彻底压制，最宜韬光养晦、切不可妄动',
+// 九档字母等级文案
+const LETTER_BAND: Record<LetterLevel, string> = {
+  'S+': 'SSS级·超吉：气机极致鼎盛，阴阳既济，可成非常之业',
+  'S':  'SS级·上吉：气机充盈浑厚，助缘极深，事业大跨步跃进',
+  'A+': 'A级·上佳：气机顺畅有力，贵人提携，名利双收之运',
+  'A':  'A级·佳运：气机正向，做事得力，稳步向前有提升',
+  'B+': 'B级·平顺：气机平和，无功无过大方向不偏，稳中求进',
+  'B-': 'B级·偏弱：气机略有阻滞，小不顺较多，谨慎行事即安',
+  'C':  'C级·偏差：气机偏逆，加剧原局偏枯，宜守不宜攻多事',
+  'C-': 'C级·低迷：气机明显逆月令喜用，是非破财增多，韬光养晦',
+  'D':  'D级·极差：用神被彻底压制，气机枯竭，最宜蛰伏切不可妄动',
 };
 
-/** 大运/流年 5 档分级：按"压缩分"映射到夯~拉完了 */
-export function wuDangFromScore(rawScore: number): { level: WuDangLevel; band: string; displayScore: number } {
-  const displayScore = compressScore(rawScore);
-  // 先按新档位判（用户明确规则）
-  let level: WuDangLevel;
-  if (displayScore > 5) level = '夯';
-  else if (displayScore > 2) level = '人上人';
-  else if (displayScore >= -2) level = 'npc';
-  else if (displayScore >= -8) level = '拉';
-  else level = '拉完了';
+// 字母等级 → 配色 CSS class（与 UI 颜色系统对应）
+export const LETTER_LEVEL_META: Record<LetterLevel, { classBg: string; classText: string; classRing: string; sortIndex: number }> = {
+  'S+': { classBg: 'bg-gradient-to-br from-rose-500 to-amber-400',  classText: 'text-white',   classRing: 'ring-rose-600',  sortIndex: 9 },
+  'S':  { classBg: 'bg-gradient-to-br from-amber-400 to-yellow-300',classText: 'text-white',   classRing: 'ring-amber-500', sortIndex: 8 },
+  'A+': { classBg: 'bg-emerald-500',                              classText: 'text-white',   classRing: 'ring-emerald-600', sortIndex: 7 },
+  'A':  { classBg: 'bg-green-500',                                classText: 'text-white',   classRing: 'ring-green-600', sortIndex: 6 },
+  'B+': { classBg: 'bg-sky-400',                                  classText: 'text-white',   classRing: 'ring-sky-500',   sortIndex: 5 },
+  'B-': { classBg: 'bg-slate-400',                                classText: 'text-white',   classRing: 'ring-slate-500', sortIndex: 4 },
+  'C':  { classBg: 'bg-orange-400',                               classText: 'text-white',   classRing: 'ring-orange-500', sortIndex: 3 },
+  'C-': { classBg: 'bg-red-400',                                  classText: 'text-white',   classRing: 'ring-red-500',   sortIndex: 2 },
+  'D':  { classBg: 'bg-gradient-to-br from-zinc-700 to-zinc-900', classText: 'text-white',   classRing: 'ring-zinc-800',   sortIndex: 1 },
+};
 
-  return { level, band: WU_DANG_BAND[level], displayScore };
+/**
+ * 大运/流年 9 档字母分级：按"压缩分 displayScore"映射到 S+ ~ D
+ * 分值梯度刻意拉开，避免档位集中：
+ *   S+: > +6
+ *   S : +4 ~ +6 (含)
+ *   A+: +2 ~ +4 (含)
+ *   A : 0  ~ +2 (含)
+ *   B+: -2 ~ 0  (含)
+ *   B-: -4 ~ -2 (含)
+ *   C : -6 ~ -4 (含)
+ *   C-: -8 ~ -6 (含)
+ *   D : < -8
+ */
+export function letterFromScore(rawScore: number): { level: LetterLevel; band: string; displayScore: number } {
+  const displayScore = compressScore(rawScore);
+  let level: LetterLevel;
+  if      (displayScore > 6)  level = 'S+';
+  else if (displayScore > 4)  level = 'S';
+  else if (displayScore > 2)  level = 'A+';
+  else if (displayScore > 0)  level = 'A';
+  else if (displayScore >= -2) level = 'B+';
+  else if (displayScore >= -4) level = 'B-';
+  else if (displayScore >= -6) level = 'C';
+  else if (displayScore >= -8) level = 'C-';
+  else                         level = 'D';
+  return { level, band: LETTER_BAND[level], displayScore };
 }
 
-// 命盘基准 + 岁运调整 叠加后的五档映射（±14 尺度，阈值为单边 ±7 的两倍）
+// 命盘基准 + 岁运调整 叠加后的九档映射（±14 尺度，阈值约为两倍 scale）
+export function letterFromCombined(combinedDisplayScore: number): { level: LetterLevel; band: string } {
+  let level: LetterLevel;
+  if      (combinedDisplayScore > 12) level = 'S+';
+  else if (combinedDisplayScore > 8)  level = 'S';
+  else if (combinedDisplayScore > 4)  level = 'A+';
+  else if (combinedDisplayScore > 0)  level = 'A';
+  else if (combinedDisplayScore >= -4) level = 'B+';
+  else if (combinedDisplayScore >= -8) level = 'B-';
+  else if (combinedDisplayScore >= -12) level = 'C';
+  else if (combinedDisplayScore >= -16) level = 'C-';
+  else                         level = 'D';
+  return { level, band: LETTER_BAND[level] };
+}
+
+// ====== 兼容旧 WuDangLevel 的临时包装（UI 切换 LetterLevel 后删除）======
+export function wuDangFromScore(rawScore: number): { level: WuDangLevel; band: string; displayScore: number } {
+  const { level: l, band, displayScore } = letterFromScore(rawScore);
+  const lvlMap: Record<LetterLevel, WuDangLevel> = {
+    'S+': '夯', 'S': '夯', 'A+': '人上人', 'A': '人上人',
+    'B+': 'npc', 'B-': 'npc', 'C': '拉', 'C-': '拉', 'D': '拉完了',
+  };
+  return { level: lvlMap[l], band, displayScore };
+}
 export function wuDangFromCombined(combinedDisplayScore: number): { level: WuDangLevel; band: string } {
-  let level: WuDangLevel;
-  if (combinedDisplayScore > 10) level = '夯';
-  else if (combinedDisplayScore > 4) level = '人上人';
-  else if (combinedDisplayScore >= -4) level = 'npc';
-  else if (combinedDisplayScore >= -16) level = '拉';
-  else level = '拉完了';
-  return { level, band: WU_DANG_BAND[level] };
+  const { level: l, band } = letterFromCombined(combinedDisplayScore);
+  const lvlMap: Record<LetterLevel, WuDangLevel> = {
+    'S+': '夯', 'S': '夯', 'A+': '人上人', 'A': '人上人',
+    'B+': 'npc', 'B-': 'npc', 'C': '拉', 'C-': '拉', 'D': '拉完了',
+  };
+  return { level: lvlMap[l], band };
 }
 
 // 命盘综合评分（新机制）：三维度——阴阳平衡度 + 用神力量 + 忌神状态
-// 输出 rawScore（±26 尺度，与 scoreGanZhiImpact 同口径），用 wuDangFromScore 映射五档
+// 输出 rawScore（±26 尺度，与 scoreGanZhiImpact 同口径），用九档字母等级映射
 export function scoreMingPan(
   chart: BaZiChart,
   yongJi: YongJiResult,
 ): {
   rawScore: number;
   displayScore: number;
-  level: WuDangLevel;
+  level: WuDangLevel;       // 旧五档（兼容）
+  letterLevel: LetterLevel; // 新九档（UI 首选）
   band: string;
   balanceScore: number;
   usefulScore: number;
@@ -2102,6 +2183,7 @@ export function scoreMingPan(
   const tabooScore = Math.round((50 - tabooPct) * 0.12 * 10) / 10;   // 0%→+6, 100%→-6
 
   const rawScore = Math.round((balanceScore + usefulScore + tabooScore) * 10) / 10;
+  const letterRes = letterFromScore(rawScore);
   const { level, band, displayScore } = wuDangFromScore(rawScore);
 
   const fmt = (n: number) => (n >= 0 ? '+' : '') + n;
@@ -2111,71 +2193,43 @@ export function scoreMingPan(
     `忌神状态：占比${tabooPct}% → ${fmt(tabooScore)}`,
   ];
 
-  return { rawScore, displayScore, level, band, balanceScore, usefulScore, tabooScore, detail };
+  return {
+    rawScore, displayScore, level, letterLevel: letterRes.level, band,
+    balanceScore, usefulScore, tabooScore, detail,
+  };
 }
 
 /**
- * 趋势加成 & 趋势警告标记（仅作用于「大运」「流年」这种"有序序列"的分值）：
- *  - 前一步 = 拉 / 拉完了  &  下一步 = 夯 / 人上人   → 给"下一步" **加 +2.0 显示分加成**（穷则变、变则通）
- *  - 前一步 = 夯 / 人上人  &  下一步 = 拉 / 拉完了  → "下一步"打 downgradeAlert=true（好到不好，红色感叹号）
+ * 序列评分：为「大运」「流年」有序序列逐条计算九档字母等级 + 压缩分
+ * 【已按用户要求取消：前一步/上一个大运对当前步的"趋势加成"与"降档警告"分值影响】
+ * 现在每一步的等级/分数完全由本条 rawScore 独立决定，不受前后步影响。
+ * 返回结果中额外附带 letterLevel（新九档），供 UI 直接渲染；level/band 为旧五档兼容字段。
  */
 export function applyForwardTrend<T extends { rawScore: number }>(items: T[]): Array<
   T & {
     displayScore: number;
-    level: WuDangLevel;
+    level: WuDangLevel;       // 旧五档（兼容）
     band: string;
-    upgradeBonusApplied: boolean;
-    downgradeAlert: boolean;
+    upgradeBonusApplied: boolean;  // 永远 false（已取消趋势加成）
+    downgradeAlert: boolean;       // 永远 false（已取消前序影响）
+    letterLevel: LetterLevel;      // 新九档 S+~D（UI 首选）
   }
 > {
-  // 先按 rawScore 算出 base level/baseScore（不加成），作为"前一步好/不好"的判断依据
-  const staged = items.map(it => ({
-    base: wuDangFromScore(it.rawScore),
-  }));
-  const isGood = (lvl: WuDangLevel) => lvl === '夯' || lvl === '人上人';
-  const isBad  = (lvl: WuDangLevel) => lvl === '拉' || lvl === '拉完了';
-
-  return items.map((it, i) => {
-    const prev = i > 0 ? staged[i - 1].base : null;
-    const cur  = staged[i].base;
-    let displayScore = cur.displayScore;
-    let upgradeBonusApplied = false;
-    let downgradeAlert = false;
-    if (prev && isBad(prev.level) && (cur.level === '夯')) {
-      // 前拉后夯 → 额外加 +2（拉到人上人也加 +1 作为小加成，但用户说"前一步为拉下一步为夯则额外加分"，严格按拉+夯才给最大档加成）
-      displayScore += 2;
-      upgradeBonusApplied = true;
-    } else if (prev && isBad(prev.level) && cur.level === '人上人') {
-      displayScore += 0.8;
-      upgradeBonusApplied = true;
-    }
-    // 加成后需要重新计算 level/band（可能升级）
-    let level: WuDangLevel;
-    if (displayScore > 5) level = '夯';
-    else if (displayScore > 2) level = '人上人';
-    else if (displayScore >= -2) level = 'npc';
-    else if (displayScore >= -8) level = '拉';
-    else level = '拉完了';
-
-    const bandByLevel: Record<WuDangLevel, string> = {
-      夯:       '大吉之运：气机鼎盛、夯实到底，可成大事',
-      人上人:   '吉运：事业台阶明显向上，助缘深厚',
-      npc:      '平常运：无功无过，稳中求进即可',
-      拉:       '凶运：加剧偏枯或逆月令喜用，宜守不宜攻',
-      拉完了:   '大凶之运：用神被彻底压制，最宜韬光养晦、切不可妄动',
+  return items.map((it) => {
+    const cur = letterFromScore(it.rawScore);
+    // 旧五档兼容映射（UI 升级后可移除）
+    const lvlMap: Record<LetterLevel, WuDangLevel> = {
+      'S+': '夯', 'S': '夯', 'A+': '人上人', 'A': '人上人',
+      'B+': 'npc', 'B-': 'npc', 'C': '拉', 'C-': '拉', 'D': '拉完了',
     };
-    const band = bandByLevel[level];
-
-    if (prev && isGood(prev.level) && (level === '拉' || level === '拉完了')) {
-      downgradeAlert = true; // 好 → 不好，追加红色感叹号
-    }
     return {
       ...it,
-      displayScore: Math.round(displayScore * 10) / 10,
-      level,
-      band,
-      upgradeBonusApplied,
-      downgradeAlert,
+      displayScore: cur.displayScore,
+      letterLevel: cur.level,
+      level: lvlMap[cur.level],
+      band: cur.band,
+      upgradeBonusApplied: false,
+      downgradeAlert: false,
     };
   });
 }
@@ -3259,63 +3313,45 @@ export function analyzeDaYunLiuNian(
   }));
   const recentLiuNian = recentTrended as any;
 
-  // —— 修复 Bug1-2：近年流年 + 大运下10年流年，趋势加成时把加分明细补进 topReasons，避免"综合分有遗漏"观感 ——
-  for (const dy of daYunWithFortune) {
-    for (const ln of (dy as any).liuNian10 || []) {
-      if (ln.upgradeBonusApplied) {
-        const base = wuDangFromScore(ln.rawScore).displayScore;
-        const bonus = Math.round(((ln.displayScore as number) - base) * 10) / 10;
-        if (bonus > 0) {
-          ln.topReasons = [...(ln.topReasons || []), `趋势加成 +${bonus}（上年拉，此年翻身）`];
-        }
-      }
-      if (ln.downgradeAlert) {
-        ln.topReasons = [...(ln.topReasons || []), `⚠ 前年尚吉，此年转凶（下坡）`];
-      }
-    }
-  }
-  for (const ln of recentLiuNian) {
-    if ((ln as any).upgradeBonusApplied) {
-      const base = wuDangFromScore((ln as any).rawScore).displayScore;
-      const bonus = Math.round(((ln.displayScore as number) - base) * 10) / 10;
-      if (bonus > 0) {
-        (ln as any).topReasons = [...((ln as any).topReasons || []), `趋势加成 +${bonus}（上年拉，此年翻身）`];
-      }
-    }
-    if ((ln as any).downgradeAlert) {
-      (ln as any).topReasons = [...((ln as any).topReasons || []), `⚠ 前年尚吉，此年转凶（下坡）`];
-    }
-  }
+  // 注：已按用户要求移除「趋势加成」和「降档警告」分值影响
+  // （即不再参考"上一个大运/流年好/坏"来改变当前条目的评分或提示）
+  // 每一步评分完全按本条 rawScore 独立计算。
 
-  // —— 命盘基准联动：大运/流年分 = 命盘基准分 + 岁运调整分（±14 尺度，用 wuDangFromCombined 映射） ——
+  // —— 命盘基准联动：大运/流年分 = 命盘基准分 + 岁运调整分（±14 尺度，用 letterFromCombined 九档映射） ——
   for (const dy of daYunWithFortune as any[]) {
     const dyCombined = mingPanCompress + (dy.displayScore || 0);
+    const dyLetter = letterFromCombined(dyCombined);
     const dyMap = wuDangFromCombined(dyCombined);
     dy.displayScore = Math.round(dyCombined * 10) / 10;
     dy.score = dy.displayScore;
+    dy.letterLevel = dyLetter.level;  // 新九档字母等级
     dy.level = dyMap.level;
     dy.fortune = dyMap.level;
-    dy.band = dyMap.band;
+    dy.band = dyLetter.band;
     dy.mingPanBase = mingPanCompress;
     for (const ln of (dy.liuNian10 || [])) {
       const lnCombined = mingPanCompress + (ln.displayScore || 0);
+      const lnLetter = letterFromCombined(lnCombined);
       const lnMap = wuDangFromCombined(lnCombined);
       ln.displayScore = Math.round(lnCombined * 10) / 10;
       ln.score = ln.displayScore;
+      ln.letterLevel = lnLetter.level;  // 新九档字母等级
       ln.level = lnMap.level;
       ln.fortune = lnMap.level;
-      ln.band = lnMap.band;
+      ln.band = lnLetter.band;
       ln.mingPanBase = mingPanCompress;
     }
   }
   for (const ln of recentLiuNian as any[]) {
     const lnCombined = mingPanCompress + (ln.displayScore || 0);
+    const lnLetter = letterFromCombined(lnCombined);
     const lnMap = wuDangFromCombined(lnCombined);
     ln.displayScore = Math.round(lnCombined * 10) / 10;
     ln.score = ln.displayScore;
+    ln.letterLevel = lnLetter.level;  // 新九档字母等级
     ln.level = lnMap.level;
     ln.fortune = lnMap.level;
-    ln.band = lnMap.band;
+    ln.band = lnLetter.band;
     ln.mingPanBase = mingPanCompress;
   }
 

@@ -501,13 +501,13 @@ function computeTaiJiDbReferences(
 }
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '1.0.2';
+const APP_VERSION = '1.1.0';
 
 export default function BaZiAnalyzerPage() {
-  const [year, setYear] = useState('1990');
-  const [month, setMonth] = useState('5');
-  const [day, setDay] = useState('15');
-  const [hour, setHour] = useState('12');
+  const [year, setYear] = useState('2000');
+  const [month, setMonth] = useState('1');
+  const [day, setDay] = useState('1');
+  const [hour, setHour] = useState('0');
   const [minute, setMinute] = useState('0');
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [chart, setChart] = useState<BaZiChart | null>(null);
@@ -539,8 +539,8 @@ export default function BaZiAnalyzerPage() {
     const h = parseInt(hour, 10);
     const min = parseInt(minute, 10);
 
-    if (isNaN(y) || y < 1900 || y > 2100) {
-      toast.error('请输入有效的年份（1900-2100）');
+    if (isNaN(y) || y < 1800 || y > 2100) {
+      toast.error('请输入有效的年份（1800-2100）');
       return;
     }
     if (isNaN(m) || m < 1 || m > 12) {
@@ -786,16 +786,16 @@ export default function BaZiAnalyzerPage() {
             </span>
           </div>
 
-          {/* 主标题：苹果官网超大尺寸，宋体 Black 900 */}
+          {/* 主标题：沛然堂 · 毛体（Maoti）超大尺寸 */}
           <h1
-            className="text-[52px] font-black leading-[1.08] tracking-tight md:text-[80px] lg:text-[104px]"
+            className="text-[64px] font-black leading-[1.05] tracking-wide md:text-[100px] lg:text-[140px]"
             style={{
-              fontFamily: "'Noto Serif SC', serif",
+              fontFamily: "'Maoti', 'Noto Serif SC', serif",
               color: 'var(--foreground)',
-              letterSpacing: '-0.01em',
+              letterSpacing: '0.04em',
             }}
           >
-            你智哥的<br />阴阳分析系统
+            沛然堂
           </h1>
 
           {/* 副标题：苹果官网式精细副标题，较大间距 */}
@@ -918,7 +918,7 @@ export default function BaZiAnalyzerPage() {
                 <div className="grid gap-4 md:grid-cols-3">
                   <div className="space-y-2">
                     <Label className="font-medium">出生年份</Label>
-                    <Input type="number" value={year} onChange={(e) => setYear(e.target.value)} placeholder="如 1990" />
+                    <Input type="number" value={year} onChange={(e) => setYear(e.target.value)} placeholder="如 2000" />
                   </div>
                   <div className="space-y-2">
                     <Label className="font-medium">月份</Label>
@@ -1370,21 +1370,42 @@ export default function BaZiAnalyzerPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {(() => {
-                    // 大运/流年 5 档视觉映射：夯/人上人/npc/拉/拉完了
-                    const WUDANG_META: Record<string, { bg: string; border: string; text: string; ring: string; labelColor: string }> = {
-                      '夯':     { bg: '#FFF7ED', border: '#B45309', text: '#0C0A09', ring: '#F59E0B', labelColor: '#9A3412' },
-                      '人上人': { bg: '#F5F3FF', border: '#6D28D9', text: '#0C0A09', ring: '#8B5CF6', labelColor: '#5B21B6' },
-                      'npc':    { bg: '#F8FAFC', border: '#475569', text: '#0F172A', ring: '#94A3B8', labelColor: '#334155' },
-                      '拉':     { bg: '#FFF7ED', border: '#EA580C', text: '#0C0A09', ring: '#FB923C', labelColor: '#C2410C' },
-                      '拉完了': { bg: '#FEF2F2', border: '#B91C1C', text: '#0C0A09', ring: '#EF4444', labelColor: '#991B1B' },
+                    // ===== 大运/流年 新九档字母等级视觉映射（S+ > S > A+ > A > B+ > B- > C > C- > D）=====
+                    const LETTER_META: Record<string, { bg: string; border: string; text: string; ring: string; labelColor: string; dot: string }> = {
+                      'S+': { bg: 'linear-gradient(135deg,#fff1f2,#fef3c7)', border: '#E11D48', text: '#881337', ring: '#F43F5E', labelColor: '#9F1239', dot: '#E11D48' },
+                      'S':  { bg: 'linear-gradient(135deg,#fefce8,#fef9c3)', border: '#D97706', text: '#78350F', ring: '#F59E0B', labelColor: '#B45309', dot: '#F59E0B' },
+                      'A+': { bg: '#ECFDF5', border: '#059669', text: '#064E3B', ring: '#10B981', labelColor: '#047857', dot: '#059669' },
+                      'A':  { bg: '#F0FDF4', border: '#16A34A', text: '#14532D', ring: '#22C55E', labelColor: '#15803D', dot: '#16A34A' },
+                      'B+': { bg: '#F0F9FF', border: '#0284C7', text: '#082F49', ring: '#0EA5E9', labelColor: '#0369A1', dot: '#0284C7' },
+                      'B-': { bg: '#F8FAFC', border: '#475569', text: '#0F172A', ring: '#64748B', labelColor: '#334155', dot: '#64748B' },
+                      'C':  { bg: '#FFF7ED', border: '#EA580C', text: '#7C2D12', ring: '#F97316', labelColor: '#C2410C', dot: '#EA580C' },
+                      'C-': { bg: '#FEF2F2', border: '#DC2626', text: '#450A0A', ring: '#EF4444', labelColor: '#B91C1C', dot: '#DC2626' },
+                      'D':  { bg: 'linear-gradient(135deg,#18181B,#27272A)', border: '#09090B', text: '#FAFAFA', ring: '#52525B', labelColor: '#F4F4F5', dot: '#18181B' },
                     };
-                    const m = (lvl: string) => WUDANG_META[lvl] ?? WUDANG_META['npc'];
+                    // 旧五档兼容映射（数据未切换时的兜底）
+                    const WUDANG_META: Record<string, { bg: string; border: string; text: string; ring: string; labelColor: string; dot: string }> = {
+                      '夯':     { bg: '#FFF7ED', border: '#B45309', text: '#0C0A09', ring: '#F59E0B', labelColor: '#9A3412', dot: '#B45309' },
+                      '人上人': { bg: '#F5F3FF', border: '#6D28D9', text: '#0C0A09', ring: '#8B5CF6', labelColor: '#5B21B6', dot: '#6D28D9' },
+                      'npc':    { bg: '#F8FAFC', border: '#475569', text: '#0F172A', ring: '#94A3B8', labelColor: '#334155', dot: '#475569' },
+                      '拉':     { bg: '#FFF7ED', border: '#EA580C', text: '#0C0A09', ring: '#FB923C', labelColor: '#C2410C', dot: '#EA580C' },
+                      '拉完了': { bg: '#FEF2F2', border: '#B91C1C', text: '#0C0A09', ring: '#EF4444', labelColor: '#991B1B', dot: '#B91C1C' },
+                    };
+                    // 取显示等级：优先用新九档 letterLevel，兜底用老 fortune/level
+                    const getLevel = (row: any): string => {
+                      if (row && (row.letterLevel === 0 || row.letterLevel)) return String(row.letterLevel);
+                      return String(row?.fortune ?? row?.level ?? 'B-');
+                    };
+                    const m = (row: any) => {
+                      const lvl = typeof row === 'string' ? row : getLevel(row);
+                      return (LETTER_META[lvl] ?? WUDANG_META[lvl] ?? LETTER_META['B-']);
+                    };
+                    const displayLevel = (row: any) => getLevel(row);
 
                     // —— 点击大运切换折线图：activeDY 优先取 expandedDY（用户选中），否则取默认 currentDaYun ——
                     const clampScore = (n: number) => {
                       const v = typeof n === 'number' ? n : Number(n);
                       if (!Number.isFinite(v)) return 0;
-                      return Math.max(-7, Math.min(7, Math.round(v * 10) / 10));
+                      return Math.max(-8, Math.min(8, Math.round(v * 10) / 10));
                     };
                     const useIndex =
                       expandedDY !== null &&
@@ -1400,7 +1421,7 @@ export default function BaZiAnalyzerPage() {
                         year: Number(ln.year) || 0,
                         ganzhi: String(ln.ganzhi || ''),
                         displayScore: clampScore(ln.displayScore),
-                        level: (ln.level || 'npc'),
+                        level: displayLevel(ln),
                       })),
                     };
 
@@ -1424,12 +1445,14 @@ export default function BaZiAnalyzerPage() {
                                 {activeCurve.label}
                               </span>
                             </div>
-                            <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold text-muted-foreground">
-                              <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-full" style={{ backgroundColor: '#B45309' }} />夯（{'>'}+5）</span>
-                              <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-full" style={{ backgroundColor: '#6D28D9' }} />人上人（+2~+5）</span>
-                              <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-full" style={{ backgroundColor: '#475569' }} />NPC（-2~+2）</span>
-                              <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-full" style={{ backgroundColor: '#DC2626' }} />拉（{'<'} -2）</span>
-                              <span className="inline-flex items-center gap-1.5 text-[#DC2626]">红"!"：前吉转凶 ⚠️</span>
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-bold text-muted-foreground">
+                              {(['S+','S','A+','A','B+','B-','C','C-','D'] as const).map(lv => (
+                                <span key={lv} className="inline-flex items-center gap-1">
+                                  <span className="size-2.5 rounded-full" style={{ backgroundColor: LETTER_META[lv].dot }} />
+                                  {lv}
+                                </span>
+                              ))}
+                              <span className="text-[10px] text-muted-foreground/70">（分值梯度拉开：S+ {' > '} +6 ｜ S: +4~+6 ｜ A+: +2~+4 ｜ A: 0~+2 ｜ B+: -2~0 ｜ B-: -4~-2 ｜ C: -6~-4 ｜ C-: -8~-6 ｜ D {' < '} -8）</span>
                             </div>
                           </div>
                           <DaYunCurveChart items={activeCurve.items as any} />
@@ -1452,7 +1475,7 @@ export default function BaZiAnalyzerPage() {
                               </TableHeader>
                               <TableBody>
                                 {daYunAnalysis.daYunWithFortune.map((dy: any) => {
-                                  const meta = m(dy.fortune);
+                                  const meta = m(dy);
                                   const isOpen = expandedDY === dy.index;
                                   const isCurrent = dy.index === daYunAnalysis.currentDaYunIndex;
                                   return (
@@ -1481,30 +1504,24 @@ export default function BaZiAnalyzerPage() {
                                           </TableCell>
                                           <TableCell>
                                             <span
-                                              className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold"
+                                              className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-black"
                                               style={{
                                                 background: meta.bg,
                                                 color: meta.labelColor,
                                                 border: `1px solid ${meta.border}`,
-                                                boxShadow: `0 0 0 1px ${meta.ring}26`,
-                                                letterSpacing: '0.05em',
+                                                boxShadow: `0 0 0 1px ${meta.ring}33`,
+                                                letterSpacing: '0.06em',
                                               }}
                                             >
-                                              {dy.fortune}
-                                              {dy.upgradeBonusApplied && (
-                                                <span className="ml-1 inline-flex items-center rounded-sm px-1 text-[9px] font-black" style={{ backgroundColor: '#0C0A09', color: '#ffffff' }}>
-                                                  +趋势
-                                                </span>
-                                              )}
+                                              {displayLevel(dy)}
                                             </span>
-                                            <DownAlertBadge show={dy.downgradeAlert} />
                                           </TableCell>
                                           <TableCell className="tabular-nums">
                                             <div>
                                               <span
                                                 className="font-bold"
                                                 style={{
-                                                  color: dy.score > 2 ? '#B45309' : dy.score >= 0 ? '#047857' : dy.score >= -2 ? '#334155' : '#991B1B',
+                                                  color: dy.score > 4 ? '#E11D48' : dy.score > 2 ? '#B45309' : dy.score >= 0 ? '#047857' : dy.score >= -2 ? '#0369A1' : dy.score >= -6 ? '#C2410C' : '#991B1B',
                                                 }}
                                               >
                                                 {dy.score >= 0 ? '+' : ''}
@@ -1535,7 +1552,7 @@ export default function BaZiAnalyzerPage() {
                                               </div>
                                               <div className="grid gap-2 sm:grid-cols-5 md:grid-cols-5 lg:grid-cols-10">
                                                 {dy.liuNian10.map((ln: any) => {
-                                                  const lmeta = m(ln.fortune);
+                                                  const lmeta = m(ln);
                                                   return (
                                                     <div
                                                       key={ln.year}
@@ -1550,21 +1567,15 @@ export default function BaZiAnalyzerPage() {
                                                         <div className="text-xs font-bold tabular-nums">{ln.year}</div>
                                                         <div className="inline-flex items-center">
                                                           <span
-                                                            className="rounded-full px-1.5 py-0.5 text-[10px] font-bold"
+                                                            className="rounded-full px-1.5 py-0.5 text-[10px] font-black"
                                                             style={{
                                                               color: lmeta.labelColor,
                                                               border: `1px solid ${lmeta.border}`,
-                                                              background: 'rgba(255,255,255,0.7)',
+                                                              background: 'rgba(255,255,255,0.78)',
                                                             }}
                                                           >
-                                                            {ln.fortune}
-                                                            {ln.upgradeBonusApplied && (
-                                                              <span className="ml-1 inline-flex items-center rounded-sm px-1 text-[8px] font-black" style={{ backgroundColor: '#0C0A09', color: '#ffffff' }}>
-                                                                +趋势
-                                                              </span>
-                                                            )}
+                                                            {displayLevel(ln)}
                                                           </span>
-                                                          <DownAlertBadge show={ln.downgradeAlert} />
                                                         </div>
                                                       </div>
                                                       <div className="mt-1 flex items-end justify-between">
@@ -1574,7 +1585,7 @@ export default function BaZiAnalyzerPage() {
                                                         <div
                                                           className="text-sm font-bold tabular-nums"
                                                           style={{
-                                                            color: ln.score > 2 ? '#B45309' : ln.score >= 0 ? '#047857' : ln.score >= -2 ? '#334155' : '#991B1B',
+                                                            color: ln.score > 4 ? '#E11D48' : ln.score > 2 ? '#B45309' : ln.score >= 0 ? '#047857' : ln.score >= -2 ? '#0369A1' : ln.score >= -6 ? '#C2410C' : '#991B1B',
                                                           }}
                                                         >
                                                           {ln.score >= 0 ? '+' : ''}
@@ -1604,7 +1615,7 @@ export default function BaZiAnalyzerPage() {
                           <div className="mb-2 text-sm font-bold"><span className="mark-highlight">近年流年</span>提示（{currentYear - 1}-{currentYear + 4}）</div>
                           <div className="grid gap-2 md:grid-cols-6">
                             {daYunAnalysis.recentLiuNian.map((ln: any) => {
-                              const meta = m(ln.fortune);
+                              const meta = m(ln);
                               return (
                                 <div
                                   key={ln.year}
@@ -1618,17 +1629,13 @@ export default function BaZiAnalyzerPage() {
                                   <div className="text-xs font-bold text-muted-foreground">{ln.year}</div>
                                   <div className="mt-0.5 text-base font-bold" style={{ color: meta.text }}>{ln.ganzhi}</div>
                                   <div
-                                    className="mt-1 flex items-center justify-center gap-1 text-xs font-black flex-wrap"
-                                    style={{ color: meta.labelColor, letterSpacing: '0.04em' }}
+                                    className="mt-1 flex items-center justify-center gap-1.5 text-xs font-black flex-wrap"
+                                    style={{ color: meta.labelColor, letterSpacing: '0.06em' }}
                                   >
-                                    <span>{ln.fortune}</span>
-                                    {ln.upgradeBonusApplied && (
-                                      <span className="inline-flex items-center rounded-sm px-1 text-[8px] font-black" style={{ backgroundColor: '#0C0A09', color: '#ffffff' }}>
-                                        +趋势
-                                      </span>
-                                    )}
-                                    <DownAlertBadge show={ln.downgradeAlert} />
-                                    <span className="font-bold opacity-80">
+                                    <span className="rounded-full px-1.5 py-0.5" style={{ border: `1px solid ${meta.border}`, background: 'rgba(255,255,255,0.78)' }}>
+                                      {displayLevel(ln)}
+                                    </span>
+                                    <span className="font-bold opacity-85">
                                       ({ln.score >= 0 ? '+' : ''}{ln.score})
                                     </span>
                                   </div>
@@ -1681,7 +1688,7 @@ export default function BaZiAnalyzerPage() {
                   >日主 · 格局 · 用神 · <span className="mark-highlight">整体定调</span>一图速览</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-3">
-                  <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
                     {/* 1. 日主 */}
                     <div
                       className="rounded-xl p-4 transition-transform hover:-translate-y-0.5"
@@ -1745,53 +1752,137 @@ export default function BaZiAnalyzerPage() {
                         {yongJi.usefulElements.length > 0 ? '助平衡为吉' : '待细查'}
                       </div>
                     </div>
-                    {/* 4. 整体定调（新标尺：阴阳二气显现 + 气息冲突） */}
+
+                    {/* 4. 财富分（0-100，新量化） */}
                     {(() => {
-                      // 5 档配色（字体统一黑色，色块用背景/border）
-                      const toneMeta: Record<string, { bg: string; border: string; ring: string; text: string; sub: string }> = {
-                        '夯':       { bg: '#FFF7ED', border: '#B45309', ring: '#F59E0B', text: '#0C0A09', sub: '#9A3412' },
-                        '人上人':   { bg: '#F5F3FF', border: '#6D28D9', ring: '#8B5CF6', text: '#0C0A09', sub: '#5B21B6' },
-                        'npc':      { bg: '#F8FAFC', border: '#475569', ring: '#94A3B8', text: '#0F172A', sub: '#334155' },
-                        '拉':       { bg: '#FFF7ED', border: '#EA580C', ring: '#FB923C', text: '#0C0A09', sub: '#C2410C' },
-                        '拉完了':   { bg: '#FEF2F2', border: '#B91C1C', ring: '#EF4444', text: '#0C0A09', sub: '#991B1B' },
+                      const ws = wealthNobility?.wealthScore ?? 0;
+                      const lvTag = ws >= 85 ? '上吉' : ws >= 70 ? '吉' : ws >= 60 ? '及格' : ws >= 45 ? '偏弱' : '偏低';
+                      const col = ws >= 85 ? '#B45309' : ws >= 70 ? '#059669' : ws >= 60 ? '#0284C7' : ws >= 45 ? '#EA580C' : '#DC2626';
+                      const bg = ws >= 85 ? '#FFFBEB' : ws >= 70 ? '#ECFDF5' : ws >= 60 ? '#F0F9FF' : ws >= 45 ? '#FFF7ED' : '#FEF2F2';
+                      return (
+                        <div className="rounded-xl p-4 transition-transform hover:-translate-y-0.5"
+                          style={{ backgroundColor: bg, border: `1px solid ${col}33` }}
+                        >
+                          <div className="flex items-baseline justify-between">
+                            <div className="text-[10px] font-bold tracking-[0.2em] text-muted-foreground">财富分</div>
+                            <span className="rounded-sm px-1.5 py-0.5 text-[9px] font-black" style={{ color: '#ffffff', backgroundColor: col }}>
+                              {lvTag}
+                            </span>
+                          </div>
+                          <div className="mt-2 flex items-baseline gap-1">
+                            <span className="text-3xl font-black tabular-nums" style={{ color: col }}>{ws}</span>
+                            <span className="text-xs font-bold text-muted-foreground">/ 100</span>
+                          </div>
+                          <div className="mt-2 h-2 w-full overflow-hidden rounded-full" style={{ backgroundColor: '#E5E7EB' }}>
+                            <div className="h-full rounded-full transition-all"
+                              style={{ width: `${Math.max(0, Math.min(100, ws))}%`, backgroundColor: col }}
+                            />
+                          </div>
+                          <div className="mt-1 text-[10px] font-bold text-muted-foreground/90">{wealthNobility?.wealthLevel ?? '—'}</div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* 5. 贵寿分（0-100，新量化） */}
+                    {(() => {
+                      const ns = wealthNobility?.nobilityScore ?? 0;
+                      const lvTag = ns >= 85 ? '上吉' : ns >= 70 ? '吉' : ns >= 60 ? '及格' : ns >= 45 ? '偏弱' : '偏低';
+                      const col = ns >= 85 ? '#6D28D9' : ns >= 70 ? '#4F46E5' : ns >= 60 ? '#0369A1' : ns >= 45 ? '#9333EA' : '#DC2626';
+                      const bg = ns >= 85 ? '#F5F3FF' : ns >= 70 ? '#EEF2FF' : ns >= 60 ? '#EFF6FF' : ns >= 45 ? '#FAF5FF' : '#FEF2F2';
+                      return (
+                        <div className="rounded-xl p-4 transition-transform hover:-translate-y-0.5"
+                          style={{ backgroundColor: bg, border: `1px solid ${col}33` }}
+                        >
+                          <div className="flex items-baseline justify-between">
+                            <div className="text-[10px] font-bold tracking-[0.2em] text-muted-foreground">贵寿分</div>
+                            <span className="rounded-sm px-1.5 py-0.5 text-[9px] font-black" style={{ color: '#ffffff', backgroundColor: col }}>
+                              {lvTag}
+                            </span>
+                          </div>
+                          <div className="mt-2 flex items-baseline gap-1">
+                            <span className="text-3xl font-black tabular-nums" style={{ color: col }}>{ns}</span>
+                            <span className="text-xs font-bold text-muted-foreground">/ 100</span>
+                          </div>
+                          <div className="mt-2 h-2 w-full overflow-hidden rounded-full" style={{ backgroundColor: '#E5E7EB' }}>
+                            <div className="h-full rounded-full transition-all"
+                              style={{ width: `${Math.max(0, Math.min(100, ns))}%`, backgroundColor: col }}
+                            />
+                          </div>
+                          <div className="mt-1 text-[10px] font-bold text-muted-foreground/90">{wealthNobility?.nobilityLevel ?? '—'}</div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* 6. 格局综合分 overallScore（0-100 · 60 及格，搭配命盘 letterLevel） */}
+                    {(() => {
+                      const overall = wealthNobility?.overallScore ?? 0;
+                      const passed = overall >= 60;
+                      const col = overall >= 88 ? '#E11D48' : overall >= 72 ? '#D97706' : overall >= 60 ? '#059669' : overall >= 38 ? '#EA580C' : '#B91C1C';
+                      const letterLv = (mingPanScore?.letterLevel ?? (overall >= 88 ? 'S+' : overall >= 72 ? 'A' : overall >= 60 ? 'B+' : overall >= 38 ? 'C' : 'D')) as string;
+                      const letterColorMap: Record<string, string> = {
+                        'S+': '#E11D48','S':'#D97706','A+':'#059669','A':'#16A34A',
+                        'B+':'#0284C7','B-':'#475569','C':'#EA580C','C-':'#DC2626','D':'#18181B',
                       };
-                      const level = (mingPanScore?.level ?? wealthNobility?.overallLevel ?? 'npc') as string;
-                      const meta = toneMeta[level] ?? toneMeta['npc'];
-                      // 三维度明细（新机制：阴阳平衡度 + 用神力量 + 忌神状态）
+                      const letterCol = letterColorMap[letterLv] ?? col;
                       const detail = mingPanScore?.detail ?? [];
                       return (
                         <div
-                          className="rounded-xl p-4 transition-transform hover:-translate-y-0.5"
+                          className="col-span-2 rounded-xl p-4 transition-transform hover:-translate-y-0.5 lg:col-span-1"
                           style={{
-                            backgroundColor: meta.bg,
-                            border: `2px solid ${meta.border}`,
-                            boxShadow: `0 0 0 1px ${meta.ring}26, 0 2px 10px -4px ${meta.ring}40`,
+                            background: `linear-gradient(135deg, #FFFFFF 0%, ${letterCol}0A 100%)`,
+                            border: `2px solid ${letterCol}`,
+                            boxShadow: `0 0 0 1px ${letterCol}26, 0 2px 10px -4px ${letterCol}50`,
                           }}
                         >
-                          <div className="text-[10px] font-bold tracking-[0.2em]" style={{ color: meta.sub }}>整体定调</div>
-                          <div
-                            className="mt-2 leading-snug"
-                            style={{
-                              fontFamily: "'Noto Serif SC', serif",
-                              lineHeight: '1.2',
-                              color: meta.text,
-                              fontSize: level.length >= 3 ? '18px' : '26px',
-                              fontWeight: 900,
-                              letterSpacing: '0.06em',
-                            }}
-                          >
-                            {level}
+                          <div className="flex items-center justify-between">
+                            <div className="text-[10px] font-bold tracking-[0.2em]" style={{ color: letterCol }}>
+                              命盘综合分
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span
+                                className="rounded-full px-2 py-0.5 text-[11px] font-black"
+                                style={{
+                                  background: letterCol,
+                                  color: letterLv === 'D' ? '#FFFFFF' : letterLv === 'C-' ? '#FFF' : '#FFFFFF',
+                                  letterSpacing: '0.06em',
+                                }}
+                              >
+                                {letterLv}
+                              </span>
+                              <span
+                                className="rounded-sm px-1.5 py-0.5 text-[10px] font-black"
+                                style={{
+                                  color: passed ? '#FFFFFF' : '#FFFFFF',
+                                  backgroundColor: passed ? '#047857' : '#B91C1C',
+                                }}
+                              >
+                                {passed ? '及格' : '未及格'}
+                              </span>
+                            </div>
                           </div>
-                          <div className="mt-2 text-[11px] font-bold" style={{ color: meta.sub }}>
-                            综合分 {mingPanScore ? (mingPanScore.displayScore >= 0 ? '+' : '') + mingPanScore.displayScore : '—'}
+                          <div className="mt-1 flex items-baseline gap-1">
+                            <span className="text-[28px] font-black tabular-nums leading-none" style={{ color: letterCol }}>
+                              {overall}
+                            </span>
+                            <span className="text-xs font-bold text-muted-foreground">/ 100 · 及格线 60</span>
                           </div>
-                          {detail.length > 0 && (
-                            <div className="mt-2 space-y-1">
+                          <div className="mt-2 relative h-2.5 w-full overflow-hidden rounded-full" style={{ backgroundColor: '#E5E7EB' }}>
+                            <div className="absolute left-0 top-0 h-full w-px" style={{ left: '60%', backgroundColor: '#0C0A09', height: '150%', top: '-25%' }} />
+                            <div className="relative h-full rounded-full transition-all"
+                              style={{ width: `${Math.max(0, Math.min(100, overall))}%`, backgroundColor: col }}
+                            />
+                          </div>
+                          {detail.length > 0 ? (
+                            <div className="mt-2 space-y-0.5">
                               {detail.map((d, i) => (
-                                <div key={i} className="text-[11px] font-bold leading-snug" style={{ color: '#0C0A09', opacity: 0.72 }}>
-                                  {d}
+                                <div key={i} className="text-[10px] font-bold leading-snug" style={{ color: '#0C0A09', opacity: 0.72 }}>
+                                  · {d}
                                 </div>
                               ))}
+                            </div>
+                          ) : (
+                            <div className="mt-2 text-[10px] font-bold text-muted-foreground/80">
+                              命盘基准分 {mingPanScore ? (mingPanScore.displayScore >= 0 ? '+' : '') + mingPanScore.displayScore : '—'}
                             </div>
                           )}
                         </div>
@@ -2363,12 +2454,19 @@ export default function BaZiAnalyzerPage() {
       {/* 页脚 */}
       <footer className="w-full border-t border-border/40 bg-background/80 py-8 backdrop-blur-sm">
         <div className="mx-auto max-w-7xl px-4 text-center text-sm text-muted-foreground md:px-6">
-          <p style={{ fontFamily: "'Noto Serif SC', serif" }}>
-            你智哥的阴阳分析系统 · 以太极阴阳为体，以月气动应为用
+          <p style={{ fontFamily: "'Maoti', 'Noto Serif SC', serif", fontSize: '18px', letterSpacing: '0.05em' }}>
+            沛然堂 · 以太极阴阳为体，以月气动应为用
           </p>
           <p className="mt-1 text-xs">本工具仅供命理研究与学习参考，不构成任何人生决策建议</p>
           <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-[11px] font-bold text-muted-foreground">
             v{APP_VERSION} · 正式版
+          </p>
+          {/* 内部代码声明：置于页面最下方 */}
+          <p
+            className="mx-auto mt-6 max-w-3xl text-center text-[12px] font-medium leading-relaxed tracking-wider"
+            style={{ fontFamily: "'Noto Serif SC', serif", color: 'var(--foreground)', opacity: 0.55 }}
+          >
+            内部代码 · 不可商用盈利 · 公开代码仅作为无害公开供人民群众监督
           </p>
         </div>
       </footer>
