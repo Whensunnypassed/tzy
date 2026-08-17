@@ -8,6 +8,12 @@ import {
   type IHeavenlyStem,
   type IEarthlyBranch,
 } from '@/data/bazidata';
+import {
+  getMonthBranchByExactTime,
+  isBeforeLiChun,
+  getDaysToNextTerm,
+  getDaysToPrevTerm,
+} from '@/utils/solarTermsCalc';
 
 // 十天干索引
 const STEMS = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
@@ -146,34 +152,11 @@ const getDayPillar = (year: number, month: number, day: number): { stem: string;
   return { stem: STEMS[stemIndex], branch: BRANCHES[branchIndex] };
 };
 
-// 立春日期近似（简化：每年2月4日左右为立春）
-// 精确算法较复杂，这里使用2月4日作为立春近似值
-const LI_CHUN_APPROX_MONTH = 2;
-const LI_CHUN_APPROX_DAY = 4;
-
-// 二十四节气近似日期（用于月柱划分，只需要节）
-// 简化：每个月的节大概在4-8号，这里使用近似值
-// 更精确的简化：用每月的节气中点
-const JIE_QI_DAYS: Record<number, number> = {
-  1: 6,   // 小寒（近似）
-  2: 4,   // 立春
-  3: 6,   // 惊蛰
-  4: 5,   // 清明
-  5: 6,   // 立夏
-  6: 6,   // 芒种
-  7: 7,   // 小暑
-  8: 8,   // 立秋
-  9: 8,   // 白露
-  10: 8,  // 寒露
-  11: 7,  // 立冬
-  12: 7,  // 大雪
-};
-
-// 判断年柱（以立春为界）
-const getYearPillar = (year: number, month: number, day: number): { stem: string; branch: string } => {
+// 判断年柱（以精确立春时刻为界）
+const getYearPillar = (year: number, month: number, day: number, hour: number, minute: number): { stem: string; branch: string } => {
   let lunarYear = year;
-  // 如果在立春前，属上一年
-  if (month < LI_CHUN_APPROX_MONTH || (month === LI_CHUN_APPROX_MONTH && day < LI_CHUN_APPROX_DAY)) {
+  // 使用精确节气时间判断是否在立春之前
+  if (isBeforeLiChun(year, month, day, hour, minute)) {
     lunarYear = year - 1;
   }
   // 年干公式：(年份-3) % 10
@@ -183,45 +166,17 @@ const getYearPillar = (year: number, month: number, day: number): { stem: string
   return { stem: STEMS[stemIndex === 0 ? 9 : stemIndex - 1], branch: BRANCHES[branchIndex === 0 ? 11 : branchIndex - 1] };
 };
 
-// 判断月柱（以节令为界）
+// 判断月柱（以精确节气时刻为界）
 const getMonthPillar = (
   yearStem: string,
   year: number,
   month: number,
   day: number,
+  hour: number,
+  minute: number,
 ): { stem: string; branch: string; branchIndex: number } => {
-  // 计算月支索引（0=寅月对应农历正月）
-  // 立春后=寅月（第1个月）
-  let monthBranchIndex: number;
-
-  if (month < 2 || (month === 2 && day < JIE_QI_DAYS[2])) {
-    // 大寒~立春前 = 丑月（十二月）
-    monthBranchIndex = 11;
-  } else if (month === 2 || (month === 3 && day < JIE_QI_DAYS[3])) {
-    // 立春~惊蛰前 = 寅月（正月）
-    monthBranchIndex = 0;
-  } else if (month === 3 || (month === 4 && day < JIE_QI_DAYS[4])) {
-    monthBranchIndex = 1; // 卯月
-  } else if (month === 4 || (month === 5 && day < JIE_QI_DAYS[5])) {
-    monthBranchIndex = 2; // 辰月
-  } else if (month === 5 || (month === 6 && day < JIE_QI_DAYS[6])) {
-    monthBranchIndex = 3; // 巳月
-  } else if (month === 6 || (month === 7 && day < JIE_QI_DAYS[7])) {
-    monthBranchIndex = 4; // 午月
-  } else if (month === 7 || (month === 8 && day < JIE_QI_DAYS[8])) {
-    monthBranchIndex = 5; // 未月
-  } else if (month === 8 || (month === 9 && day < JIE_QI_DAYS[9])) {
-    monthBranchIndex = 6; // 申月
-  } else if (month === 9 || (month === 10 && day < JIE_QI_DAYS[10])) {
-    monthBranchIndex = 7; // 酉月
-  } else if (month === 10 || (month === 11 && day < JIE_QI_DAYS[11])) {
-    monthBranchIndex = 8; // 戌月
-  } else if (month === 11 || (month === 12 && day < JIE_QI_DAYS[12])) {
-    monthBranchIndex = 9; // 亥月
-  } else {
-    monthBranchIndex = 10; // 子月
-  }
-
+  // 使用精确节气时间计算月支
+  const { monthBranchIndex } = getMonthBranchByExactTime(year, month, day, hour, minute);
   const stem = getMonthStem(yearStem, monthBranchIndex);
   return { stem, branch: MONTH_BRANCHES[monthBranchIndex], branchIndex: monthBranchIndex };
 };
@@ -313,41 +268,16 @@ const JIA_ZI_60 = [
   '甲寅', '乙卯', '丙辰', '丁巳', '戊午', '己未', '庚申', '辛酉', '壬戌', '癸亥',
 ];
 
-// 各月节的近似日期（阳历，用于起运年龄计算）
-// 索引对应节气（0=立春、1=惊蛰、2=清明... 11=大雪）
-const JIE_QI_TABLE = [
-  { month: 2, day: 4, name: '立春' },   // 寅月开始
-  { month: 3, day: 6, name: '惊蛰' },   // 卯月开始
-  { month: 4, day: 5, name: '清明' },   // 辰月开始
-  { month: 5, day: 6, name: '立夏' },   // 巳月开始
-  { month: 6, day: 6, name: '芒种' },   // 午月开始
-  { month: 7, day: 7, name: '小暑' },   // 未月开始
-  { month: 8, day: 8, name: '立秋' },   // 申月开始
-  { month: 9, day: 8, name: '白露' },   // 酉月开始
-  { month: 10, day: 8, name: '寒露' },  // 戌月开始
-  { month: 11, day: 7, name: '立冬' },  // 亥月开始
-  { month: 12, day: 7, name: '大雪' },  // 子月开始
-  { month: 1, day: 6, name: '小寒' },   // 丑月开始
-];
-
-// 计算两个日期之间的天数差
-const diffDays = (y1: number, m1: number, d1: number, y2: number, m2: number, d2: number): number => {
-  const date1 = new Date(y1, m1 - 1, d1);
-  const date2 = new Date(y2, m2 - 1, d2);
-  return Math.round(Math.abs(date2.getTime() - date1.getTime()) / (1000 * 60 * 60 * 24));
-};
-
 // 大运排布
 // 顺逆判断：阳年生男、阴年生女 → 顺排；阴年生男、阳年生女 → 逆排
-// 阳年 = 年干为甲丙戊庚壬（奇数位），阴年 = 年干为乙丁己辛癸（偶数位）
-// 以月柱干支为基准，顺排取下一个、逆排取上一个，沿60甲子序列推进
 // 起运岁数：从出生日到最近一个节（顺排数到下一个节，逆排数到上一个节）
-// 三天折合一岁，一天折合四个月，一个时辰折合十天
+// 三天折合一岁，使用精确节气时间计算
 const getDaYun = (
   year: number,
   month: number,
   day: number,
   hour: number,
+  minute: number,
   gender: 'male' | 'female',
   yearStem: string,
   monthStem: string,
@@ -377,7 +307,7 @@ const getDaYun = (
       index: i,
       stem: ganzhi[0],
       branch: ganzhi[1],
-      startAge: 0, // 稍后计算
+      startAge: 0,
       startYear: 0,
       endYear: 0,
       daysToJie: 0,
@@ -385,42 +315,17 @@ const getDaYun = (
   }
 
   // 4. 计算起运年龄（三天折合一岁）
-  // 顺排：数到下一个节（出生之后的第一个节）
-  // 逆排：数到上一个节（出生之前的最后一个节）
-  let daysToJie = 0;
-
-  const currentJie = JIE_QI_TABLE[monthBranchIndex];
-  const nextJieIndex = (monthBranchIndex + 1) % 12;
-  const nextJie = JIE_QI_TABLE[nextJieIndex];
-  const prevJieIndex = (monthBranchIndex - 1 + 12) % 12;
-  const prevJie = JIE_QI_TABLE[prevJieIndex];
-
+  // 使用精确节气时间计算到下一个/上一个节的距离
+  let daysToJie: number;
   if (shunPai) {
-    // 顺排：数到下一个节（出生之后的第一个节）
-    let nextYear = year;
-    let nextMonth = nextJie.month;
-    // 如果生日已经过了本年的下一个节的月/日，则下一个节在次年
-    const birthMD = month * 100 + day;
-    const nextMD = nextMonth * 100 + nextJie.day;
-    if (birthMD >= nextMD) {
-      nextYear = year + 1;
-    }
-    daysToJie = diffDays(year, month, day, nextYear, nextMonth, nextJie.day);
+    // 顺排：数到出生后第一个"节"
+    daysToJie = getDaysToNextTerm(year, month, day, hour, minute);
   } else {
-    // 逆排：数到上一个节（出生之前的最后一个节）
-    let prevYear = year;
-    let prevMonth = prevJie.month;
-    // 如果生日早于本年的上一个节的月/日，则上一个节在上一年
-    const birthMD = month * 100 + day;
-    const prevMD = prevMonth * 100 + prevJie.day;
-    if (birthMD <= prevMD) {
-      prevYear = year - 1;
-    }
-    daysToJie = diffDays(year, month, day, prevYear, prevMonth, prevJie.day);
+    // 逆排：数到出生前最近一个"节"
+    daysToJie = getDaysToPrevTerm(year, month, day, hour, minute);
   }
 
-  // 三天折合一岁，一天折合四个月，一个时辰折合十天
-  // 简化计算：起运岁数 = 天数 / 3（保留到小数点后1位，约3.2岁）
+  // 三天折合一岁
   const startAge = Math.max(1, Math.round((daysToJie / 3) * 10) / 10);
   const startAgeInt = Math.floor(startAge);
 
@@ -430,7 +335,7 @@ const getDaYun = (
     dayunList[i].startAge = daYunStartAge;
     dayunList[i].startYear = year + daYunStartAge;
     dayunList[i].endYear = dayunList[i].startYear + 9;
-    dayunList[i].daysToJie = daysToJie;
+    dayunList[i].daysToJie = Math.round(daysToJie);
   }
 
   return dayunList;
@@ -546,11 +451,11 @@ export function calculateBaZi(
   // 真太阳时校正
   const trueSolar = adjustTrueSolarTime(year, month, day, hour, minute, longitude);
 
-  // 年柱
-  const yearPillar = getYearPillar(year, month, day);
+  // 年柱（使用真太阳时，精确到分钟）
+  const yearPillar = getYearPillar(year, month, day, trueSolar.hour, trueSolar.minute);
 
-  // 月柱
-  const monthPillar = getMonthPillar(yearPillar.stem, year, month, day);
+  // 月柱（使用真太阳时，精确到分钟）
+  const monthPillar = getMonthPillar(yearPillar.stem, year, month, day, trueSolar.hour, trueSolar.minute);
 
   // 日柱（注意：23点后日柱要加一天，为次日子时）
   let dayYear = year;
@@ -581,8 +486,8 @@ export function calculateBaZi(
     shiShen: isDay ? '日主' : getShiShen(dayMaster, stem),
   });
 
-  // 大运
-  const daYun = getDaYun(year, month, day, hour, gender, yearPillar.stem, monthPillar.stem, monthPillar.branch, monthPillar.branchIndex);
+  // 大运（使用真太阳时精确节气计算）
+  const daYun = getDaYun(year, month, day, trueSolar.hour, trueSolar.minute, gender, yearPillar.stem, monthPillar.stem, monthPillar.branch, monthPillar.branchIndex);
 
   return {
     year: makePillar(yearPillar.stem, yearPillar.branch),
