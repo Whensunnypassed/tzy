@@ -28,6 +28,7 @@ import {
   calculateElementPower,
   analyzeMingJuPattern,
   analyzeWealthNobility,
+  scoreMingPan,
   analyzeDaYunLiuNian,
   calculateYinYangBalance,
   calculateColdHotBalance,
@@ -626,6 +627,12 @@ export default function BaZiAnalyzerPage() {
     return analyzeWealthNobility(chart, monthQi, yongJi, elementPower);
   }, [chart, monthQi, yongJi, elementPower]);
 
+  // 命盘综合评分（新机制：三维度平衡度+用神+忌神，作为大运流年联动基准）
+  const mingPanScore = useMemo(() => {
+    if (!chart || !yongJi) return null;
+    return scoreMingPan(chart, yongJi);
+  }, [chart, yongJi]);
+
   const daYunAnalysis = useMemo(() => {
     if (!chart || !yongJi || !monthQi || !elementPower) return null;
     return analyzeDaYunLiuNian(chart, yongJi, monthQi, elementPower, currentYear);
@@ -677,11 +684,13 @@ export default function BaZiAnalyzerPage() {
     const minusC = toC(Number(row.minusSumRaw) || 0);
     const otherC = toC(Number(row.otherSumRaw) || 0);
 
-    // 趋势加成 = 最终综合分 - 原始分压缩值（若无 plusSumRaw/minusSumRaw/otherSumRaw 等明细字段，趋势为 0 不展示）
+    // 命盘基准分（联动）：大运/流年综合分 = 命盘基准 + 岁运调整
+    const mingPanBase = typeof row.mingPanBase === 'number' ? row.mingPanBase : 0;
+    // 趋势加成 = 最终综合分 - 命盘基准 - 原始分压缩值（若无 plusSumRaw/minusSumRaw/otherSumRaw 等明细字段，趋势为 0 不展示）
     const hasDetail = row.plusSumRaw !== undefined || row.minusSumRaw !== undefined || row.otherSumRaw !== undefined;
     let trendC = 0;
     if (hasDetail && row.rawScore !== undefined) {
-      trendC = Math.round((displayScore - toC(row.rawScore)) * 10) / 10;
+      trendC = Math.round((displayScore - toC(row.rawScore) - mingPanBase) * 10) / 10;
     }
 
     if (!hasDetail) return null;
@@ -709,6 +718,7 @@ export default function BaZiAnalyzerPage() {
         {pill('加分', plusC, '#047857')}
         {pill('扣分', minusC, '#DC2626')}
         {Math.abs(otherC) >= 0.05 && pill('其他', otherC, '#6D28D9')}
+        {Math.abs(mingPanBase) >= 0.05 && pill('命盘', mingPanBase, '#0EA5E9')}
         {Math.abs(trendC) >= 0.05 && pill('趋势', trendC, '#B45309')}
         <span className="mx-0.5 text-[11px] font-black text-muted-foreground">=</span>
         <span
@@ -1626,22 +1636,10 @@ export default function BaZiAnalyzerPage() {
                         '拉':       { bg: '#FFF7ED', border: '#EA580C', ring: '#FB923C', text: '#0C0A09', sub: '#C2410C' },
                         '拉完了':   { bg: '#FEF2F2', border: '#B91C1C', ring: '#EF4444', text: '#0C0A09', sub: '#991B1B' },
                       };
-                      const meta = toneMeta[wealthNobility.overallLevel] ?? toneMeta['npc'];
-                      // 把 overallDesc 里现成的显现信息做两个小标签（从描述里抓即可，不再重复跑算法）
-                      const hasYang = /阳气.*?(\d+)%/.exec(wealthNobility.overallDesc);
-                      const hasYin = /阴气.*?(\d+)%/.exec(wealthNobility.overallDesc);
-                      const yangPct = hasYang ? Number(hasYang[1]) : null;
-                      const yinPct  = hasYin  ? Number(hasYin[1])  : null;
-                      const yangTag = yangPct == null ? '阳?' : yangPct >= 28 ? '阳显' : yangPct >= 15 ? '阳微显' : yangPct >= 8 ? '阳弱' : '阳隐';
-                      const yinTag  = yinPct  == null ? '阴?' : yinPct  >= 28 ? '阴显' : yinPct  >= 15 ? '阴微显' : yinPct  >= 8 ? '阴弱' : '阴隐';
-                      // 气息冲突标签
-                      const conflictMatch = /气息(无冲突|微冲突|明显冲突|严重冲突)/.exec(wealthNobility.overallDesc);
-                      const qiTag = conflictMatch ? conflictMatch[1] : '';
-                      const qiColor =
-                        qiTag === '无冲突' ? '#059669' :
-                        qiTag === '微冲突' ? '#D97706' :
-                        qiTag === '明显冲突' ? '#EA580C' :
-                        qiTag === '严重冲突' ? '#B91C1C' : '#475569';
+                      const level = (mingPanScore?.level ?? wealthNobility?.overallLevel ?? 'npc') as string;
+                      const meta = toneMeta[level] ?? toneMeta['npc'];
+                      // 三维度明细（新机制：阴阳平衡度 + 用神力量 + 忌神状态）
+                      const detail = mingPanScore?.detail ?? [];
                       return (
                         <div
                           className="rounded-xl p-4 transition-transform hover:-translate-y-0.5"
@@ -1658,35 +1656,25 @@ export default function BaZiAnalyzerPage() {
                               fontFamily: "'Noto Serif SC', serif",
                               lineHeight: '1.2',
                               color: meta.text,
-                              fontSize: wealthNobility.overallLevel.length >= 3 ? '18px' : '26px',
+                              fontSize: level.length >= 3 ? '18px' : '26px',
                               fontWeight: 900,
                               letterSpacing: '0.06em',
                             }}
                           >
-                            {wealthNobility.overallLevel}
+                            {level}
                           </div>
-                          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                            <span
-                              className="inline-flex items-center rounded-full px-2 py-[2px] text-[10px] font-semibold"
-                              style={{ background: '#FFEDD5', color: '#9A3412' }}
-                            >
-                              {yangTag}
-                            </span>
-                            <span
-                              className="inline-flex items-center rounded-full px-2 py-[2px] text-[10px] font-semibold"
-                              style={{ background: '#DBEAFE', color: '#1E3A8A' }}
-                            >
-                              {yinTag}
-                            </span>
-                            {qiTag && (
-                              <span
-                                className="inline-flex items-center rounded-full px-2 py-[2px] text-[10px] font-semibold"
-                                style={{ background: `${qiColor}14`, color: qiColor, border: `1px solid ${qiColor}40` }}
-                              >
-                                {qiTag}
-                              </span>
-                            )}
+                          <div className="mt-2 text-[11px] font-bold" style={{ color: meta.sub }}>
+                            综合分 {mingPanScore ? (mingPanScore.displayScore >= 0 ? '+' : '') + mingPanScore.displayScore : '—'}
                           </div>
+                          {detail.length > 0 && (
+                            <div className="mt-2 space-y-1">
+                              {detail.map((d, i) => (
+                                <div key={i} className="text-[11px] font-bold leading-snug" style={{ color: '#0C0A09', opacity: 0.72 }}>
+                                  {d}
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       );
                     })()}

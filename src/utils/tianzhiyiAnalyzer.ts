@@ -1698,6 +1698,15 @@ export function compressScore(rawScore: number): number {
   return Math.round((rawScore / RAW_SCORE_DIVISOR) * 10) / 10;
 }
 
+// 五档共用文案（命盘 / 大运 / 流年统一）
+const WU_DANG_BAND: Record<WuDangLevel, string> = {
+  夯:       '大吉之运：气机鼎盛、夯实到底，可成大事',
+  人上人:   '吉运：事业台阶明显向上，助缘深厚',
+  npc:      '平常运：无功无过，稳中求进即可',
+  拉:       '凶运：加剧偏枯或逆月令喜用，宜守不宜攻',
+  拉完了:   '大凶之运：用神被彻底压制，最宜韬光养晦、切不可妄动',
+};
+
 /** 大运/流年 5 档分级：按"压缩分"映射到夯~拉完了 */
 export function wuDangFromScore(rawScore: number): { level: WuDangLevel; band: string; displayScore: number } {
   const displayScore = compressScore(rawScore);
@@ -1709,14 +1718,81 @@ export function wuDangFromScore(rawScore: number): { level: WuDangLevel; band: s
   else if (displayScore >= -8) level = '拉';
   else level = '拉完了';
 
-  const bandByLevel: Record<WuDangLevel, string> = {
-    夯:       '大吉之运：气机鼎盛、夯实到底，可成大事',
-    人上人:   '吉运：事业台阶明显向上，助缘深厚',
-    npc:      '平常运：无功无过，稳中求进即可',
-    拉:       '凶运：加剧偏枯或逆月令喜用，宜守不宜攻',
-    拉完了:   '大凶之运：用神被彻底压制，最宜韬光养晦、切不可妄动',
-  };
-  return { level, band: bandByLevel[level], displayScore };
+  return { level, band: WU_DANG_BAND[level], displayScore };
+}
+
+// 命盘基准 + 岁运调整 叠加后的五档映射（±14 尺度，阈值为单边 ±7 的两倍）
+export function wuDangFromCombined(combinedDisplayScore: number): { level: WuDangLevel; band: string } {
+  let level: WuDangLevel;
+  if (combinedDisplayScore > 10) level = '夯';
+  else if (combinedDisplayScore > 4) level = '人上人';
+  else if (combinedDisplayScore >= -4) level = 'npc';
+  else if (combinedDisplayScore >= -16) level = '拉';
+  else level = '拉完了';
+  return { level, band: WU_DANG_BAND[level] };
+}
+
+// 命盘综合评分（新机制）：三维度——阴阳平衡度 + 用神力量 + 忌神状态
+// 输出 rawScore（±26 尺度，与 scoreGanZhiImpact 同口径），用 wuDangFromScore 映射五档
+export function scoreMingPan(
+  chart: BaZiChart,
+  yongJi: YongJiResult,
+): {
+  rawScore: number;
+  displayScore: number;
+  level: WuDangLevel;
+  band: string;
+  balanceScore: number;
+  usefulScore: number;
+  tabooScore: number;
+  detail: string[];
+} {
+  const pillars: Pillar[] = [chart.year, chart.month, chart.day, chart.hour];
+  const pillarNames = ['年', '月', '日', '时'];
+
+  // —— 维度1：阴阳平衡度（±11）—— 土已并入阴阳（燥土/阳土归阳，湿土/阴土归阴）
+  const { yang, yin } = calculateYinYangBalance(chart);
+  const yinYangDiff = Math.abs(yang - yin); // 0(均衡) ~ 100(彻底偏枯)
+  const balanceScore = Math.round((11 - yinYangDiff * 0.22) * 10) / 10; // 0→+11, 100→-11
+
+  // —— 维度2&3：用神/忌神力量占比（基于干支级标记，含土的干支级判断）——
+  const weights = [
+    { stem: 1.0, branch: 1.5 }, // 年
+    { stem: 1.2, branch: 2.5 }, // 月
+    { stem: 1.5, branch: 1.8 }, // 日
+    { stem: 0.8, branch: 1.2 }, // 时
+  ];
+  let usefulPower = 0;
+  let tabooPower = 0;
+  let totalPower = 0;
+  pillars.forEach((pillar, idx) => {
+    const w = weights[idx];
+    const stemMark = yongJi.stemMarks[`${pillarNames[idx]}干`];
+    const branchMark = yongJi.branchMarks[`${pillarNames[idx]}支`];
+    if (stemMark === 'useful') usefulPower += w.stem;
+    else if (stemMark === 'taboo') tabooPower += w.stem;
+    totalPower += w.stem;
+    if (branchMark === 'useful') usefulPower += w.branch;
+    else if (branchMark === 'taboo') tabooPower += w.branch;
+    totalPower += w.branch;
+  });
+
+  const usefulPct = totalPower > 0 ? Math.round((usefulPower / totalPower) * 100) : 0;
+  const tabooPct = totalPower > 0 ? Math.round((tabooPower / totalPower) * 100) : 0;
+  const usefulScore = Math.round((usefulPct - 50) * 0.18 * 10) / 10; // 100%→+9, 0%→-9
+  const tabooScore = Math.round((50 - tabooPct) * 0.12 * 10) / 10;   // 0%→+6, 100%→-6
+
+  const rawScore = Math.round((balanceScore + usefulScore + tabooScore) * 10) / 10;
+  const { level, band, displayScore } = wuDangFromScore(rawScore);
+
+  const fmt = (n: number) => (n >= 0 ? '+' : '') + n;
+  const detail = [
+    `阴阳平衡度：阳气${yang}%·阴气${yin}%（偏枯差${yinYangDiff}%）→ ${fmt(balanceScore)}`,
+    `用神力量：占比${usefulPct}% → ${fmt(usefulScore)}`,
+    `忌神状态：占比${tabooPct}% → ${fmt(tabooScore)}`,
+  ];
+
+  return { rawScore, displayScore, level, band, balanceScore, usefulScore, tabooScore, detail };
 }
 
 /**
@@ -2663,6 +2739,9 @@ export function analyzeDaYunLiuNian(
   }>;
 } {
   const yinYangPct = calculateYinYangBalance(chart);
+  // 命盘基准分（新机制）：先天层次，作为大运/流年联动的基准
+  const mingPan = scoreMingPan(chart, yongJi);
+  const mingPanCompress = mingPan.displayScore;
 
   // 把「阴阳作用→某流年/某运」的映射抽象成一个小工具，避免重复
   const calcLiuNian = (year: number, stem: string, branch: string) => {
@@ -2886,6 +2965,38 @@ export function analyzeDaYunLiuNian(
     if ((ln as any).downgradeAlert) {
       (ln as any).topReasons = [...((ln as any).topReasons || []), `⚠ 前年尚吉，此年转凶（下坡）`];
     }
+  }
+
+  // —— 命盘基准联动：大运/流年分 = 命盘基准分 + 岁运调整分（±14 尺度，用 wuDangFromCombined 映射） ——
+  for (const dy of daYunWithFortune as any[]) {
+    const dyCombined = mingPanCompress + (dy.displayScore || 0);
+    const dyMap = wuDangFromCombined(dyCombined);
+    dy.displayScore = Math.round(dyCombined * 10) / 10;
+    dy.score = dy.displayScore;
+    dy.level = dyMap.level;
+    dy.fortune = dyMap.level;
+    dy.band = dyMap.band;
+    dy.mingPanBase = mingPanCompress;
+    for (const ln of (dy.liuNian10 || [])) {
+      const lnCombined = mingPanCompress + (ln.displayScore || 0);
+      const lnMap = wuDangFromCombined(lnCombined);
+      ln.displayScore = Math.round(lnCombined * 10) / 10;
+      ln.score = ln.displayScore;
+      ln.level = lnMap.level;
+      ln.fortune = lnMap.level;
+      ln.band = lnMap.band;
+      ln.mingPanBase = mingPanCompress;
+    }
+  }
+  for (const ln of recentLiuNian as any[]) {
+    const lnCombined = mingPanCompress + (ln.displayScore || 0);
+    const lnMap = wuDangFromCombined(lnCombined);
+    ln.displayScore = Math.round(lnCombined * 10) / 10;
+    ln.score = ln.displayScore;
+    ln.level = lnMap.level;
+    ln.fortune = lnMap.level;
+    ln.band = lnMap.band;
+    ln.mingPanBase = mingPanCompress;
   }
 
   return {
