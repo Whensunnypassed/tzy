@@ -14,6 +14,14 @@ import {
   getCurrentDaYunIndex,
 } from './baziCalculator';
 
+import {
+  SHI_ER_CHANG_SHENG,
+  WU_HU_DUN_MONTH_STEM,
+  NIAN_YUE_TAIJI_DEFS,
+  NIAN_YUE_TAIJI_CASES,
+  NIAN_TAIJI_RULES,
+} from '../data/bazidata';
+
 // 四象与四季月令气机真机（《自然易鉴》第七章第二节）
 export const FOUR_SYMBOL_META: Record<string, {
   symbol: '少阳' | '老阳' | '少阴' | '老阴';
@@ -356,6 +364,263 @@ export function analyzeYongJi(chart: BaZiChart, monthQi: MonthQiResult): YongJiR
     stemMarks,
     branchMarks,
     description,
+  };
+}
+
+// ============================================================
+// 年月太极分析（《太极阴阳法·年月分析核心基础》）
+// 核心定论：年为命局根本，年月组合构成命局核心太极，日时为根本太极的动态应验环节；
+//           吉凶唯一依据为阴阳二气的存缺、损伤、平衡状态；十神不参与富贵贫贱判断。
+// 判定流程：五虎遁搭年月框架 → 年干定位（先天年吉）→ 年支三类作用 → 两仪气机厚薄（十二长生量化）
+//           → 年月太极三态（完整/受损/绝境）→ 日时动态应验（维护/破坏）
+// ============================================================
+export interface NianYueYiGong {
+  stem: string;   // 仪的核心天干
+  state: '彰显' | '暗藏' | '不见';
+  power: number;  // 0~100 气机力量分
+  changSheng: string; // 该天干落月令的十二长生状态
+  desc: string;
+}
+
+export interface NianYueTaiJiResult {
+  // —— 年月框架 ——
+  yearGZ: string;
+  monthGZ: string;
+  wuHuDunValid: boolean;
+  wuHuDunDesc: string;
+  yearStemChangSheng: string;       // 年干落月令的十二长生状态
+  // —— 年干先天吉凶 ——
+  yearStemJiXiong: '先天年吉' | '先天年平' | '先天年忌';
+  yearStemReason: string;
+  // —— 年支三类作用 ——
+  yearBranchAction: '落实兑现' | '阻碍否定' | '制衡借利' | '中平';
+  yearBranchReason: string;
+  // —— 月令两仪 ——
+  taijiName: string;
+  taijiNote: string;
+  yangYi: NianYueYiGong;
+  yinYi: NianYueYiGong;
+  // —— 年月太极三态 ——
+  state: '两仪完整' | '两仪受损' | '两仪绝境';
+  stateDesc: string;
+  // —— 日时动态应验 ——
+  riShiEffect: '维护' | '破坏' | '中平';
+  riShiReason: string;
+  // —— 综合结论 ——
+  verdict: string;
+  evidence: string[];
+  matchedCase: { title: string; analysis: string } | null;
+}
+
+const STEMS_ORDER = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
+
+// 十二长生 → 气机强弱分（长生/临官/帝旺/冠带=有力，沐浴/养/衰/病/胎=中平，死/墓/绝=无力）
+const CHANG_SHENG_POWER: Record<string, number> = {
+  长生: 20, 临官: 22, 帝旺: 24, 冠带: 18,
+  沐浴: 8, 养: 6, 衰: 4, 病: 2, 胎: 2,
+  死: -18, 墓: -12, 绝: -20,
+};
+
+const HIDDEN_STEM_MAP: Record<string, string[]> = {
+  子: ['癸'], 丑: ['己', '辛', '癸'], 寅: ['甲', '丙', '戊'], 卯: ['乙'],
+  辰: ['戊', '乙', '癸'], 巳: ['丙', '戊', '庚'], 午: ['丁', '己'], 未: ['己', '丁', '乙'],
+  申: ['庚', '戊', '壬'], 酉: ['辛'], 戌: ['戊', '辛', '丁'], 亥: ['壬', '甲'],
+};
+
+export function analyzeNianYueTaiJi(
+  chart: BaZiChart,
+  monthQi: MonthQiResult,
+  yongJi: YongJiResult,
+): NianYueTaiJiResult {
+  // 五行生克（局部映射，避免依赖文件后部导出的 SHENG_ORDER/KE_ORDER 造成的声明顺序问题）
+  const KE_MAP: Record<string, string> = { wood: 'earth', earth: 'water', water: 'fire', fire: 'metal', metal: 'wood' };
+  const SHENG_MAP: Record<string, string> = { wood: 'fire', fire: 'earth', earth: 'metal', metal: 'water', water: 'wood' };
+  const pillars: Pillar[] = [chart.year, chart.month, chart.day, chart.hour];
+  const chartStems = pillars.map((p) => p.stem);
+  const chartBranches = pillars.map((p) => p.branch);
+  const evidence: string[] = [];
+
+  // ① 五虎遁·年上起月：验证年月组合是否依五虎遁成立（年干定月干，确立命局基础太极框架）
+  const firstMonthStem = WU_HU_DUN_MONTH_STEM[chart.year.stem];
+  const firstIdx = STEMS_ORDER.indexOf(firstMonthStem);
+  const expectedMonthStem = STEMS_ORDER[(firstIdx + chart.monthBranchIndex) % 10];
+  const wuHuDunValid = expectedMonthStem === chart.month.stem;
+  const wuHuDunDesc = `依五虎遁，${chart.year.stem}年自${firstMonthStem}寅月起顺推至${monthQi.monthName}得${expectedMonthStem}干${chart.month.branch}，与排盘${wuHuDunValid ? '一致（年月太极框架成立）' : '不一致（按交节时刻修正所致）'}。年干定月干，确立命局基础太极框架；月令具备全局规制权，统一定局中所有天干旺衰状态。`;
+  evidence.push(wuHuDunDesc);
+
+  // ② 月令两仪（当月固有太极：阳仪、阴仪核心干支）
+  const taijiDef = NIAN_YUE_TAIJI_DEFS.find((t) => t.months.includes(monthQi.monthName))
+    ?? NIAN_YUE_TAIJI_DEFS[0];
+
+  // ③ 年干定位：置于月令规制下，判其是否为月令平衡因子 → 先天年吉
+  const yearStemChangSheng = SHI_ER_CHANG_SHENG[chart.month.branch]?.[chart.year.stem] ?? '—';
+  let yearStemJiXiong: NianYueTaiJiResult['yearStemJiXiong'];
+  let yearStemReason: string;
+  const yearStemMark = yongJi.stemMarks['年干'];
+  const yearEl = elementName(STEM_ELEMENTS[chart.year.stem]);
+  if (chart.year.stem === taijiDef.yangYi || chart.year.stem === taijiDef.yinYi) {
+    yearStemJiXiong = '先天年吉';
+    yearStemReason = `年干${chart.year.stem}（${yearEl}）直接命中${monthQi.monthName}${taijiDef.name}的两仪核心（${taijiDef.yangYi}${taijiDef.yinYi}），为月令所需的平衡因子，先天年吉，此根基永久存在。年干落月令十二长生「${yearStemChangSheng}」，${CHANG_SHENG_POWER[yearStemChangSheng] >= 0 ? '气机有力，先天根基扎实' : '气机偏弱，先天根基稍薄'}。`;
+  } else if (yearStemMark === 'useful') {
+    yearStemJiXiong = '先天年吉';
+    yearStemReason = `年干${chart.year.stem}（${yearEl}）属${monthQi.monthName}月令用神（平衡方向），为月令所需的平衡因子，先天年吉，此根基永久存在。年干落月令十二长生「${yearStemChangSheng}」。`;
+  } else if (yearStemMark === 'taboo') {
+    yearStemJiXiong = '先天年忌';
+    yearStemReason = `年干${chart.year.stem}（${yearEl}）属${monthQi.monthName}月令忌神方向，违背月令规制，先天年忌——凶性底色存在，需年月日时制衡方能转圜。年干落月令十二长生「${yearStemChangSheng}」。`;
+  } else {
+    yearStemJiXiong = '先天年平';
+    yearStemReason = `年干${chart.year.stem}（${yearEl}）不直接命中月令两仪，亦不在月令核心喜忌之上，先天年平——根基平常，吉凶全凭岁运引动。年干落月令十二长生「${yearStemChangSheng}」。`;
+  }
+  evidence.push(`年干定位：${yearStemReason}`);
+
+  // ④ 年支作用：年干主天象契机，年支主落地成形（在天成象，在地成形）
+  // 判定优先级（按《太极阴阳法》甲X年·丙寅月案例校准）：
+  //   核心关切是阴仪贵气的保全——年支伤阴仪（克/火蒸水/土晦火）→ 阻碍否定；
+  //   年支落实阴仪（同气/生）或稳固阳仪 → 落实兑现；其余视月令喜忌。
+  const yearBranchEl = chart.year.branchElement;
+  const yearStemEl = chart.year.stemElement;
+  const yangYiEl = STEM_ELEMENTS[taijiDef.yangYi];   // 阳仪元素（富气）
+  const yinYiEl = STEM_ELEMENTS[taijiDef.yinYi];     // 阴仪元素（贵气）
+  const branchShangYin = KE_MAP[yearBranchEl] === yinYiEl           // 年支克阴仪（如辰土克癸水）
+    || (yinYiEl === 'water' && yearBranchEl === 'fire')             // 火旺蒸干水（如午火蒸癸水）
+    || (yinYiEl === 'fire' && yearBranchEl === 'earth');            // 土晦火（如戌土晦丁火）
+  const branchFuYin = yearBranchEl === yinYiEl || SHENG_MAP[yearBranchEl] === yinYiEl;  // 同气/生阴仪（如子水落实癸水）
+  const branchFuYang = yearBranchEl === yangYiEl || SHENG_MAP[yearBranchEl] === yangYiEl; // 稳固阳仪（如寅木助丙火）
+  let yearBranchAction: NianYueTaiJiResult['yearBranchAction'];
+  let yearBranchReason: string;
+  const branchKeStem = KE_MAP[yearBranchEl] === yearStemEl; // 年支克年干
+  if (yearStemJiXiong === '先天年吉') {
+    if (branchKeStem || branchShangYin) {
+      yearBranchAction = '阻碍否定';
+      yearBranchReason = `年干得吉，但年支${chart.year.branch}（${elementName(yearBranchEl)}）${branchShangYin ? `克伤阴仪「${taijiDef.yinYi}」（贵气所在）` : `克年干${chart.year.stem}`}，予以否定：先天契机极佳，但现实落地阻碍重重，人生跌宕起伏。`;
+    } else if (branchFuYin || branchFuYang) {
+      yearBranchAction = '落实兑现';
+      yearBranchReason = `年干得吉，年支${chart.year.branch}（${elementName(yearBranchEl)}）${branchFuYin ? `落实阴仪「${taijiDef.yinYi}」（贵气得根）` : `稳固阳仪「${taijiDef.yangYi}」（富气得基）`}，先天年吉落地成形、兑现有力，若日时无破坏则完整兑现。`;
+    } else {
+      yearBranchAction = '中平';
+      yearBranchReason = `年干得吉，年支${chart.year.branch}（${elementName(yearBranchEl)}）对两仪无显著生克，先天年吉落地平稳，视日时岁运引动而定。`;
+    }
+  } else if (yearStemJiXiong === '先天年忌') {
+    if (branchKeStem || yongJi.usefulElements.includes(yearBranchEl) || branchFuYin) {
+      yearBranchAction = '制衡借利';
+      yearBranchReason = `年干为忌，年支${chart.year.branch}（${elementName(yearBranchEl)}）${branchKeStem ? `制衡克耗年干${chart.year.stem}` : '属月令用神方向'}：可借忌神得阶段性利好，但凶性底色不变，逢气机引动之时必应凶。`;
+    } else {
+      yearBranchAction = '中平';
+      yearBranchReason = `年干为忌，年支${chart.year.branch}（${elementName(yearBranchEl)}）未形成有效制衡，凶性无从化解，全凭日时岁运引动。`;
+    }
+  } else {
+    yearBranchAction = '中平';
+    yearBranchReason = `年干先天年平，年支${chart.year.branch}（${elementName(yearBranchEl)}）${branchFuYin ? '落实阴仪，落地略助吉' : branchShangYin ? '克伤阴仪，落地略添阻' : branchFuYang ? '稳固阳仪，落地略助吉' : yongJi.usefulElements.includes(yearBranchEl) ? '属月令用神方向，落地略助吉' : yongJi.tabooElements.includes(yearBranchEl) ? '属月令忌神方向，落地略添阻' : '无显著扶抑'}。`;
+  }
+  evidence.push(`年支作用：${yearBranchReason}`);
+
+  // ⑤ 两仪气机厚薄评估（十二长生为唯一气机强弱标准 + 透干/藏干/无现）
+  const evalYi = (yiStem: string): NianYueYiGong => {
+    const el = elementName(STEM_ELEMENTS[yiStem]);
+    const cs = SHI_ER_CHANG_SHENG[chart.month.branch]?.[yiStem] ?? '—';
+    let power = CHANG_SHENG_POWER[cs] ?? 0;
+    let state: NianYueYiGong['state'];
+    if (chartStems.includes(yiStem)) {
+      power += 60;
+      state = '彰显';
+    } else if (chartBranches.some((b) => (HIDDEN_STEM_MAP[b] || []).includes(yiStem))) {
+      power += 40;
+      state = '暗藏';
+    } else {
+      state = '不见';
+    }
+    // 受克损伤（四柱天干克此仪）
+    const hurtBy = chartStems.filter((s) => KE_MAP[STEM_ELEMENTS[s]] === STEM_ELEMENTS[yiStem]).length;
+    const hurt = hurtBy * 14;
+    power -= hurt;
+    const desc = `${yiStem}（${el}）${state}：落月令十二长生「${cs}」，${hurtBy > 0 ? `受天干${chartStems.filter((s) => KE_MAP[STEM_ELEMENTS[s]] === STEM_ELEMENTS[yiStem]).join('、')}克制（-${hurt}）` : '无天干克制'}，气机力量分 ${power}`;
+    return { stem: yiStem, state, power: Math.max(-30, Math.min(100, power)), changSheng: cs, desc };
+  };
+  const yangYi = evalYi(taijiDef.yangYi);
+  const yinYi = evalYi(taijiDef.yinYi);
+  evidence.push(`两仪评估：阳仪${yangYi.desc}；阴仪${yinYi.desc}`);
+
+  // ⑥ 年月太极三态（完整/受损/绝境）
+  // 常规：阳仪彰显（≥50）+ 阴仪有根（≥40）→ 完整；全盘木火特例：阳仪彰显（≥60）+ 阴仪暗藏有气（≥20）且不受重创 → 亦完整
+  let state: NianYueTaiJiResult['state'];
+  let stateDesc: string;
+  const yangOk = yangYi.power >= 50;
+  const yinOk = yinYi.power >= 40;
+  const yinRooted = yinYi.power >= 20 && yinYi.state === '暗藏';
+  if ((yangOk && yinOk) || (yangYi.power >= 60 && yinRooted)) {
+    state = '两仪完整';
+    stateDesc = `${taijiDef.name}两仪保全：阳仪「${taijiDef.yangYi}」气机彰显，阴仪「${taijiDef.yinYi}」${yinOk ? '有根稳固' : '暗藏无伤'}——年月太极根基完好，格局成贵成富的基础具备。${yangYi.power >= 60 && yinRooted ? '（全盘木火格局特例：阳仪彰显、阴仪暗藏无伤，亦可成富贵。）' : ''}`;
+  } else if (yangYi.power >= 20 && yinYi.power >= 20) {
+    state = '两仪受损';
+    stateDesc = `${taijiDef.name}两仪受损：阳仪「${taijiDef.yangYi}」${yangOk ? '尚可' : '气机偏弱'}，阴仪「${taijiDef.yinYi}」${yinOk ? '尚可' : '气机受抑'}——年月太极未绝，仍有富贵余地，成色取决于日时能否补救${yangYi.power < yinYi.power ? taijiDef.yangYi : taijiDef.yinYi}。`;
+  } else {
+    state = '两仪绝境';
+    stateDesc = `${taijiDef.name}两仪绝境：${yangYi.power < 20 ? `阳仪「${taijiDef.yangYi}」` : `阴仪「${taijiDef.yinYi}」`}彻底无根或遭重创压制，阴阳隔绝，年月太极不立——格局偏枯，最需日时/岁运大力度救助。`;
+  }
+  evidence.push(`年月太极三态：${state}。${stateDesc}`);
+
+  // ⑦ 日时动态应验（日时为年月太极的动态应验环节：维护或破坏两仪）
+  const riShi: Array<{ char: string; el: string }> = [
+    { char: chart.day.stem, el: chart.day.stemElement },
+    { char: chart.day.branch, el: chart.day.branchElement },
+    { char: chart.hour.stem, el: chart.hour.stemElement },
+    { char: chart.hour.branch, el: chart.hour.branchElement },
+  ];
+  const yiEls: string[] = [STEM_ELEMENTS[taijiDef.yangYi], STEM_ELEMENTS[taijiDef.yinYi]];
+  const hurtRiShi = riShi.filter((r) => yiEls.some((y) => KE_MAP[r.el] === y));
+  const helpRiShi = riShi.filter((r) => yiEls.includes(r.el) || yiEls.some((y) => SHENG_MAP[r.el] === y));
+  let riShiEffect: NianYueTaiJiResult['riShiEffect'];
+  let riShiReason: string;
+  if (hurtRiShi.length > 0 && hurtRiShi.length >= helpRiShi.length) {
+    riShiEffect = '破坏';
+    riShiReason = `日时${hurtRiShi.map((r) => r.char).join('、')}克损两仪（${yiEls.map(elementName).join('、')}），先天年月吉气落地受阻——先天契机佳，但现实落地阻碍重重，人生得失起伏明显。`;
+  } else if (helpRiShi.length > 0) {
+    riShiEffect = '维护';
+    riShiReason = `日时${helpRiShi.map((r) => r.char).join('、')}生扶两仪（${yiEls.map(elementName).join('、')}），先天年月吉气得日时动态维护，可落地兑现。`;
+  } else {
+    riShiEffect = '中平';
+    riShiReason = '日时干支对两仪无显著生克，先天年月吉凶应验视岁运引动而定。';
+  }
+  evidence.push(`日时动态应验：${riShiReason}`);
+
+  // ⑧ 综合结论
+  const matched = NIAN_YUE_TAIJI_CASES.find((c) => c.yearGZ === `${chart.year.stem}${chart.year.branch}` && c.monthGZ === `${chart.month.stem}${chart.month.branch}`) ?? null;
+  if (matched) evidence.push(`命中参考格局「${matched.title}」：${matched.analysis}`);
+
+  let verdict: string;
+  if (yearStemJiXiong === '先天年吉' && yearBranchAction === '落实兑现' && state === '两仪完整' && riShiEffect !== '破坏') {
+    verdict = `先天年吉·完整兑现：${chart.year.stem}${chart.year.branch}年干得吉、年支落实，${taijiDef.name}两仪保全，日时无破坏——先天根基永久存在，格局成富贵的基础已具备。`;
+  } else if (yearStemJiXiong === '先天年吉' && (yearBranchAction === '阻碍否定' || riShiEffect === '破坏')) {
+    verdict = `先天年吉·落地受阻：先天契机极佳，但${yearBranchAction === '阻碍否定' ? '年支' : '日时'}予以否定，现实落地阻碍重重——人生跌宕起伏，大起大落之象，需岁运补缺方见成效。`;
+  } else if (yearStemJiXiong === '先天年忌' && yearBranchAction === '制衡借利') {
+    verdict = `先天年忌·借忌得利：年干为忌而年支制衡，可借忌神得阶段性利好，但凶性底色不变——逢忌神气机引动之时必应凶，宜守不宜攻。`;
+  } else if (state === '两仪绝境') {
+    verdict = `年月太极绝境：${taijiDef.name}阴阳隔绝，格局偏枯——富贵根基薄弱，最需日时、岁运大力度救助，后天修身立德尤为关键。`;
+  } else {
+    verdict = `${yearStemJiXiong}，${yearBranchAction}，${state}——格局根基${state === '两仪完整' ? '扎实' : state === '两仪受损' ? '中平、有补救余地' : '偏薄'}，${riShiEffect === '破坏' ? '日时添阻，宜守待时' : riShiEffect === '维护' ? '日时维护，可期有成' : '平顺待引动'}。`;
+  }
+
+  return {
+    yearGZ: `${chart.year.stem}${chart.year.branch}`,
+    monthGZ: `${chart.month.stem}${chart.month.branch}`,
+    wuHuDunValid,
+    wuHuDunDesc,
+    yearStemChangSheng,
+    yearStemJiXiong,
+    yearStemReason,
+    yearBranchAction,
+    yearBranchReason,
+    taijiName: taijiDef.name,
+    taijiNote: taijiDef.note,
+    yangYi,
+    yinYi,
+    state,
+    stateDesc,
+    riShiEffect,
+    riShiReason,
+    verdict,
+    evidence,
+    matchedCase: matched ? { title: matched.title, analysis: matched.analysis } : null,
   };
 }
 
@@ -1052,10 +1317,13 @@ const getDirectReading = (stem: string, branch: string, gender: string): string 
 };
 
 // 命局模式分析
+// 重写评价标准（《太极阴阳法》）：年为格局根本，年月组合构成命局核心太极，格局基调以年月太极三态为首判；
+// 十神不参与格局吉凶判定，仅以阴阳二气的存缺、损伤、平衡状态为唯一依据
 export function analyzeMingJuPattern(chart: BaZiChart, monthQi: MonthQiResult, yongJi: YongJiResult): {
   mainShengKe: string[];
   patternType: string;
   description: string;
+  nianYueTaiJi: NianYueTaiJiResult;
 } {
   const pillars = [chart.year, chart.month, chart.day, chart.hour];
   const pillarNames = ['年', '月', '日', '时'];
@@ -1078,9 +1346,9 @@ export function analyzeMingJuPattern(chart: BaZiChart, monthQi: MonthQiResult, y
     }
   }
 
-  // 判断模式类型（融合《自然易鉴》第七章第三节·格局高低判定标准）
-  let patternType = '平衡模式';
-  let description = '';
+  // 判断模式类型（新标准：年月太极为根本，五行生克为辅助）
+  let patternType: string;
+  let description: string;
 
   const usefulCount = Object.values(yongJi.stemMarks).filter((v) => v === 'useful').length
     + Object.values(yongJi.branchMarks).filter((v) => v === 'useful').length;
@@ -1088,24 +1356,41 @@ export function analyzeMingJuPattern(chart: BaZiChart, monthQi: MonthQiResult, y
     + Object.values(yongJi.branchMarks).filter((v) => v === 'taboo').length;
   const fsMeta = FOUR_SYMBOL_META[monthQi.fourSymbol];
 
-  if (shengKeList.length >= 5) {
+  // 年月太极定格局根本（《太极阴阳法》：所有格局分析必须追溯年太极核心，月气仅提供当月阴阳平衡规则）
+  const nianYueTaiJi = analyzeNianYueTaiJi(chart, monthQi, yongJi);
+  const shengKeText = shengKeList.length > 0
+    ? `命局主要干支作用：${shengKeList.slice(0, 4).join('；')}。`
+    : '命局干支生克关系平缓，以气机流转为主。';
+  const yueLingText = `${monthQi.fourSymbol}月令真机：${fsMeta.coreMantra}。`;
+
+  if (nianYueTaiJi.state === '两仪完整') {
+    patternType = '年月太极成局（上等）';
+    description = `【${patternType}】年月构成核心太极「${nianYueTaiJi.taijiName}」，两仪保全：阳仪「${nianYueTaiJi.yangYi.stem}」气机彰显、阴仪「${nianYueTaiJi.yinYi.stem}」有根无伤。${nianYueTaiJi.verdict}${shengKeText}${yueLingText}此格局以年月太极定根基，日时行维护之责则富贵可期。`;
+  } else if (nianYueTaiJi.state === '两仪受损') {
+    patternType = '年月太极受损（中平）';
+    description = `【${patternType}】年月核心太极「${nianYueTaiJi.taijiName}」两仪受损：${nianYueTaiJi.yangYi.power < 50 ? `阳仪「${nianYueTaiJi.yangYi.stem}」气机偏弱` : `阴仪「${nianYueTaiJi.yinYi.stem}」气机受抑`}，格局根基未绝但成色减损。${nianYueTaiJi.verdict}${shengKeText}${yueLingText}格局高低取决于日时能否补救受损之一仪，岁运补缺则转机现。`;
+  } else if (nianYueTaiJi.state === '两仪绝境') {
+    patternType = '年月太极绝境（偏枯）';
+    description = `【${patternType}】年月核心太极「${nianYueTaiJi.taijiName}」两仪绝境，阴阳隔绝、格局偏枯。${nianYueTaiJi.verdict}${shengKeText}${yueLingText}此命富贵根基薄弱，最需日时、岁运大力度救助，后天修身立德尤为关键。`;
+  } else if (shengKeList.length >= 5) {
     patternType = '生克模式';
-    description = `命局中生克关系复杂，五行之间相互作用频繁。主要变化方式以五行生克为主导，体现为明显的制化关系。吉凶得失通过生克作用链条来判断，动应哪个五行就引动对应的生克链条。${monthQi.fourSymbol}月令真机：${fsMeta.coreMantra}。`;
+    description = `命局中生克关系复杂，五行之间相互作用频繁。主要变化方式以五行生克为主导，体现为明显的制化关系。吉凶得失通过生克作用链条来判断，动应哪个五行就引动对应的生克链条。${nianYueTaiJi.verdict}${yueLingText}`;
   } else if (Math.abs(usefulCount - tabooCount) <= 2) {
     patternType = '平衡模式';
-    description = `命局用神忌神力量相对均衡，整体以阴阳平衡为主要变化方式。用神与忌神相互制约，保持命局动态平衡。运年助用则吉，助忌则凶，平衡为吉，失衡为凶。${monthQi.fourSymbol}气机真机：${fsMeta.coreXiJi}。`;
+    description = `命局用神忌神力量相对均衡，整体以阴阳平衡为主要变化方式。用神与忌神相互制约，保持命局动态平衡。运年助用则吉，助忌则凶，平衡为吉，失衡为凶。${nianYueTaiJi.verdict}${yueLingText}`;
   } else if (usefulCount > tabooCount) {
     patternType = '得用模式（偏上等）';
-    description = `命局用神多于忌神，用神有力且无大破损。对应《自然易鉴》格局判定：月令得气、阴阳基本均衡——上等格局特征（富贵双全、福寿绵长）的基础。${monthQi.fourSymbol}月令核心：${fsMeta.coreMantra}。`;
+    description = `命局用神多于忌神，用神有力且无大破损。对应《自然易鉴》格局判定：月令得气、阴阳基本均衡——上等格局特征（富贵双全、福寿绵长）的基础。${nianYueTaiJi.verdict}${yueLingText}`;
   } else {
     patternType = '得失模式（忌神偏盛）';
-    description = `命局忌神稍占上风，主要变化方式为得失模式。得用神之助或制忌神之喜，为命局主要得吉方式；反之则为得凶方式。整体格局高低，取决于《自然易鉴》三大要点：月令气机是否纯粹、阴阳水火是否平衡、全局气机是否流通。`;
+    description = `命局忌神稍占上风，主要变化方式为得失模式。得用神之助或制忌神之喜，为命局主要得吉方式；反之则为得凶方式。整体格局高低，取决于《自然易鉴》三大要点：月令气机是否纯粹、阴阳水火是否平衡、全局气机是否流通。${nianYueTaiJi.verdict}`;
   }
 
   return {
     mainShengKe: shengKeList.slice(0, 6), // 取前6条主要关系
     patternType,
     description,
+    nianYueTaiJi,
   };
 }
 
@@ -1115,6 +1400,7 @@ export function analyzeWealthNobility(
   monthQi: MonthQiResult,
   yongJi: YongJiResult,
   elementPower: { wood: number; fire: number; earth: number; metal: number; water: number },
+  nianYueTaiJi?: NianYueTaiJiResult,
 ): {
   wealthLevel: string;
   wealthDesc: string;
@@ -1256,6 +1542,21 @@ export function analyzeWealthNobility(
   } else {
     overallLevel = '拉完了';
     overallDesc = `【拉完了】—— 阴阳二气一边彻底隐形，或气息严重冲战到隔绝，偏枯至极。${apparentReport}。一边彻底被压死、毫无翻身之力；气机堵塞、能量枯竭、用神无依、忌神横行。主根基被抽、底盘被掀，人生大事（健康/家庭/事业/财富）往往不止一项「拉」到破局，需要比常人付出数倍的修身立德、积善养气、勤勉精进，方能转圜。`;
+  }
+
+  // 年月太极修正（《太极阴阳法》：吉凶唯一依据为阴阳二气的存缺、损伤、平衡状态）
+  // 两仪保全则升档、两仪绝境则降档；先天年吉·落地受阻者提示人生起伏
+  if (nianYueTaiJi) {
+    const t = nianYueTaiJi;
+    let adjusted = false;
+    if (t.state === '两仪完整') {
+      if (overallLevel === '人上人') { overallLevel = '夯'; adjusted = true; }
+      else if (overallLevel === 'npc') { overallLevel = '人上人'; adjusted = true; }
+    } else if (t.state === '两仪绝境') {
+      if (overallLevel === '人上人') { overallLevel = 'npc'; adjusted = true; }
+      else if (overallLevel === 'npc') { overallLevel = '拉'; adjusted = true; }
+    }
+    overallDesc += ` 年月太极：${t.taijiName}（${t.state}${adjusted ? '，经两仪修正档位' : ''}）。${t.verdict}`;
   }
 
   return {

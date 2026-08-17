@@ -624,8 +624,8 @@ export default function BaZiAnalyzerPage() {
 
   const wealthNobility = useMemo(() => {
     if (!chart || !monthQi || !yongJi || !elementPower) return null;
-    return analyzeWealthNobility(chart, monthQi, yongJi, elementPower);
-  }, [chart, monthQi, yongJi, elementPower]);
+    return analyzeWealthNobility(chart, monthQi, yongJi, elementPower, pattern?.nianYueTaiJi ?? undefined);
+  }, [chart, monthQi, yongJi, elementPower, pattern]);
 
   // 命盘综合评分（新机制：三维度平衡度+用神+忌神，作为大运流年联动基准）
   const mingPanScore = useMemo(() => {
@@ -1243,7 +1243,103 @@ export default function BaZiAnalyzerPage() {
               </Card>
 
 
-              {/* 二、大运流年分析 */}
+              {/* 二、命局模式分析 */}
+              <Card
+                id="section-mingju-pattern"
+                className="scroll-mt-6 shadow-[0_4px_24px_-12px_rgba(0,0,0,0.08)]"
+                style={{ borderLeft: `3px solid ${solarTermTheme.palette.secondary}` }}
+              >
+                <CardHeader className="pt-8 pb-5 text-center">
+                  <CardTitle
+                    className="flex justify-center text-center text-[28px] font-black leading-tight md:text-[34px]"
+                    style={{
+                      fontFamily: "'Noto Serif SC', serif",
+                      color: 'var(--foreground)',
+                      letterSpacing: '-0.01em',
+                    }}
+                  >
+                    命局模式分析
+                  </CardTitle>
+                  <CardDescription
+                    className="mt-3 text-[15px] font-normal md:text-[16px]"
+                    style={{
+                      fontFamily: "'Noto Serif SC', serif",
+                      opacity: 0.65,
+                      letterSpacing: '0.01em',
+                    }}
+                  >从<span className="mark-highlight">四柱结构</span>判断格局类型与主生克路线</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* 年月太极（《太极阴阳法》：年为格局根本，年月组合构成命局核心太极） */}
+                  {pattern.nianYueTaiJi && (
+                    <div
+                      className="rounded-lg p-4"
+                      style={{ backgroundColor: `${solarTermTheme.palette.primary}0A`, border: `1px solid ${solarTermTheme.palette.primary}22` }}
+                    >
+                      <div className="text-sm font-bold" style={{ color: `${solarTermTheme.palette.primary}` }}><span className="mark-highlight">年月太极分析</span></div>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className="rounded-md px-2.5 py-1 text-[13px] font-black text-foreground" style={{ fontFamily: "'Noto Serif SC', serif", backgroundColor: `${solarTermTheme.palette.primary}14`, border: `1px solid ${solarTermTheme.palette.primary}30` }}>
+                          {pattern.nianYueTaiJi.yearGZ}年 · {pattern.nianYueTaiJi.monthGZ}月
+                        </span>
+                        <span className="rounded-md px-2.5 py-1 text-[13px] font-black" style={{ fontFamily: "'Noto Serif SC', serif", color: '#FFFFFF', backgroundColor: `${solarTermTheme.palette.primary}` }}>
+                          {pattern.nianYueTaiJi.taijiName}
+                        </span>
+                        <span className="rounded-md px-2.5 py-1 text-[13px] font-black" style={{
+                          fontFamily: "'Noto Serif SC', serif",
+                          color: pattern.nianYueTaiJi.state === '两仪完整' ? '#047857' : pattern.nianYueTaiJi.state === '两仪受损' ? '#B45309' : '#B91C1C',
+                          backgroundColor: pattern.nianYueTaiJi.state === '两仪完整' ? '#ECFDF5' : pattern.nianYueTaiJi.state === '两仪受损' ? '#FFFBEB' : '#FEF2F2',
+                          border: `1px solid ${pattern.nianYueTaiJi.state === '两仪完整' ? '#A7F3D0' : pattern.nianYueTaiJi.state === '两仪受损' ? '#FDE68A' : '#FECACA'}`,
+                        }}>
+                          {pattern.nianYueTaiJi.state}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-sm leading-relaxed font-bold text-foreground">{pattern.nianYueTaiJi.verdict}</p>
+                      <div className="mt-3 grid gap-2 text-[13px] leading-relaxed font-bold text-muted-foreground sm:grid-cols-2">
+                        <div className="rounded-md border border-border/60 bg-card/60 px-3 py-2">
+                          <span className="font-black text-foreground">年干定位：</span>{pattern.nianYueTaiJi.yearStemJiXiong}（{pattern.nianYueTaiJi.yearStemChangSheng}）— {pattern.nianYueTaiJi.yearStemReason}
+                        </div>
+                        <div className="rounded-md border border-border/60 bg-card/60 px-3 py-2">
+                          <span className="font-black text-foreground">年支作用：</span>{pattern.nianYueTaiJi.yearBranchAction}— {pattern.nianYueTaiJi.yearBranchReason}
+                        </div>
+                        <div className="rounded-md border border-border/60 bg-card/60 px-3 py-2">
+                          <span className="font-black text-foreground">阳仪：</span>{pattern.nianYueTaiJi.yangYi.stem}（{pattern.nianYueTaiJi.yangYi.state}·{pattern.nianYueTaiJi.yangYi.power}分）· <span className="font-black text-foreground">阴仪：</span>{pattern.nianYueTaiJi.yinYi.stem}（{pattern.nianYueTaiJi.yinYi.state}·{pattern.nianYueTaiJi.yinYi.power}分）
+                        </div>
+                        <div className="rounded-md border border-border/60 bg-card/60 px-3 py-2">
+                          <span className="font-black text-foreground">日时应验：</span>{pattern.nianYueTaiJi.riShiEffect}— {pattern.nianYueTaiJi.riShiReason}
+                        </div>
+                      </div>
+                      <p className="mt-2 text-[13px] leading-relaxed font-bold text-muted-foreground">{pattern.nianYueTaiJi.taijiNote}</p>
+                      {pattern.nianYueTaiJi.matchedCase && (
+                        <div className="mt-2 rounded-md border border-border/60 bg-card/60 px-3 py-2 text-[13px] leading-relaxed font-bold text-muted-foreground">
+                          <span className="font-black text-foreground">参考格局「{pattern.nianYueTaiJi.matchedCase.title}」：</span>{pattern.nianYueTaiJi.matchedCase.analysis}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div
+                    className="rounded-lg p-4"
+                    style={{ backgroundColor: `${solarTermTheme.palette.secondary}0C`, border: `1px solid ${solarTermTheme.palette.secondary}28` }}
+                  >
+                    <div className="text-sm font-bold" style={{ color: `${solarTermTheme.palette.secondary}` }}><span className="mark-highlight">命局模式类型</span></div>
+                    <div className="mt-2 text-lg font-black text-foreground">{pattern.patternType}</div>
+                    <p className="mt-2 text-sm leading-relaxed font-bold text-muted-foreground">{pattern.description}</p>
+                  </div>
+                  <div>
+                    <div className="mb-2 text-sm font-bold"><span className="mark-highlight">主要生克关系</span></div>
+                    <div className="space-y-1.5">
+                      {pattern.mainShengKe.map((rel, i) => (
+                        <div key={i} className="flex items-center gap-2 rounded-md border border-border/60 bg-card px-3 py-1.5 text-sm font-bold">
+                          <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: `${solarTermTheme.palette.secondary}` }} />
+                          {rel}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+
+              {/* 三、大运流年分析 */}
               <Card
                 id="section-dayun"
                 className="scroll-mt-6 shadow-[0_4px_24px_-12px_rgba(0,0,0,0.08)]"
@@ -1547,7 +1643,7 @@ export default function BaZiAnalyzerPage() {
               </Card>
 
 
-              {/* 三、命主速览 */}
+              {/* 四、命主速览 */}
               <Card
                 id="section-overview"
                 className="scroll-mt-6 overflow-hidden shadow-[0_4px_24px_-12px_rgba(0,0,0,0.08)]"
@@ -1683,7 +1779,7 @@ export default function BaZiAnalyzerPage() {
               </Card>
 
 
-              {/* 四、寒热气·阴阳气占比 */}
+              {/* 五、寒热气·阴阳气占比 */}
               <Card
                 id="section-pie"
                 className="scroll-mt-6 overflow-hidden shadow-[0_4px_24px_-12px_rgba(0,0,0,0.08)]"
@@ -1739,7 +1835,7 @@ export default function BaZiAnalyzerPage() {
               </Card>
 
 
-              {/* 五、盘内存在太极 */}
+              {/* 六、盘内存在太极 */}
               <Card
                 id="section-taiji"
                 className="scroll-mt-6 overflow-hidden shadow-[0_4px_24px_-12px_rgba(0,0,0,0.08)]"
@@ -1937,7 +2033,7 @@ export default function BaZiAnalyzerPage() {
               </Card>
 
 
-              {/* 六、特别提示 */}
+              {/* 七、特别提示 */}
               <Card
                 id="section-special-tips"
                 className="scroll-mt-6 overflow-hidden shadow-[0_4px_24px_-12px_rgba(0,0,0,0.08)]"
@@ -2020,7 +2116,7 @@ export default function BaZiAnalyzerPage() {
               </Card>
 
 
-              {/* 七、月气分析 */}
+              {/* 八、月气分析 */}
               <Card id="section-monthqi" className="scroll-mt-6 overflow-hidden shadow-[0_4px_24px_-12px_rgba(0,0,0,0.08)]">
                 <div className="flex h-[3px] w-full">
                   {solarTermTheme.colors.map((c, i) => (
@@ -2106,7 +2202,7 @@ export default function BaZiAnalyzerPage() {
               </Card>
 
 
-              {/* 八、用神忌神判断 */}
+              {/* 九、用神忌神判断 */}
               <Card
                 id="section-yongji"
                 className="scroll-mt-6 shadow-[0_4px_24px_-12px_rgba(0,0,0,0.08)]"
@@ -2163,55 +2259,6 @@ export default function BaZiAnalyzerPage() {
               </Card>
 
 
-              {/* 九、命局模式分析 */}
-              <Card
-                id="section-mingju-pattern"
-                className="scroll-mt-6 shadow-[0_4px_24px_-12px_rgba(0,0,0,0.08)]"
-                style={{ borderLeft: `3px solid ${solarTermTheme.palette.secondary}` }}
-              >
-                <CardHeader className="pt-8 pb-5 text-center">
-                  <CardTitle
-                    className="flex justify-center text-center text-[28px] font-black leading-tight md:text-[34px]"
-                    style={{
-                      fontFamily: "'Noto Serif SC', serif",
-                      color: 'var(--foreground)',
-                      letterSpacing: '-0.01em',
-                    }}
-                  >
-                    命局模式分析
-                  </CardTitle>
-                  <CardDescription
-                    className="mt-3 text-[15px] font-normal md:text-[16px]"
-                    style={{
-                      fontFamily: "'Noto Serif SC', serif",
-                      opacity: 0.65,
-                      letterSpacing: '0.01em',
-                    }}
-                  >从<span className="mark-highlight">四柱结构</span>判断格局类型与主生克路线</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div
-                    className="rounded-lg p-4"
-                    style={{ backgroundColor: `${solarTermTheme.palette.secondary}0C`, border: `1px solid ${solarTermTheme.palette.secondary}28` }}
-                  >
-                    <div className="text-sm font-bold" style={{ color: `${solarTermTheme.palette.secondary}` }}><span className="mark-highlight">命局模式类型</span></div>
-                    <div className="mt-2 text-lg font-black text-foreground">{pattern.patternType}</div>
-                    <p className="mt-2 text-sm leading-relaxed font-bold text-muted-foreground">{pattern.description}</p>
-                  </div>
-                  <div>
-                    <div className="mb-2 text-sm font-bold"><span className="mark-highlight">主要生克关系</span></div>
-                    <div className="space-y-1.5">
-                      {pattern.mainShengKe.map((rel, i) => (
-                        <div key={i} className="flex items-center gap-2 rounded-md border border-border/60 bg-card px-3 py-1.5 text-sm font-bold">
-                          <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: `${solarTermTheme.palette.secondary}` }} />
-                          {rel}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
             {/* 底部操作区 */}
             <div className="flex justify-center py-4">
               <Button variant="outline" size="lg" onClick={handleReset} className="font-bold">
@@ -2241,14 +2288,14 @@ export default function BaZiAnalyzerPage() {
               </div>
               {[
                 { id: 'pillars', label: '一、四柱排盘' },
-                { id: 'dayun', label: '二、大运流年' },
-                { id: 'overview', label: '三、命主速览' },
-                { id: 'pie', label: '四、寒热·阴阳占比' },
-                { id: 'taiji', label: '五、盘内存在太极' },
-                { id: 'special-tips', label: '六、特别提示' },
-                { id: 'monthqi', label: '七、月气分析' },
-                { id: 'yongji', label: '八、用神判断' },
-                { id: 'mingju-pattern', label: '九、命局模式' },
+                { id: 'mingju-pattern', label: '二、命局模式' },
+                { id: 'dayun', label: '三、大运流年' },
+                { id: 'overview', label: '四、命主速览' },
+                { id: 'pie', label: '五、寒热·阴阳占比' },
+                { id: 'taiji', label: '六、盘内存在太极' },
+                { id: 'special-tips', label: '七、特别提示' },
+                { id: 'monthqi', label: '八、月气分析' },
+                { id: 'yongji', label: '九、用神判断' },
               ].map((item) => (
                 <a
                   key={item.id}
