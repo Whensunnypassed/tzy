@@ -14,9 +14,27 @@ const normalizedForRouter = rawBase.replace(/\/+$/, '') || '/';
 // Vite base 必须结尾带 /（文档要求），避免相对路径拼接出错
 const baseForVite = normalizedForRouter.endsWith('/') ? normalizedForRouter : normalizedForRouter + '/';
 
+// 自定义插件：为飞书虚拟模块提供空实现（独立部署时飞书SDK不生效）
+function virtualCapabilitiesPlugin() {
+  const virtualModuleId = 'virtual:capabilities';
+  const resolvedVirtualModuleId = '\0' + virtualModuleId;
+  return {
+    name: 'virtual-capabilities-stub',
+    resolveId(id) {
+      if (id === virtualModuleId) return resolvedVirtualModuleId;
+    },
+    load(id) {
+      if (id === resolvedVirtualModuleId) {
+        return `export const capabilities = {}; export default {};`;
+      }
+    },
+  };
+}
+
 export default defineConfig({
   plugins: [
     react(),
+    virtualCapabilitiesPlugin(),
   ],
   // GitHub Pages 子路径前缀
   base: baseForVite,
@@ -29,6 +47,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    cssMinify: 'lightningcss',
   },
   // 传给 React Router createBrowserRouter 的 basename
   define: {
