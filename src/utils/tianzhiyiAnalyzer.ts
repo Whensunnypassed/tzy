@@ -239,7 +239,7 @@ const EARTH_YIN_GANZHI = new Set(['己', '丑', '辰']); // 阴土/湿土
 
 // 土的喜用判断（按月令季节 + 干支级）
 // 冬月(亥子丑)：四土皆可止寒制水，辰未首选；夏月(巳午未)：土皆可选用（丑戌阴土晦火存金优先、辰未次选、戊己有吉有凶）；
-// 春月(寅卯)：土止寒固本皆可选用；辰月：辰土晦火克水需制为忌；秋月(申酉)：土可选用；戌月：独旺土为忌
+// 春月(寅卯)：土止寒固本皆可选用；辰月：辰土晦火克水需制为忌；秋月(申酉)：忌土旺（土旺晦火失富）；戌月：独旺土为忌
 export function judgeEarthXiJi(ganzhi: string, monthBranchIndex: number): 'useful' | 'taboo' | 'neutral' {
   void ganzhi; // 预留：夏月「辰土克水毁火」例外需按具体干支区分（辰中戊克癸、辰晦丙丁致十神受伤），待十神信息接入后细化
   // 冬月（亥子丑）
@@ -250,8 +250,8 @@ export function judgeEarthXiJi(ganzhi: string, monthBranchIndex: number): 'usefu
   if ([0, 1].includes(monthBranchIndex)) return 'useful';
   // 辰月：辰土晦火克水需制为忌
   if (monthBranchIndex === 2) return 'taboo';
-  // 秋月（申酉）：土可选用（制水取贵、晦火失富，双面中取用）
-  if ([6, 7].includes(monthBranchIndex)) return 'useful';
+  // 秋月（申酉）：忌土旺（土旺晦火、失富）
+  if ([6, 7].includes(monthBranchIndex)) return 'taboo';
   // 戌月：独旺土为忌
   if (monthBranchIndex === 8) return 'taboo';
   return 'neutral';
