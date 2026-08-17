@@ -13,8 +13,7 @@ node_modules
 .pnp.js
 
 # Build outputs
-# ⚠️ GitHub Pages 发布到 gh-pages 分支时，保持下面这行被注释（这样构建产物才能被 Git 跟踪）
-# dist
+dist
 dist-ssr
 *.local
 
