@@ -2641,19 +2641,34 @@ export function analyzeDaYunLiuNian(
       minusSumRaw: ms,
       otherSumRaw: os,
     } = scoreGanZhiImpact(dy.stem, dy.branch, chart, yongJi, monthQi, yinYangPct);
-    const base = wuDangFromScore(rawScoreDY);
-    const topReasons = summary.length > 0 ? summary : ['阴阳气平常，吉凶平静'];
-    const description = `${dy.stem}${dy.branch}运（综合分 ${base.displayScore >= 0 ? '+' : ''}${base.displayScore}，${base.level}）：${base.band}。关键阴阳作用：${topReasons.slice(0, 3).join('；')}。此运天干管前五年，地支管后五年，各有侧重。`;
     const liuNian10 = getLiuNianList(dy.startYear, 10).map((ln) => calcLiuNian(ln.year, ln.stem, ln.branch));
+
+    // —— 大运总判新口径：rawScore = 大运本身分数 + 下辖10年流年平均分数（压缩分口径相加再还原） ——
+    // 先统一为压缩分（÷3.6），把大运压缩分 + 十年平均压缩分，再乘回 3.6 还原成 rawScore，
+    // 这样后续 wuDangFromScore 会走同一套 compressScore + 5级映射逻辑。
+    const dyCompress = rawScoreDY / 3.6;
+    const liuNianAvgCompress = liuNian10.reduce((s, ln) => s + (ln.rawScore / 3.6), 0) / liuNian10.length;
+    const finalCompress = dyCompress + liuNianAvgCompress;
+    const rawScore = finalCompress * 3.6;
+
+    const base = wuDangFromScore(rawScore);
+    const topReasons = summary.length > 0 ? summary : ['阴阳气平常，吉凶平静'];
+    // 在"大运本身分 + 十年平均"新口径下，把十年平均分作为明细展示给用户，避免遗漏
+    const finalTopReasons = [
+      ...topReasons,
+      `大运本身分 ${dyCompress >= 0 ? '+' : ''}${Math.round(dyCompress * 10) / 10}（${dy.stem}${dy.branch}作用）`,
+      `下辖十年平均 ${liuNianAvgCompress >= 0 ? '+' : ''}${Math.round(liuNianAvgCompress * 10) / 10}（${liuNian10.length}年流年平均分）`,
+    ];
+    const description = `${dy.stem}${dy.branch}运（综合分 ${base.displayScore >= 0 ? '+' : ''}${base.displayScore}，${base.level}）：${base.band}。关键阴阳作用：${topReasons.slice(0, 3).join('；')}。此运天干管前五年，地支管后五年，各有侧重。`;
     return {
       ...dy,
       fortune: base.level,
       score: base.displayScore,          // 兼容旧字段（展示压缩分）
-      rawScore: rawScoreDY,
+      rawScore,
       plusSumRaw: ps,
       minusSumRaw: ms,
       otherSumRaw: os,
-      topReasons,
+      topReasons: finalTopReasons,
       description,
       level: base.level,
       band: base.band,
@@ -2661,6 +2676,7 @@ export function analyzeDaYunLiuNian(
       upgradeBonusApplied: false,
       downgradeAlert: false,
       liuNian10,
+      baseCompress: Math.round(finalCompress * 10) / 10,  // 趋势加成前的基础压缩分（大运本身+十年平均，无趋势bonus）
     };
   });
 
@@ -2682,6 +2698,7 @@ export function analyzeDaYunLiuNian(
     topReasons: dy.topReasons,
     description: dy.description,
     liuNian10: dy.liuNian10,
+    baseCompress: dy.baseCompress,  // 保留：趋势加成前的基础压缩分
   })));
   // 把 trended 上的 level/displayScore 同步回 fortune/score 字段（UI 用的是 fortune 和 score），同时保留升级信息
   const daYunWithFortune = daYunTrended.map(tr => {
@@ -2722,6 +2739,7 @@ export function analyzeDaYunLiuNian(
       score: tr.displayScore,
       fortune: tr.level,
       liuNian10: liuNian10Trended,
+      baseCompress: (tr as any).baseCompress,  // 保留：趋势加成前的基础压缩分
     };
   }) as any;
 
@@ -2749,8 +2767,9 @@ export function analyzeDaYunLiuNian(
   // —— 修复 Bug1-2：大运 topReasons 追加「趋势加成」说明（避免综合分有加分但看不到来源的遗漏） ——
   for (const dy of daYunWithFortune) {
     if (dy.upgradeBonusApplied) {
+      const baseVal = (dy as any).baseCompress ?? Math.round((wuDangFromScore((dy as any).rawScore).displayScore) * 10) / 10;
       const bonusVal = (dy as any).upgradeBonusApplied && Array.isArray(dy.topReasons) ?
-        (Math.round(((dy.displayScore as number) - wuDangFromScore((dy as any).rawScore).displayScore) * 10) / 10) : 0;
+        (Math.round(((dy.displayScore as number) - baseVal) * 10) / 10) : 0;
       if (bonusVal > 0) {
         dy.topReasons = [...(dy.topReasons || []), `【趋势加成】前运走低（拉），此运翻身反弹，额外加分 +${bonusVal}`];
       }
