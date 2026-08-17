@@ -298,12 +298,12 @@ export function analyzeYongJi(chart: BaZiChart, monthQi: MonthQiResult): YongJiR
   let usefulElements: string[] = [];
   let tabooElements: string[] = [];
 
-  // 木火金水的元素级用忌；土单独走干支级 judgeEarthXiJi（不再把土整类归为用神/忌神/中性）
+  // 木火金水的元素级用忌（木火属阳、金水属阴）；土单独走干支级 judgeEarthXiJi（不再把土整类归为用神/忌神/中性）
   if (monthQi.usageDirection === 'yin') {
     usefulElements = ['metal', 'water'];
     tabooElements = ['wood', 'fire'];
   } else {
-    usefulElements = ['fire'];
+    usefulElements = ['fire', 'wood'];
     tabooElements = ['metal', 'water'];
   }
 
