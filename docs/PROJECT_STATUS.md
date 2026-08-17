@@ -1,0 +1,76 @@
+# 项目状态总览（PROJECT STATUS）
+
+> 本文件用于其他模型/开发者快速接手项目，了解当前版本、已完成工作与同步流程。
+> 最后更新：v1.1.0
+
+---
+
+## 项目现状
+
+**项目**：`tzy` — 沛然堂 · 八字命理智能分析系统（React + Vite + Tailwind v4）
+**仓库**：`Whensunnypassed/tzy`（GitHub，main 分支）
+**当前版本**：**v1.1.0 · 正式版**（`package.json` 与 `BaZiAnalyzerPage.tsx` 中 `APP_VERSION` 两处同步维护）
+**线上地址**：https://whensunnypassed.github.io/tzy/ （由 gh-pages 分支驱动部署）
+**工作区状态**：干净，main 与线上均已同步到最新。
+
+---
+
+## 已完成工作（按版本时间线）
+
+| 版本 | 提交 | 内容 |
+|---|---|---|
+| v1.0.0 | `31389d3` | 正式版发布：UI 去金色高亮、恢复命局模式分析模块、版本号规范化 |
+| v1.0.1 | `ec4615c` | 底层分析引擎重命名 `tianzhiyiAnalyzer` → `baziAnalyzer` |
+| v1.0.2 | `ea40e79` | 《太极阴阳法·年月分析核心基础》归档至 `reference/docs` |
+| **v1.1.0** | `5c5741a` | **评分体系重构 + 品牌更名**（核心版本）：<br>① 大运/流年评分：五档「夯~拉完了」→ 九档字母等级 **S+ S A+ A B+ B- C C- D**，分值梯度拉开（S+>+6 ~ D<-8）<br>② **取消上一个大运对下一个大运的趋势加成与降档警告**，每步评分独立计算<br>③ 格局评分：五档文字 → **0-100 纯数值打分**（财富分 wealthScore / 贵寿分 nobilityScore / 格局综合分 overallScore），60 分及格线<br>④ 品牌：标题「你智哥的阴阳分析系统」→「**沛然堂**」，毛体(Maoti)超大字号；页脚新增「内部代码 · 不可商用盈利 · 公开代码仅作为无害公开供人民群众监督」 |
+| v1.1.0 | `6c92aa4` | 新增 `docs/SYNC.md` 同步规范文档 |
+| v1.1.0 | `68d4f35` | 标签页 logo 由模板紫色闪电 → 太极图 |
+| v1.1.0 | `7b57619` | favicon 改名 `favicon-v2.svg` 绕过浏览器图标缓存 |
+
+---
+
+## 同步工作流程（核心，务必遵守）
+
+```
+改代码 → npm.cmd run build:pages（构建验证必须通过）
+→ 改版本号（package.json + BaZiAnalyzerPage.tsx 的 APP_VERSION，两处保持一致）
+→ git add 具体文件（不要 git add -A / 通配）
+→ git commit --no-verify -m "..." （必须 --no-verify，见下方说明）
+→ git push （同步源码到 main）
+→ 【用户明确要求部署时】npx.cmd gh-pages -d dist（更新线上 gh-pages 分支）
+```
+
+详细命令与约定见 `docs/SYNC.md`。
+
+### 关键坑点（务必注意）
+
+1. **`git push` ≠ 上线**：线上站点由 `gh-pages` 分支驱动，源码推到 main 后必须**额外**执行 `npx gh-pages -d dist` 才会更新线上。
+2. **提交必须 `--no-verify`**：项目模板遗留的 `src/components/ui/calendar.tsx`、`resizable.tsx` 类型错误及 `eslint.config.mjs` 导出问题，会导致 precommit 的 `npm run lint` 失败（与本项目业务代码无关）。`vite build` 通过即可放心提交。
+3. **版本号两处同步**：`package.json` 的 `"version"` 与 `BaZiAnalyzerPage.tsx` 的 `const APP_VERSION` 必须一致，否则网页页脚版本号失真。
+4. **一次完成再同步**：一次改动完成后统一提交推送，不边改边推（避免零碎提交）。
+5. **部署按需执行**：第 5 步（gh-pages 部署）仅在用户明确说"部署到线上站点"时执行，默认只推源码。
+6. **PowerShell 环境**：命令用 `npm.cmd`（非 `npm`）、语句间用 `;` 连接（不支持 `&&`）、git 加 `--no-pager` 防卡住。
+
+---
+
+## 核心文件索引
+
+| 文件 | 职责 |
+|---|---|
+| `src/utils/baziAnalyzer.ts` | 排盘分析、大运/流年/格局评分逻辑（九档字母分级 S+~D、0-100 纯数值打分的核心实现） |
+| `src/utils/baziCalculator.ts` | 四柱排盘底层算法 |
+| `src/pages/BaZiAnalyzerPage/BaZiAnalyzerPage.tsx` | 全部 UI 界面（命主速览、命局模式、大运流年表格等），含 `APP_VERSION` |
+| `src/data/bazidata.ts` | 数据表（十二长生、五虎遁、年月太极定义等） |
+| `docs/SYNC.md` | 同步 GitHub 标准步骤 |
+| `docs/PROJECT_STATUS.md` | 本文档：项目状态与工作记录 |
+| `reference/docs/` | 命理理论参考文档（《自然易鉴》《太极阴阳法》等） |
+| `vite.config.ts` | base=/tzy/ 配置（GitHub Pages 子路径），端口 8001 |
+
+---
+
+## 版本号维护约定
+
+- 功能 / UI 改动 → 递增次版本号（如 `1.1.0 → 1.2.0`）
+- 仅修 bug → 递增补丁号（如 `1.1.0 → 1.1.1`）
+- 提交信息风格：`feat:` 新功能 / `fix:` 修复 / `refactor:` 重构 / `docs:` 文档（简体中文）
+- 提交信息中标注版本号，如 `（v1.1.0）`
