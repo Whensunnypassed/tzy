@@ -501,7 +501,7 @@ function computeTaiJiDbReferences(
 }
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.1.1';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -1688,7 +1688,7 @@ export default function BaZiAnalyzerPage() {
                   >日主 · 格局 · 用神 · <span className="mark-highlight">整体定调</span>一图速览</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-3">
-                  <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+                  <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                     {/* 1. 日主 */}
                     <div
                       className="rounded-xl p-4 transition-transform hover:-translate-y-0.5"
@@ -1753,81 +1753,24 @@ export default function BaZiAnalyzerPage() {
                       </div>
                     </div>
 
-                    {/* 4. 财富分（0-100，新量化） */}
-                    {(() => {
-                      const ws = wealthNobility?.wealthScore ?? 0;
-                      const lvTag = ws >= 85 ? '上吉' : ws >= 70 ? '吉' : ws >= 60 ? '及格' : ws >= 45 ? '偏弱' : '偏低';
-                      const col = ws >= 85 ? '#B45309' : ws >= 70 ? '#059669' : ws >= 60 ? '#0284C7' : ws >= 45 ? '#EA580C' : '#DC2626';
-                      const bg = ws >= 85 ? '#FFFBEB' : ws >= 70 ? '#ECFDF5' : ws >= 60 ? '#F0F9FF' : ws >= 45 ? '#FFF7ED' : '#FEF2F2';
-                      return (
-                        <div className="rounded-xl p-4 transition-transform hover:-translate-y-0.5"
-                          style={{ backgroundColor: bg, border: `1px solid ${col}33` }}
-                        >
-                          <div className="flex items-baseline justify-between">
-                            <div className="text-[10px] font-bold tracking-[0.2em] text-muted-foreground">财富分</div>
-                            <span className="rounded-sm px-1.5 py-0.5 text-[9px] font-black" style={{ color: '#ffffff', backgroundColor: col }}>
-                              {lvTag}
-                            </span>
-                          </div>
-                          <div className="mt-2 flex items-baseline gap-1">
-                            <span className="text-3xl font-black tabular-nums" style={{ color: col }}>{ws}</span>
-                            <span className="text-xs font-bold text-muted-foreground">/ 100</span>
-                          </div>
-                          <div className="mt-2 h-2 w-full overflow-hidden rounded-full" style={{ backgroundColor: '#E5E7EB' }}>
-                            <div className="h-full rounded-full transition-all"
-                              style={{ width: `${Math.max(0, Math.min(100, ws))}%`, backgroundColor: col }}
-                            />
-                          </div>
-                          <div className="mt-1 text-[10px] font-bold text-muted-foreground/90">{wealthNobility?.wealthLevel ?? '—'}</div>
-                        </div>
-                      );
-                    })()}
-
-                    {/* 5. 贵寿分（0-100，新量化） */}
-                    {(() => {
-                      const ns = wealthNobility?.nobilityScore ?? 0;
-                      const lvTag = ns >= 85 ? '上吉' : ns >= 70 ? '吉' : ns >= 60 ? '及格' : ns >= 45 ? '偏弱' : '偏低';
-                      const col = ns >= 85 ? '#6D28D9' : ns >= 70 ? '#4F46E5' : ns >= 60 ? '#0369A1' : ns >= 45 ? '#9333EA' : '#DC2626';
-                      const bg = ns >= 85 ? '#F5F3FF' : ns >= 70 ? '#EEF2FF' : ns >= 60 ? '#EFF6FF' : ns >= 45 ? '#FAF5FF' : '#FEF2F2';
-                      return (
-                        <div className="rounded-xl p-4 transition-transform hover:-translate-y-0.5"
-                          style={{ backgroundColor: bg, border: `1px solid ${col}33` }}
-                        >
-                          <div className="flex items-baseline justify-between">
-                            <div className="text-[10px] font-bold tracking-[0.2em] text-muted-foreground">贵寿分</div>
-                            <span className="rounded-sm px-1.5 py-0.5 text-[9px] font-black" style={{ color: '#ffffff', backgroundColor: col }}>
-                              {lvTag}
-                            </span>
-                          </div>
-                          <div className="mt-2 flex items-baseline gap-1">
-                            <span className="text-3xl font-black tabular-nums" style={{ color: col }}>{ns}</span>
-                            <span className="text-xs font-bold text-muted-foreground">/ 100</span>
-                          </div>
-                          <div className="mt-2 h-2 w-full overflow-hidden rounded-full" style={{ backgroundColor: '#E5E7EB' }}>
-                            <div className="h-full rounded-full transition-all"
-                              style={{ width: `${Math.max(0, Math.min(100, ns))}%`, backgroundColor: col }}
-                            />
-                          </div>
-                          <div className="mt-1 text-[10px] font-bold text-muted-foreground/90">{wealthNobility?.nobilityLevel ?? '—'}</div>
-                        </div>
-                      );
-                    })()}
-
-                    {/* 6. 格局综合分 overallScore（0-100 · 60 及格，搭配命盘 letterLevel） */}
+                    {/* 4. 格局综合分 overallScore（0-100 · 60 及格，字母等级与 0-100 分对齐） */}
                     {(() => {
                       const overall = wealthNobility?.overallScore ?? 0;
                       const passed = overall >= 60;
-                      const col = overall >= 88 ? '#E11D48' : overall >= 72 ? '#D97706' : overall >= 60 ? '#059669' : overall >= 38 ? '#EA580C' : '#B91C1C';
-                      const letterLv = (mingPanScore?.letterLevel ?? (overall >= 88 ? 'S+' : overall >= 72 ? 'A' : overall >= 60 ? 'B+' : overall >= 38 ? 'C' : 'D')) as string;
+                      // 字母等级与 0-100 分严格对齐：满分必为 S+，60 及格线落 B+ 档，杜绝"满分却低档"矛盾
+                      const letterLv =
+                        overall >= 92 ? 'S+' : overall >= 84 ? 'S' : overall >= 76 ? 'A+' :
+                        overall >= 68 ? 'A' : overall >= 60 ? 'B+' : overall >= 50 ? 'B-' :
+                        overall >= 40 ? 'C' : overall >= 30 ? 'C-' : 'D';
                       const letterColorMap: Record<string, string> = {
                         'S+': '#E11D48','S':'#D97706','A+':'#059669','A':'#16A34A',
                         'B+':'#0284C7','B-':'#475569','C':'#EA580C','C-':'#DC2626','D':'#18181B',
                       };
-                      const letterCol = letterColorMap[letterLv] ?? col;
+                      const letterCol = letterColorMap[letterLv] ?? '#059669';
                       const detail = mingPanScore?.detail ?? [];
                       return (
                         <div
-                          className="col-span-2 rounded-xl p-4 transition-transform hover:-translate-y-0.5 lg:col-span-1"
+                          className="col-span-2 rounded-xl p-4 transition-transform hover:-translate-y-0.5 md:col-span-1"
                           style={{
                             background: `linear-gradient(135deg, #FFFFFF 0%, ${letterCol}0A 100%)`,
                             border: `2px solid ${letterCol}`,
@@ -1836,14 +1779,14 @@ export default function BaZiAnalyzerPage() {
                         >
                           <div className="flex items-center justify-between">
                             <div className="text-[10px] font-bold tracking-[0.2em]" style={{ color: letterCol }}>
-                              命盘综合分
+                              格局综合分
                             </div>
                             <div className="flex items-center gap-1.5">
                               <span
                                 className="rounded-full px-2 py-0.5 text-[11px] font-black"
                                 style={{
                                   background: letterCol,
-                                  color: letterLv === 'D' ? '#FFFFFF' : letterLv === 'C-' ? '#FFF' : '#FFFFFF',
+                                  color: '#FFFFFF',
                                   letterSpacing: '0.06em',
                                 }}
                               >
@@ -1852,7 +1795,7 @@ export default function BaZiAnalyzerPage() {
                               <span
                                 className="rounded-sm px-1.5 py-0.5 text-[10px] font-black"
                                 style={{
-                                  color: passed ? '#FFFFFF' : '#FFFFFF',
+                                  color: '#FFFFFF',
                                   backgroundColor: passed ? '#047857' : '#B91C1C',
                                 }}
                               >
@@ -1869,7 +1812,7 @@ export default function BaZiAnalyzerPage() {
                           <div className="mt-2 relative h-2.5 w-full overflow-hidden rounded-full" style={{ backgroundColor: '#E5E7EB' }}>
                             <div className="absolute left-0 top-0 h-full w-px" style={{ left: '60%', backgroundColor: '#0C0A09', height: '150%', top: '-25%' }} />
                             <div className="relative h-full rounded-full transition-all"
-                              style={{ width: `${Math.max(0, Math.min(100, overall))}%`, backgroundColor: col }}
+                              style={{ width: `${Math.max(0, Math.min(100, overall))}%`, backgroundColor: letterCol }}
                             />
                           </div>
                           {detail.length > 0 ? (
