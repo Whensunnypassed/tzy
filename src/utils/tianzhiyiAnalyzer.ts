@@ -237,22 +237,40 @@ const YIN_ELEMENTS = new Set(['metal', 'water']);
 const EARTH_YANG_GANZHI = new Set(['戊', '未', '戌']); // 阳土/燥土
 const EARTH_YIN_GANZHI = new Set(['己', '丑', '辰']); // 阴土/湿土
 
-// 土的喜用判断（按月令季节 + 干支级）
-// 冬月(亥子丑)：四土皆可止寒制水，辰未首选；夏月(巳午未)：土皆可选用（丑戌阴土晦火存金优先、辰未次选、戊己有吉有凶）；
-// 春月(寅卯)：土止寒固本皆可选用；辰月：辰土晦火克水需制为忌；秋月(申酉)：忌土旺（土旺晦火失富）；戌月：独旺土为忌
-export function judgeEarthXiJi(ganzhi: string, monthBranchIndex: number): 'useful' | 'taboo' | 'neutral' {
-  void ganzhi; // 预留：夏月「辰土克水毁火」例外需按具体干支区分（辰中戊克癸、辰晦丙丁致十神受伤），待十神信息接入后细化
-  // 冬月（亥子丑）
+// 土的喜用判断（按月令季节 + 干支级 + 命局水气/阴阳占比）
+//   冬月(亥子丑)：走土吉，四土皆可止寒制水（辰未首选、丑戌次之、戊己皆可用）
+//   夏月(巳午未)：丑戌吉（阴土晦火存金）；辰未「地支见水则凶、无水次选」（辰克水毁火、未燥晦火）
+//   春月(寅卯)：土止寒固本；但阴气不显（阴气占比 < 30%，参照「寒热·阴阳占比」模块）时勿土克水 → 忌
+//   辰月：辰土晦火克水需制 → 忌；秋月(申酉)：忌土旺（土旺晦火、失富）；戌月：独旺土 → 忌
+const YIN_NOT_APPARENT_THRESHOLD = 30; // 阴气占比低于此值视为「不显」（可调）
+export function judgeEarthXiJi(
+  ganzhi: string,
+  chart: BaZiChart,
+  yinYangPct?: { yang: number; yin: number },
+): 'useful' | 'taboo' | 'neutral' {
+  const monthBranchIndex = chart.monthBranchIndex;
+  const branches = [chart.year.branch, chart.month.branch, chart.day.branch, chart.hour.branch];
+  // 地支见水：命局四支中出现水支（亥 / 子）
+  const branchSeesWater = branches.some((b) => BRANCH_ELEMENTS[b] === 'water');
+  // 阴气显不显：结合「寒热·阴阳占比」模块，阴气占比不足三成视为「不显」
+  const yy = yinYangPct ?? calculateYinYangBalance(chart);
+  const yinNotApparent = yy.yin < YIN_NOT_APPARENT_THRESHOLD;
+
+  // 冬月（亥子丑）：走土吉（止寒制水）
   if ([9, 10, 11].includes(monthBranchIndex)) return 'useful';
-  // 夏月（巳午未）：土皆可选用（丑戌阴土晦火存金优先，辰未次选，戊己有吉有凶）
-  if ([3, 4, 5].includes(monthBranchIndex)) return 'useful';
-  // 春月（寅卯）：土止寒固本，皆可选用（戊土为首）
-  if ([0, 1].includes(monthBranchIndex)) return 'useful';
-  // 辰月：辰土晦火克水需制为忌
+  // 夏月（巳午未）：丑戌吉；辰未见水则凶、无水次选
+  if ([3, 4, 5].includes(monthBranchIndex)) {
+    if (ganzhi === '丑' || ganzhi === '戌') return 'useful';
+    if (ganzhi === '辰' || ganzhi === '未') return branchSeesWater ? 'taboo' : 'useful';
+    return 'useful'; // 戊己（夏月有吉有凶，缺十神语境时默认按可用）
+  }
+  // 春月（寅卯）：土止寒固本；阴气不显则勿土克水（过克已弱之水气）
+  if ([0, 1].includes(monthBranchIndex)) return yinNotApparent ? 'taboo' : 'useful';
+  // 辰月：辰土晦火克水需制 → 忌
   if (monthBranchIndex === 2) return 'taboo';
   // 秋月（申酉）：忌土旺（土旺晦火、失富）
   if ([6, 7].includes(monthBranchIndex)) return 'taboo';
-  // 戌月：独旺土为忌
+  // 戌月：独旺土 → 忌
   if (monthBranchIndex === 8) return 'taboo';
   return 'neutral';
 }
@@ -314,7 +332,7 @@ export function analyzeYongJi(chart: BaZiChart, monthQi: MonthQiResult): YongJiR
   const pillarNames = ['年', '月', '日', '时'];
 
   const markElement = (el: string, ganzhi: string): 'useful' | 'taboo' | 'neutral' => {
-    if (el === 'earth') return judgeEarthXiJi(ganzhi, chart.monthBranchIndex);
+    if (el === 'earth') return judgeEarthXiJi(ganzhi, chart);
     if (usefulElements.includes(el)) return 'useful';
     if (tabooElements.includes(el)) return 'taboo';
     return 'neutral';
@@ -1899,12 +1917,12 @@ export function scoreGanZhiImpact(
 
   const markStem = (s: string): 'useful' | 'taboo' | 'neutral' => {
     const el = STEM_ELEMENTS[s];
-    if (el === 'earth') return judgeEarthXiJi(s, chart.monthBranchIndex);
+    if (el === 'earth') return judgeEarthXiJi(s, chart, yinYangPct);
     return isUsefulEl(el) ? 'useful' : isTabooEl(el) ? 'taboo' : 'neutral';
   };
   const markBranch = (b: string): 'useful' | 'taboo' | 'neutral' => {
     const el = BRANCH_ELEMENTS[b];
-    if (el === 'earth') return judgeEarthXiJi(b, chart.monthBranchIndex);
+    if (el === 'earth') return judgeEarthXiJi(b, chart, yinYangPct);
     return isUsefulEl(el) ? 'useful' : isTabooEl(el) ? 'taboo' : 'neutral';
   };
 
@@ -1927,9 +1945,10 @@ export function scoreGanZhiImpact(
     summary.push(`${compressFmt(s)} ${msg}`);
   };
 
-  // -------- A. 月令阴阳喜用方向（主分量A，满分 ±22，占总分约 60%） --------
-  const needYin = monthQi.usageDirection === 'yin'; // 月令要补阴（金水）
-  const needYang = !needYin;                        // 月令要补阳（火土）
+  // -------- A. 月令阴阳喜用方向（主分量A，大运重地支：地支权重 >> 天干） --------
+  // 文献：天干主象、地支主实；天干生克需地支呼应（落地）方可应验，故地支为主、天干为辅
+  const needYin = monthQi.usageDirection === 'yin'; // 盘需制阳（补阴）：金水（阴）吉、木火（阳）不吉
+  const needYang = !needYin;                        // 盘需制阴（补阳）：木火（阳）吉、金水（阴）不吉
   const stemEl = STEM_ELEMENTS[stem];
   const branchEl = BRANCH_ELEMENTS[branch];
   const stemMark = markStem(stem);
@@ -1940,22 +1959,22 @@ export function scoreGanZhiImpact(
     ? (['未', '戌'].includes(branch) ? 'yang' : 'yin')
     : BRANCH_YINYANG[branch];
 
-  // 天干五行
-  if (stemMark === 'useful')       { score += 5; pushSum(`天干${stem}属月令用神（${elementName(stemEl)}）`, +5); }
-  else if (stemMark === 'taboo')   { score -= 5; pushSum(`天干${stem}属月令忌神（${elementName(stemEl)}）`, -5); }
-  // 地支五行（权重略大）
-  if (branchMark === 'useful')     { score += 7; pushSum(`地支${branch}属月令用神（${elementName(branchEl)}）`, +7); }
-  else if (branchMark === 'taboo') { score -= 7; pushSum(`地支${branch}属月令忌神（${elementName(branchEl)}）`, -7); }
-  // 天干阴阳属性是否契合月令大方向
-  if (needYang && stemYY === 'yang') { score += 2.5; pushSum(`天干${stem}为阳干，契合月令补阳方向`, +2.5); }
-  if (needYin  && stemYY === 'yin')  { score += 2.5; pushSum(`天干${stem}为阴干，契合月令补阴方向`, +2.5); }
-  if (needYang && stemYY === 'yin')  { score -= 1.5; pushSum(`天干${stem}为阴干，逆月令补阳方向`, -1.5); }
-  if (needYin  && stemYY === 'yang') { score -= 1.5; pushSum(`天干${stem}为阳干，逆月令补阴方向`, -1.5); }
+  // 天干五行（占比少：天干为表象）
+  if (stemMark === 'useful')       { score += 3; pushSum(`天干${stem}属月令用神（${elementName(stemEl)}）`, +3); }
+  else if (stemMark === 'taboo')   { score -= 3; pushSum(`天干${stem}属月令忌神（${elementName(stemEl)}）`, -3); }
+  // 地支五行（大运重地支：地支为实质，权重加大）
+  if (branchMark === 'useful')     { score += 10; pushSum(`地支${branch}属月令用神（${elementName(branchEl)}）`, +10); }
+  else if (branchMark === 'taboo') { score -= 10; pushSum(`地支${branch}属月令忌神（${elementName(branchEl)}）`, -10); }
+  // 天干阴阳属性是否契合制阴/制阳大方向
+  if (needYang && stemYY === 'yang') { score += 1.5; pushSum(`天干${stem}为阳干，契合制阴（补阳）方向`, +1.5); }
+  if (needYin  && stemYY === 'yin')  { score += 1.5; pushSum(`天干${stem}为阴干，契合制阳（补阴）方向`, +1.5); }
+  if (needYang && stemYY === 'yin')  { score -= 1; pushSum(`天干${stem}为阴干，逆制阴（补阳）方向`, -1); }
+  if (needYin  && stemYY === 'yang') { score -= 1; pushSum(`天干${stem}为阳干，逆制阳（补阴）方向`, -1); }
   // 地支阴阳属性
-  if (needYang && branchYY === 'yang') { score += 3; pushSum(`地支${branch}为阳支，契合月令补阳方向`, +3); }
-  if (needYin  && branchYY === 'yin')  { score += 3; pushSum(`地支${branch}为阴支，契合月令补阴方向`, +3); }
-  if (needYang && branchYY === 'yin')  { score -= 2; pushSum(`地支${branch}为阴支，逆月令补阳方向`, -2); }
-  if (needYin  && branchYY === 'yang') { score -= 2; pushSum(`地支${branch}为阳支，逆月令补阴方向`, -2); }
+  if (needYang && branchYY === 'yang') { score += 4; pushSum(`地支${branch}为阳支，契合制阴（补阳）方向`, +4); }
+  if (needYin  && branchYY === 'yin')  { score += 4; pushSum(`地支${branch}为阴支，契合制阳（补阴）方向`, +4); }
+  if (needYang && branchYY === 'yin')  { score -= 3; pushSum(`地支${branch}为阴支，逆制阴（补阳）方向`, -3); }
+  if (needYin  && branchYY === 'yang') { score -= 3; pushSum(`地支${branch}为阳支，逆制阳（补阴）方向`, -3); }
 
   // -------- B. 原局偏枯弥合度（主分量B，满分 ±18） --------
   const yangShort = yinYangPct.yang < 40; // 命局偏阴，阳气不够
@@ -1963,29 +1982,29 @@ export function scoreGanZhiImpact(
   const balanced  = !yangShort && !yinShort; // 二气均衡，弥合权重减半（避免拉向单边）
   const half = balanced ? 0.5 : 1.0;
 
-  // 补阳气（命局阳气不足时）
+  // 补阳气（命局阳气不足时）—— 地支权重 >> 天干
   if (yangShort) {
-    if (stemYY   === 'yang') { const s = +3.5*half; score += s; pushSum(`天干${stem}为阳干，补原局阳气不足`, +s); }
-    if (stemYY   === 'yin')  { const s = -2*half;   score += s; pushSum(`天干${stem}为阴干，再增阴气→偏`,  s); }
-    if (branchYY === 'yang') { const s = +4.5*half; score += s; pushSum(`地支${branch}为阳支，补原局阳气不足`, +s); }
-    if (branchYY === 'yin')  { const s = -2.5*half; score += s; pushSum(`地支${branch}为阴支，再增阴气→偏`,  s); }
+    if (stemYY   === 'yang') { const s = +2.5*half; score += s; pushSum(`天干${stem}为阳干，补原局阳气不足`, +s); }
+    if (stemYY   === 'yin')  { const s = -1.5*half; score += s; pushSum(`天干${stem}为阴干，再增阴气→偏`,  s); }
+    if (branchYY === 'yang') { const s = +5.5*half; score += s; pushSum(`地支${branch}为阳支，补原局阳气不足`, +s); }
+    if (branchYY === 'yin')  { const s = -3*half;   score += s; pushSum(`地支${branch}为阴支，再增阴气→偏`,  s); }
   }
   // 补阴气
   if (yinShort) {
-    if (stemYY   === 'yin')  { const s = +3.5*half; score += s; pushSum(`天干${stem}为阴干，补原局阴气不足`, +s); }
-    if (stemYY   === 'yang') { const s = -2*half;   score += s; pushSum(`天干${stem}为阳干，再增阳气→偏`,  s); }
-    if (branchYY === 'yin')  { const s = +4.5*half; score += s; pushSum(`地支${branch}为阴支，补原局阴气不足`, +s); }
-    if (branchYY === 'yang') { const s = -2.5*half; score += s; pushSum(`地支${branch}为阳支，再增阳气→偏`,  s); }
+    if (stemYY   === 'yin')  { const s = +2.5*half; score += s; pushSum(`天干${stem}为阴干，补原局阴气不足`, +s); }
+    if (stemYY   === 'yang') { const s = -1.5*half; score += s; pushSum(`天干${stem}为阳干，再增阳气→偏`,  s); }
+    if (branchYY === 'yin')  { const s = +5.5*half; score += s; pushSum(`地支${branch}为阴支，补原局阴气不足`, +s); }
+    if (branchYY === 'yang') { const s = -3*half;   score += s; pushSum(`地支${branch}为阳支，再增阳气→偏`,  s); }
   }
   // 命局本就平衡，不再做单边偏向（不加分、只扣那些"继续助强一边"的）
   if (balanced) {
     const yangDominantYuanju = yinYangPct.yang > yinYangPct.yin;
     if (yangDominantYuanju) {
       if (stemYY   === 'yang') { score -= 1; pushSum(`原局阳气略多，${stem}再为阳干易失衡`, -1); }
-      if (branchYY === 'yang') { score -= 1.5; pushSum(`原局阳气略多，${branch}再为阳支易失衡`, -1.5); }
+      if (branchYY === 'yang') { score -= 2; pushSum(`原局阳气略多，${branch}再为阳支易失衡`, -2); }
     } else {
       if (stemYY   === 'yin') { score -= 1; pushSum(`原局阴气略多，${stem}再为阴干易失衡`, -1); }
-      if (branchYY === 'yin') { score -= 1.5; pushSum(`原局阴气略多，${branch}再为阴支易失衡`, -1.5); }
+      if (branchYY === 'yin') { score -= 2; pushSum(`原局阴气略多，${branch}再为阴支易失衡`, -2); }
     }
   }
 
