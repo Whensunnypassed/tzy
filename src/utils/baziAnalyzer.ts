@@ -1534,24 +1534,22 @@ export function analyzeWealthNobility(
     : '寿元有损，身体底子较弱，需特别注意养生，忌过度操劳，定期检查调养。'
   }`;
 
-  // ================ 格局综合分 overallScore（0-100，60 及格） ================
-  // 基础分：阴阳二气"显现"程度 + 气息冲突度
-  let baseOverall = 50;
-  // 显现加成（±40）
-  if (yangStronglyApparent && yinStronglyApparent) baseOverall += 35;
-  else if (yangApparent && yinApparent) baseOverall += 22;
-  else if (!yangAlmostInvisible && !yinAlmostInvisible) baseOverall += 8;
-  else if (yangTotallyInvisible || yinTotallyInvisible) baseOverall -= 35;
-  else if (yangAlmostInvisible || yinAlmostInvisible) baseOverall -= 18;
-  // 气息冲突修正（-30 ~ +8）
-  if (qiConflict === '无冲突') baseOverall += 8;
-  else if (qiConflict === '微冲突') baseOverall -= 3;
-  else if (qiConflict === '明显冲突') baseOverall -= 15;
-  else baseOverall -= 28;
-  // 用神达标加成：用神力量 ≥20 → +10；<6 → -10
-  if (yongShenPower >= 20) baseOverall += 10;
-  else if (yongShenPower < 6) baseOverall -= 10;
-  let overallScore = Math.max(0, Math.min(100, baseOverall));
+  // ================ 格局综合分 overallScore（0-100，60 及格，金字塔分布） ================
+  // 设计目标：高分极难（S+ 仅约 0.1%），S 也稀少；大部分命盘落在 35~75 的中间带。
+  // 采用「乘性压制」：多个条件必须同时满足才能逼近满分，避免"加性堆分"导致人人满分。
+  // 1) 阴阳平衡分（0-55）：balanceRatio = 1 - |阳-阴|/100，幂次 3 放大"完美平衡"的稀有性
+  const balanceRatio = Math.max(0, 1 - powerDiff / 100);
+  const balanceScore = 55 * Math.pow(balanceRatio, 3);
+  // 2) 用神力量分（0-25）：用神占比，幂次 2（用神极旺才得高分）
+  const yongRatio = Math.max(0, Math.min(1, yongShenPower / 100));
+  const yongScore = 25 * Math.pow(yongRatio, 2);
+  // 3) 气息冲突分（0-20）
+  let conflictScore: number;
+  if (qiConflict === '无冲突') conflictScore = 20;
+  else if (qiConflict === '微冲突') conflictScore = 12;
+  else if (qiConflict === '明显冲突') conflictScore = 5;
+  else conflictScore = 0;
+  let overallScore = Math.round(balanceScore + yongScore + conflictScore);
 
   // 年月太极修正（纯数值加减 ±12）：两仪完整加分、两仪绝境扣分
   let taijiNote = '';
@@ -1571,12 +1569,12 @@ export function analyzeWealthNobility(
   }
   overallScore = Math.max(0, Math.min(100, overallScore));
 
-  // 综合档位（兼容旧命名，UI 可直接用 overallScore 渲染进度条）
+  // 综合档位（兼容旧命名，UI 可直接用 overallScore 渲染进度条；随新分布收紧）
   let overallLevel: string;
-  if (overallScore >= 88) overallLevel = '夯';
+  if (overallScore >= 90) overallLevel = '夯';
   else if (overallScore >= 72) overallLevel = '人上人';
   else if (overallScore >= 60) overallLevel = 'npc';
-  else if (overallScore >= 38) overallLevel = '拉';
+  else if (overallScore >= 36) overallLevel = '拉';
   else overallLevel = '拉完了';
 
   const passTag = overallScore >= 60 ? '及格' : '未及格';
@@ -1585,11 +1583,11 @@ export function analyzeWealthNobility(
   const overallScoreText = `【${overallScore}分·${passTag}】`;
   let overallDescHead = '';
   if (overallScore >= 90) overallDescHead = '阴阳二气俱足且充分显现，气息无冲突，水火既济之象。气机从心所欲不逾矩，能量密度极大，稳得住、顶得起、扛得下，事业家庭财富健康皆可夯实到底。';
-  else if (overallScore >= 78) overallDescHead = '阴阳二气皆活、互根互用，可上可下、可进可退；做事有章法、处世有余地，在人群中天然压得住场面、拿得到资源。主出身不差、努力有回报、贵人有支撑。';
-  else if (overallScore >= 68) overallDescHead = '阴阳二气都有显现，气息基本不冲突，用神可调度。事业稳步向上，生活层次中上。';
+  else if (overallScore >= 80) overallDescHead = '阴阳二气皆活、互根互用，可上可下、可进可退；做事有章法、处世有余地，在人群中天然压得住场面、拿得到资源。主出身不差、努力有回报、贵人有支撑。';
+  else if (overallScore >= 70) overallDescHead = '阴阳二气都有显现，气息基本不冲突，用神可调度。事业稳步向上，生活层次中上。';
   else if (overallScore >= 60) overallDescHead = '阴阳二气一显一弱，但弱的一方没有彻底隐形；气息有拉扯，不至于崩塌。属于"饿不死也翻不了天"的平常之命，按部就班、随大流走，靠平台/家庭/时代红利度日。';
-  else if (overallScore >= 48) overallDescHead = '阴阳二气略有失衡，气息有冲突。命局能量被单边拽着走，做事两头不讨好、进退两难。财富健康事业会有一项持续偏低，宜修身养性、勤勉积累。';
-  else if (overallScore >= 35) overallDescHead = '阴阳二气有一边几乎隐形，气息明显冲突。人生多有"想做做不成、想放放不下"的拉扯感，宜守不宜攻，多积德行善、养气修身以待天时。';
+  else if (overallScore >= 45) overallDescHead = '阴阳二气略有失衡，气息有冲突。命局能量被单边拽着走，做事两头不讨好、进退两难。财富健康事业会有一项持续偏低，宜修身养性、勤勉积累。';
+  else if (overallScore >= 30) overallDescHead = '阴阳二气有一边几乎隐形，气息明显冲突。人生多有"想做做不成、想放放不下"的拉扯感，宜守不宜攻，多积德行善、养气修身以待天时。';
   else overallDescHead = '阴阳二气一边彻底隐形，或气息严重冲战到隔绝，偏枯至极。气机堵塞、能量枯竭、用神无依、忌神横行。需要比常人付出数倍的修身立德、积善养气、勤勉精进，方能转圜。';
 
   const overallDesc = `${overallScoreText} ${overallDescHead} ${apparentReport}。${taijiNote ? taijiNote : ''}`;

@@ -501,7 +501,7 @@ function computeTaiJiDbReferences(
 }
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '1.1.1';
+const APP_VERSION = '1.1.2';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -1753,15 +1753,28 @@ export default function BaZiAnalyzerPage() {
                       </div>
                     </div>
 
-                    {/* 4. 格局综合分 overallScore（0-100 · 60 及格，字母等级与 0-100 分对齐） */}
+                    {/* 4. 格局综合分 overallScore（0-100 · 60 及格，金字塔分布：S+ 仅约0.1%） */}
                     {(() => {
                       const overall = wealthNobility?.overallScore ?? 0;
-                      const passed = overall >= 60;
-                      // 字母等级与 0-100 分严格对齐：满分必为 S+，60 及格线落 B+ 档，杜绝"满分却低档"矛盾
+                      // 字母等级与 0-100 分严格对齐（金字塔分布：高分极稀有）
+                      // S+ ≥96（约0.1%） / S ≥90 / A+ ≥82 / A ≥72 / B+ ≥60(及格线) / B- ≥48 / C ≥36 / C- ≥24 / D <24
                       const letterLv =
-                        overall >= 92 ? 'S+' : overall >= 84 ? 'S' : overall >= 76 ? 'A+' :
-                        overall >= 68 ? 'A' : overall >= 60 ? 'B+' : overall >= 50 ? 'B-' :
-                        overall >= 40 ? 'C' : overall >= 30 ? 'C-' : 'D';
+                        overall >= 96 ? 'S+' : overall >= 90 ? 'S' : overall >= 82 ? 'A+' :
+                        overall >= 72 ? 'A' : overall >= 60 ? 'B+' : overall >= 48 ? 'B-' :
+                        overall >= 36 ? 'C' : overall >= 24 ? 'C-' : 'D';
+                      // 分档标签：高分档不再显示"及格"，避免"S+ 及格"的矛盾观感
+                      const lvTag =
+                        letterLv === 'S+' || letterLv === 'S' ? '极佳' :
+                        letterLv === 'A+' || letterLv === 'A' ? '佳' :
+                        letterLv === 'B+' ? '及格' :
+                        letterLv === 'B-' ? '欠佳' :
+                        letterLv === 'C' || letterLv === 'C-' ? '偏差' : '极差';
+                      const tagColor =
+                        letterLv === 'S+' || letterLv === 'S' ? '#B91C1C' :
+                        letterLv === 'A+' || letterLv === 'A' ? '#047857' :
+                        letterLv === 'B+' ? '#0369A1' :
+                        letterLv === 'B-' ? '#475569' :
+                        letterLv === 'C' || letterLv === 'C-' ? '#C2410C' : '#7F1D1D';
                       const letterColorMap: Record<string, string> = {
                         'S+': '#E11D48','S':'#D97706','A+':'#059669','A':'#16A34A',
                         'B+':'#0284C7','B-':'#475569','C':'#EA580C','C-':'#DC2626','D':'#18181B',
@@ -1796,10 +1809,10 @@ export default function BaZiAnalyzerPage() {
                                 className="rounded-sm px-1.5 py-0.5 text-[10px] font-black"
                                 style={{
                                   color: '#FFFFFF',
-                                  backgroundColor: passed ? '#047857' : '#B91C1C',
+                                  backgroundColor: tagColor,
                                 }}
                               >
-                                {passed ? '及格' : '未及格'}
+                                {lvTag}
                               </span>
                             </div>
                           </div>
