@@ -49,7 +49,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
-    cssMinify: 'lightningcss',
+    cssMinify: 'esbuild',
   },
   // 传给 React Router createBrowserRouter 的 basename
   define: {

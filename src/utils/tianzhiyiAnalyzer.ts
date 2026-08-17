@@ -2717,9 +2717,9 @@ export function analyzeDaYunLiuNian(
       return {
         ...orig,
         // 保留 MVP 加减分明细字段：
-        plusSumRaw: lnTr.plusSumRaw,
-        minusSumRaw: lnTr.minusSumRaw,
-        otherSumRaw: lnTr.otherSumRaw,
+        plusSumRaw: (lnTr as any).plusSumRaw,
+        minusSumRaw: (lnTr as any).minusSumRaw,
+        otherSumRaw: (lnTr as any).otherSumRaw,
         // 新字段（覆盖/追加）：压缩分、档位、警告
         score: lnTr.displayScore,                 // UI 上目前的 'score' 展示为压缩分
         fortune: lnTr.level,                       // 兼容旧字段（liuen.fortune）

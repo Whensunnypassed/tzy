@@ -450,7 +450,7 @@ function computeTaiJiDbReferences(
   if (mq) {
     // 命中月令专属太极（如：庚丙太极出现在巳/午/未月）时收录
     if (taiji.taijiType && typeof mq.coreQiJi === 'string' && /太极/.test(mq.coreQiJi)) {
-      refs.push({ tag: `【月令核心气机·${mq.monthPillar || ''}】`, text: mq.coreQiJi });
+      refs.push({ tag: `【月令核心气机·${(mq as any).monthPillar || mq.month || ''}】`, text: mq.coreQiJi });
     }
     if (taiji.taijiType && typeof mq.yueLingSummary === 'string' && /太极/.test(mq.yueLingSummary)) {
       refs.push({ tag: '【月令总诀】', text: mq.yueLingSummary });
