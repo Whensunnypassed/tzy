@@ -11,7 +11,7 @@
 //  这么做避免 rawScore 直接相加时数值过大，导致五档映射失真。
 //
 //  说明：本文件是「算法参考实现」，不参与生产打包。
-//        生产代码位置：src/utils/tianzhiyiAnalyzer.ts → daYunBase
+//        生产代码位置：src/utils/baziAnalyzer.ts → daYunBase
 // ============================================================
 
 export type WuDangLevel = '夯' | '人上人' | 'npc' | '拉' | '拉完了';
@@ -24,7 +24,7 @@ export interface WuDangResult {
 }
 
 // —— 基础：把 rawScore 映射成 displayScore + 五档 ——
-// 这里的实现和 src/utils/tianzhiyiAnalyzer.ts 的 wuDangFromScore() 保持一致
+// 这里的实现和 src/utils/baziAnalyzer.ts 的 wuDangFromScore() 保持一致
 export function wuDangFromScore(rawScore: number): WuDangResult {
   const displayScore = Math.round((rawScore / 3.6) * 10) / 10;
   let level: WuDangLevel;

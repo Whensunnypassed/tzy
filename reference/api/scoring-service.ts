@@ -3,7 +3,7 @@
 //
 //  定位：对外提供「一个排盘 → 得到全部分析结果」的稳定接口。
 //        UI 组件、CLI 脚本、未来的 REST API，都直接调用本文件。
-//        内部再去组装 baziCalculator + tianzhiyiAnalyzer + solarTermsCalc。
+//        内部再去组装 baziCalculator + baziAnalyzer + solarTermsCalc。
 //
 //  优势：
 //    ① 内部算法重构不影响调用方（所有调用方只依赖本文件 4 个方法）
@@ -17,7 +17,7 @@ import { calculateBaZi, type BaZiChart } from '@/utils/baziCalculator';
 import {
   analyzeTianZhiYi,
   type ITianZhiYiReport,
-} from '@/utils/tianzhiyiAnalyzer';
+} from '@/utils/baziAnalyzer';
 
 export interface BirthInput {
   year: number;

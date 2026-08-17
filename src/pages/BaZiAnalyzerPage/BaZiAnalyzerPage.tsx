@@ -36,7 +36,7 @@ import {
   extractSpecialTips,
   type MonthQiResult,
   type YongJiResult,
-} from '@/utils/tianzhiyiAnalyzer';
+} from '@/utils/baziAnalyzer';
 import {
   ELEMENT_PALETTE_FORMAL,
   getSolarTermThemeByBirthDate,
@@ -501,7 +501,7 @@ function computeTaiJiDbReferences(
 }
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.0.1';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('1990');

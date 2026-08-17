@@ -10,7 +10,7 @@
 //
 //  判定依据必须全部中文输出，不可出现英文缩写。
 //  本文件为算法参考，不参与生产打包。
-//  生产代码位置：src/utils/tianzhiyiAnalyzer.ts → detectTaiji()
+//  生产代码位置：src/utils/baziAnalyzer.ts → detectTaiji()
 // ============================================================
 
 import type { BaZiChart } from '@/utils/baziCalculator';
@@ -220,7 +220,7 @@ const HIDDEN_STEMS: Record<string, string[]> = {
 /**
  * 参考版：检测太极（三档权重汇总）
  * 返回命中的全部 TaijiHit 列表，UI 按权重降序展示。
- * 本函数只作演示，真实生产版本见 tianzhiyiAnalyzer.ts。
+ * 本函数只作演示，真实生产版本见 baziAnalyzer.ts。
  */
 export function detectTaijiReference(chart: BaZiChart): TaijiHit[] {
   const hits: TaijiHit[] = [];
