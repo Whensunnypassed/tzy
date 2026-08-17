@@ -1,0 +1,38 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build outputs
+# ⚠️ GitHub Pages 发布到 gh-pages 分支时，保持下面这行被注释（这样构建产物才能被 Git 跟踪）
+# dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Vite cache
+.vite
+*.tsbuildinfo
+
+# gh-pages publishing cache
+node_modules/.cache/gh-pages
+.cache

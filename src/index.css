@@ -1,0 +1,27 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700;900&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+@import "@lark-apaas/client-toolkit-lite/styles.css";
+@import "tw-animate-css";
+@import "./tailwind-theme.css";
+@import "./typography.css";
+
+/* 毛体字（用于节气诗句等书法风格展示） */
+@font-face {
+  font-family: 'Maoti';
+  src: url('/fonts/maoti.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* 重要文字高亮标记 - 暖黄底 + 金黄边 + 黑色文字，保留传统中国风朱批质感 */
+.mark-highlight {
+  background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+  padding: 0 6px;
+  border-radius: 4px;
+  border: 1px solid #F59E0B;
+  box-shadow: 0 1px 2px rgba(245, 158, 11, 0.15);
+  color: var(--foreground);
+  font-weight: 900;
+  white-space: nowrap;
+}
