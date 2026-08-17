@@ -2,7 +2,7 @@
 //          IJiaZiPillar, IMonthQiExt, ICoreRule, IClassicCase, IUltimateSummary,
 //          MOCK_HEAVENLY_STEMS, MOCK_EARTHLY_BRANCHES, MOCK_MONTH_QI, MOCK_SHIGAN_XIJI,
 //          JIAZI_PILLARS_BY_XUN, MONTH_QI_EXPANDED, CORE_MINGLI_RULES, CLASSIC_MINGLI_CASES, ULTIMATE_SUMMARY
-// 资料来源：《自然易鉴》（丁甲福） + 八字阴阳命理体系补充资料（bzyyshujubuchong1.md）
+// 资料来源：《自然易鉴》（丁甲福） + 八字阴阳命理体系补充资料（reference/docs/03_八字阴阳命理·精炼整理.md）
 
 export interface IHeavenlyStem {
   char: string

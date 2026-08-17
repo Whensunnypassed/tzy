@@ -227,12 +227,37 @@ const MONTH_QI_INFO: Record<number, {
 };
 
 // 五行与阴阳归属
-// 木火属阳（温→热），金属阴（凉→寒），土为调节
-// 注意：天之易中，阴阳以水火为核心
-// 阳气 = 木火（温、热），阴气 = 金水（凉、寒），土为地球调节
+// 木火属阳（温→热），金属阴（凉→寒）
+// 阳气 = 木火 + 燥土（戊、未、戌），阴气 = 金水 + 湿土（己、丑、辰）
+// 土不再作为中性第三元（文献：戊=阳土、己=阴土；未戌燥土=阳、丑辰湿土=阴，燥湿对应寒热）
 const YANG_ELEMENTS = new Set(['wood', 'fire']);
 const YIN_ELEMENTS = new Set(['metal', 'water']);
-// 土随所处环境而定，但土有止寒纳热的调节作用
+
+// 土的阴阳归属（燥湿对应寒热）
+const EARTH_YANG_GANZHI = new Set(['戊', '未', '戌']); // 阳土/燥土
+const EARTH_YIN_GANZHI = new Set(['己', '丑', '辰']); // 阴土/湿土
+
+// 土的喜用判断（按月令季节 + 干支级）
+// 冬月(亥子丑)：四土皆可止寒制水，辰未首选；夏月(巳午未)：丑戌阴土晦火存金可用，辰未助燥为忌；
+// 春月(寅卯)：土止寒固本皆可选用；辰月：辰土晦火克水需制为忌；秋月(申酉)：土可选用；戌月：独旺土为忌
+export function judgeEarthXiJi(ganzhi: string, monthBranchIndex: number): 'useful' | 'taboo' | 'neutral' {
+  // 冬月（亥子丑）
+  if ([9, 10, 11].includes(monthBranchIndex)) return 'useful';
+  // 夏月（巳午未）：丑戌阴土晦火存金可用，辰未助燥为忌
+  if ([3, 4, 5].includes(monthBranchIndex)) {
+    if (ganzhi === '丑' || ganzhi === '戌') return 'useful';
+    return 'taboo'; // 辰、未助燥；辰土克水毁火尤忌
+  }
+  // 春月（寅卯）：土止寒固本，皆可选用（戊土为首）
+  if ([0, 1].includes(monthBranchIndex)) return 'useful';
+  // 辰月：辰土晦火克水需制为忌
+  if (monthBranchIndex === 2) return 'taboo';
+  // 秋月（申酉）：土可选用（制水取贵、晦火失富，双面中取用）
+  if ([6, 7].includes(monthBranchIndex)) return 'useful';
+  // 戌月：独旺土为忌
+  if (monthBranchIndex === 8) return 'taboo';
+  return 'neutral';
+}
 
 export interface MonthQiResult {
   monthName: string;
@@ -275,11 +300,12 @@ export function analyzeYongJi(chart: BaZiChart, monthQi: MonthQiResult): YongJiR
   let usefulElements: string[] = [];
   let tabooElements: string[] = [];
 
+  // 木火金水的元素级用忌；土单独走干支级 judgeEarthXiJi（不再把土整类归为用神/忌神/中性）
   if (monthQi.usageDirection === 'yin') {
     usefulElements = ['metal', 'water'];
     tabooElements = ['wood', 'fire'];
   } else {
-    usefulElements = ['fire', 'earth'];
+    usefulElements = ['fire'];
     tabooElements = ['metal', 'water'];
   }
 
@@ -289,18 +315,19 @@ export function analyzeYongJi(chart: BaZiChart, monthQi: MonthQiResult): YongJiR
   const pillars: Pillar[] = [chart.year, chart.month, chart.day, chart.hour];
   const pillarNames = ['年', '月', '日', '时'];
 
+  const markElement = (el: string, ganzhi: string): 'useful' | 'taboo' | 'neutral' => {
+    if (el === 'earth') return judgeEarthXiJi(ganzhi, chart.monthBranchIndex);
+    if (usefulElements.includes(el)) return 'useful';
+    if (tabooElements.includes(el)) return 'taboo';
+    return 'neutral';
+  };
+
   pillars.forEach((pillar, idx) => {
     const key = `${pillarNames[idx]}干`;
-    const el = pillar.stemElement;
-    if (usefulElements.includes(el)) stemMarks[key] = 'useful';
-    else if (tabooElements.includes(el)) stemMarks[key] = 'taboo';
-    else stemMarks[key] = 'neutral';
+    stemMarks[key] = markElement(pillar.stemElement, pillar.stem);
 
     const bKey = `${pillarNames[idx]}支`;
-    const bEl = pillar.branchElement;
-    if (usefulElements.includes(bEl)) branchMarks[bKey] = 'useful';
-    else if (tabooElements.includes(bEl)) branchMarks[bKey] = 'taboo';
-    else branchMarks[bKey] = 'neutral';
+    branchMarks[bKey] = markElement(pillar.branchElement, pillar.branch);
   });
 
   const direction = monthQi.usageDirection === 'yin' ? '阴气（金水）' : '阳气（火土）';
@@ -359,49 +386,71 @@ export function calculateElementPower(chart: BaZiChart): {
   return normalized;
 }
 
-// 阴阳平衡计算
-export function calculateYinYangBalance(power: { wood: number; fire: number; earth: number; metal: number; water: number }): { yang: number; yin: number; earth: number } {
+// 阴阳平衡计算（土不再作为中性第三元：燥土未戌/阳土戊→阳，湿土丑辰/阴土己→阴）
+export function calculateYinYangBalance(chart: BaZiChart): { yang: number; yin: number } {
   let yang = 0;
   let yin = 0;
-  const earth = power.earth;
+  const pillars: Pillar[] = [chart.year, chart.month, chart.day, chart.hour];
+  const weights = [
+    { stem: 1.0, branch: 1.5 }, // 年
+    { stem: 1.2, branch: 2.5 }, // 月
+    { stem: 1.5, branch: 1.8 }, // 日
+    { stem: 0.8, branch: 1.2 }, // 时
+  ];
 
-  (['wood', 'fire'] as const).forEach((el) => { yang += power[el]; });
-  (['metal', 'water'] as const).forEach((el) => { yin += power[el]; });
+  const addYang = (v: number) => { yang += v; };
+  const addYin = (v: number) => { yin += v; };
+  const addByEl = (el: string | undefined, ganzhi: string, v: number) => {
+    if (el === 'earth') { (EARTH_YANG_GANZHI.has(ganzhi) ? addYang : addYin)(v); }
+    else if (el === 'wood' || el === 'fire') addYang(v);
+    else addYin(v);
+  };
 
-  // 计算占比
-  const total = yang + yin + earth;
+  pillars.forEach((pillar, idx) => {
+    const w = weights[idx];
+    // 天干
+    addByEl(pillar.stemElement, pillar.stem, w.stem);
+    // 地支
+    addByEl(pillar.branchElement, pillar.branch, w.branch);
+    // 藏干
+    pillar.hiddenStems.forEach((st, i) => {
+      const hEl = STEM_ELEMENTS[st];
+      const hw = w.branch * (0.5 - i * 0.15);
+      if (!hEl || hw <= 0) return;
+      addByEl(hEl, st, hw);
+    });
+  });
+
+  const total = yang + yin;
   return {
     yang: Math.round((yang / total) * 100),
     yin: Math.round((yin / total) * 100),
-    earth: Math.round((earth / total) * 100),
   };
 }
 
 // 寒热气计算（《自然易鉴》核心：寒热 = 水火配比，是格局的第一标尺）
 // 热气 = 丙丁火 + 巳午未（火之根）；寒气 = 壬癸水 + 亥子丑（水之根）
-// 木（温，助热）、金（凉，助寒）、土（止寒纳热，中性调节）单独计
-export function calculateColdHotBalance(chart: BaZiChart): { hot: number; cold: number; neutral: number } {
+// 木（温，助热）、金（凉，助寒）；土不再计为中性：戊/未/戌燥土→热，己/丑/辰湿土→寒
+export function calculateColdHotBalance(chart: BaZiChart): { hot: number; cold: number } {
   let hot = 0;
   let cold = 0;
-  let neutral = 0;
   const pillars: Pillar[] = [chart.year, chart.month, chart.day, chart.hour];
   // 月令权重放大：月令决定寒热基调
   const weights = [1.0, 2.2, 1.2, 0.9];
 
   pillars.forEach((pillar, idx) => {
     const w = weights[idx];
-    // 天干：丙丁→热，壬癸→寒，甲乙→助热（温），庚辛→助寒（凉），戊己→中
+    // 天干：丙丁→热，壬癸→寒，甲乙→助热（温），庚辛→助寒（凉），戊→热（阳土），己→寒（湿土）
     const sEl = pillar.stemElement;
     let sScore = 0;
-    let sCat: 'hot' | 'cold' | 'neutral' = 'neutral';
+    let sCat: 'hot' | 'cold' = 'hot';
     if (sEl === 'fire') { sScore = w * 1.2; sCat = 'hot'; }
     else if (sEl === 'water') { sScore = w * 1.2; sCat = 'cold'; }
     else if (sEl === 'wood') { sScore = w * 0.6; sCat = 'hot'; }
     else if (sEl === 'metal') { sScore = w * 0.6; sCat = 'cold'; }
-    else { sScore = w * 0.4; sCat = 'neutral'; }
+    else { sScore = w * 0.4; sCat = pillar.stem === '戊' ? 'hot' : 'cold'; }
     if (sCat === 'hot') hot += sScore;
-    else if (sCat === 'cold') cold += sScore;
-    else neutral += sScore;
+    else cold += sScore;
 
     // 地支：巳午未→热（火局），亥子丑→寒（水局），寅卯辰→助热（温），申酉戌→助寒（凉）
     const bEl = pillar.branchElement;
@@ -410,21 +459,20 @@ export function calculateColdHotBalance(chart: BaZiChart): { hot: number; cold: 
     // 巳午未 / 亥子丑 加成
     if (['巳', '午', '未'].includes(branch)) bBase *= 1.3;
     else if (['亥', '子', '丑'].includes(branch)) bBase *= 1.3;
-    let bCat: 'hot' | 'cold' | 'neutral' = 'neutral';
+    let bCat: 'hot' | 'cold' = 'hot';
     if (bEl === 'fire') bCat = 'hot';
     else if (bEl === 'water') bCat = 'cold';
     else if (bEl === 'wood') bCat = 'hot';
     else if (bEl === 'metal') bCat = 'cold';
-    else { // 土：未戌偏热，丑辰偏寒
+    else { // 土：未戌偏热（燥土），丑辰偏寒（湿土）
       if (['未', '戌'].includes(branch)) bCat = 'hot';
       else bCat = 'cold';
       bBase *= 0.55;
     }
     if (bCat === 'hot') hot += bBase;
-    else if (bCat === 'cold') cold += bBase;
-    else neutral += bBase;
+    else cold += bBase;
 
-    // 藏干：比例加权
+    // 藏干：比例加权（戊→热，己→寒）
     pillar.hiddenStems.forEach((st, i) => {
       const hEl = STEM_ELEMENTS[st];
       const hw = w * 0.35 * (1 - i * 0.15);
@@ -433,15 +481,15 @@ export function calculateColdHotBalance(chart: BaZiChart): { hot: number; cold: 
       else if (hEl === 'water') cold += hw;
       else if (hEl === 'wood') hot += hw * 0.5;
       else if (hEl === 'metal') cold += hw * 0.5;
-      else neutral += hw * 0.4;
+      else if (st === '戊') hot += hw * 0.4;
+      else cold += hw * 0.4;
     });
   });
 
-  const total = hot + cold + neutral;
+  const total = hot + cold;
   return {
     hot: Math.max(0, Math.min(100, Math.round((hot / total) * 100))),
-    cold: Math.max(0, Math.min(100, Math.round((cold / total) * 100))),
-    neutral: Math.max(0, Math.min(100, 100 - Math.round((hot / total) * 100) - Math.round((cold / total) * 100))),
+    cold: Math.max(0, Math.min(100, 100 - Math.round((hot / total) * 100))),
   };
 }
 
@@ -452,7 +500,7 @@ export function analyzeTaiJiInChart(
   monthQi: MonthQiResult,
   yongJi: YongJiResult,
   elementPower: { wood: number; fire: number; earth: number; metal: number; water: number },
-  yinYangPct: { yang: number; yin: number; earth: number },
+  yinYangPct: { yang: number; yin: number },
 ): {
   exists: boolean;
   level: '真太极' | '半太极' | '假太极' | '无太极';
@@ -1219,8 +1267,8 @@ export function analyzeSevenCategories(
   interaction: string;
 } {
   // 阴阳二气（融合《自然易鉴》第三章第四节·阴阳对应人事万象：心性/事业/健康/祸福）
-  const yangPower = elementPower.wood + elementPower.fire;
-  const yinPower = elementPower.metal + elementPower.water;
+  // 土不再作为中性第三元：木火与燥土（戊未戌）归阳，金水与湿土（己丑辰）归阴
+  const { yang: yangPower, yin: yinPower } = calculateYinYangBalance(chart);
 
   // 对应心性（第三章第四节·一）
   const xinXing = yangPower >= yinPower
@@ -1243,10 +1291,10 @@ export function analyzeSevenCategories(
       ? '阴寒无制倾向：易患肾虚、脾胃、风湿、气血不足、妇科、寒湿淤堵之疾（《自然易鉴》：阴寒无制，水寒土冻、木火无力）。'
       : '阴阳相对平衡，健康总体平顺，注意保养即可。';
 
-  const yinYang = `命局阳气（木火）占约 ${yangPower}%，阴气（金水）占约 ${yinPower}%，土占约 ${elementPower.earth}%。月气${monthQi.yangState === 'strong' ? '阳气盛旺' : '阴气强盛'}，以${monthQi.usageDirection === 'yin' ? '阴气' : '阳气'}为用神平衡阴阳。《自然易鉴》：阳气主富，阴气主贵寿，二者平衡则吉，失衡则凶。—— 心性倾向：${xinXing} 事业适配：${shiYe} 健康提示：${jianKangHint}`;
+  const yinYang = `命局阳气占约 ${yangPower}%，阴气占约 ${yinPower}%（木火与燥土归阳，金水与湿土归阴）。月气${monthQi.yangState === 'strong' ? '阳气盛旺' : '阴气强盛'}，以${monthQi.usageDirection === 'yin' ? '阴气' : '阳气'}为用神平衡阴阳。《自然易鉴》：阳气主富，阴气主贵寿，二者平衡则吉，失衡则凶。—— 心性倾向：${xinXing} 事业适配：${shiYe} 健康提示：${jianKangHint}`;
 
   // 五行内容
-  const fiveElements = `五行力量分布：木(${elementPower.wood}%)、火(${elementPower.fire}%)、土(${elementPower.earth}%)、金(${elementPower.metal}%)、水(${elementPower.water}%)。${elementPower.wood + elementPower.fire > 50 ? '木火偏旺，阳气充足。' : ''}${elementPower.metal + elementPower.water > 50 ? '金水偏旺，阴气强盛。' : ''}土为调节因素，占比 ${elementPower.earth}%。土多则塞，土少则松。`;
+  const fiveElements = `五行力量分布：木(${elementPower.wood}%)、火(${elementPower.fire}%)、土(${elementPower.earth}%)、金(${elementPower.metal}%)、水(${elementPower.water}%)。${elementPower.wood + elementPower.fire > 50 ? '木火偏旺，阳气充足。' : ''}${elementPower.metal + elementPower.water > 50 ? '金水偏旺，阴气强盛。' : ''}土主承载运化，占比 ${elementPower.earth}%。土多则塞，土少则松。`;
 
   // 干支内容
   const pillars = [chart.year, chart.month, chart.day, chart.hour];
@@ -1760,7 +1808,7 @@ export function scoreGanZhiImpact(
   chart: BaZiChart,
   yongJi: YongJiResult,
   monthQi: MonthQiResult,
-  yinYangPct: { yang: number; yin: number; earth: number },
+  yinYangPct: { yang: number; yin: number },
 ): {
   score: number;            // 原始分 ±26 级（内部使用）
   summary: string[];        // 展示给用户的 Top 作用（已是 ÷3.6 的压缩分，与综合分同口径）
@@ -1777,10 +1825,12 @@ export function scoreGanZhiImpact(
 
   const markStem = (s: string): 'useful' | 'taboo' | 'neutral' => {
     const el = STEM_ELEMENTS[s];
+    if (el === 'earth') return judgeEarthXiJi(s, chart.monthBranchIndex);
     return isUsefulEl(el) ? 'useful' : isTabooEl(el) ? 'taboo' : 'neutral';
   };
   const markBranch = (b: string): 'useful' | 'taboo' | 'neutral' => {
     const el = BRANCH_ELEMENTS[b];
+    if (el === 'earth') return judgeEarthXiJi(b, chart.monthBranchIndex);
     return isUsefulEl(el) ? 'useful' : isTabooEl(el) ? 'taboo' : 'neutral';
   };
 
@@ -1810,8 +1860,11 @@ export function scoreGanZhiImpact(
   const branchEl = BRANCH_ELEMENTS[branch];
   const stemMark = markStem(stem);
   const branchMark = markBranch(branch);
-  const stemYY = STEM_YINYANG[stem];   // 'yang'|'yin'
-  const branchYY = BRANCH_YINYANG[branch];
+  const stemYY = STEM_YINYANG[stem];   // 'yang'|'yin'（戊=阳土、己=阴土，与燥湿规则一致）
+  // 地支阴阳：土支用燥湿规则（未戌燥土=阳、丑辰湿土=阴），其余用传统地支阴阳
+  const branchYY = branchEl === 'earth'
+    ? (['未', '戌'].includes(branch) ? 'yang' : 'yin')
+    : BRANCH_YINYANG[branch];
 
   // 天干五行
   if (stemMark === 'useful')       { score += 5; pushSum(`天干${stem}属月令用神（${elementName(stemEl)}）`, +5); }
@@ -2611,7 +2664,7 @@ export function analyzeDaYunLiuNian(
     downgradeAlert: boolean;
   }>;
 } {
-  const yinYangPct = calculateYinYangBalance(elementPower);
+  const yinYangPct = calculateYinYangBalance(chart);
 
   // 把「阴阳作用→某流年/某运」的映射抽象成一个小工具，避免重复
   const calcLiuNian = (year: number, stem: string, branch: string) => {

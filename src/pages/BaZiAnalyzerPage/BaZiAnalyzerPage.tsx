@@ -597,9 +597,9 @@ export default function BaZiAnalyzerPage() {
 
   // 阴阳气占比（模块 1·阴阳气饼图）
   const yinYangPct = useMemo(() => {
-    if (!elementPower) return null;
-    return calculateYinYangBalance(elementPower);
-  }, [elementPower]);
+    if (!chart) return null;
+    return calculateYinYangBalance(chart);
+  }, [chart]);
 
   // 寒热气占比（模块 1·寒热气饼图）
   const coldHotPct = useMemo(() => {
@@ -1226,7 +1226,7 @@ export default function BaZiAnalyzerPage() {
                     </span>
                     <span className="flex items-center gap-1">
                       <span className="inline-block size-3 rounded bg-muted" />
-                      中性（调节因素）
+                      中性（无直接助损）
                     </span>
                   </div>
                 </CardContent>
@@ -1721,7 +1721,6 @@ export default function BaZiAnalyzerPage() {
                         items={[
                           { label: '热气', value: coldHotPct.hot, color: '#EF4444' },
                           { label: '寒气', value: coldHotPct.cold, color: '#2563EB' },
-                          { label: '中气', value: coldHotPct.neutral, color: '#A16207' },
                         ]}
                         centerTitle="寒热"
                         centerSub="COLD · HOT"
@@ -1729,7 +1728,6 @@ export default function BaZiAnalyzerPage() {
                       <div className="mt-3 flex w-full max-w-[260px] flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[12px] font-bold">
                         <span className="inline-flex items-center gap-1.5"><span className="size-3 rounded-full" style={{ backgroundColor: '#EF4444' }} />热气 <span className="font-black">{coldHotPct.hot}%</span></span>
                         <span className="inline-flex items-center gap-1.5"><span className="size-3 rounded-full" style={{ backgroundColor: '#2563EB' }} />寒气 <span className="font-black">{coldHotPct.cold}%</span></span>
-                        <span className="inline-flex items-center gap-1.5"><span className="size-3 rounded-full" style={{ backgroundColor: '#A16207' }} />中气 <span className="font-black">{coldHotPct.neutral}%</span></span>
                       </div>
                     </div>
                     {/* 右：阴阳气 饼图（纯视觉，无文字解释） */}
@@ -1739,7 +1737,6 @@ export default function BaZiAnalyzerPage() {
                         items={[
                           { label: '阳气', value: yinYangPct.yang, color: '#FFFFFF' },
                           { label: '阴气', value: yinYangPct.yin, color: '#0A0A0A' },
-                          { label: '土气', value: yinYangPct.earth, color: '#6B7280' },
                         ]}
                         centerTitle="阴阳"
                         centerSub="YIN · YANG"
@@ -1747,7 +1744,6 @@ export default function BaZiAnalyzerPage() {
                       <div className="mt-3 flex w-full max-w-[260px] flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[12px] font-bold">
                         <span className="inline-flex items-center gap-1.5"><span className="size-3 rounded-full" style={{ backgroundColor: '#FFFFFF', border: '1px solid #D1D5DB' }} />阳气 <span className="font-black">{yinYangPct.yang}%</span></span>
                         <span className="inline-flex items-center gap-1.5"><span className="size-3 rounded-full" style={{ backgroundColor: '#0A0A0A' }} />阴气 <span className="font-black">{yinYangPct.yin}%</span></span>
-                        <span className="inline-flex items-center gap-1.5"><span className="size-3 rounded-full" style={{ backgroundColor: '#6B7280' }} />土气 <span className="font-black">{yinYangPct.earth}%</span></span>
                       </div>
                     </div>
                   </div>
