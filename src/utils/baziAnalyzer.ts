@@ -1394,7 +1394,7 @@ export function analyzeMingJuPattern(chart: BaZiChart, monthQi: MonthQiResult, y
   };
 }
 
-// 富贵贫贱判断（新格局评分标准：0-100 纯数值打分，60 分及格线）
+// 富贵贫贱判断（新格局评分标准：0-100 纯数值打分，金字塔分布）
 export function analyzeWealthNobility(
   chart: BaZiChart,
   monthQi: MonthQiResult,
@@ -1408,7 +1408,7 @@ export function analyzeWealthNobility(
   nobilityScore: number;  // 贵寿分（0-100）
   nobilityLevel: string;  // 贵寿档位（保留文案方便 UI）
   nobilityDesc: string;
-  overallScore: number;   // 格局综合分（0-100，≥60 及格）
+  overallScore: number;   // 格局综合分（0-100，金字塔分布）
   overallLevel: string;   // 综合档位（保留旧五档名兼容，UI 可优先用分数）
   overallDesc: string;
 } {
@@ -1534,7 +1534,7 @@ export function analyzeWealthNobility(
     : '寿元有损，身体底子较弱，需特别注意养生，忌过度操劳，定期检查调养。'
   }`;
 
-  // ================ 格局综合分 overallScore（0-100，60 及格，金字塔分布） ================
+  // ================ 格局综合分 overallScore（0-100，金字塔分布） ================
   // 设计目标：高分极难（S+ 仅约 0.1%），S 也稀少；大部分命盘落在 35~75 的中间带。
   // 采用「乘性压制」：多个条件必须同时满足才能逼近满分，避免"加性堆分"导致人人满分。
   // 1) 阴阳平衡分（0-55）：balanceRatio = 1 - |阳-阴|/100，幂次 3 放大"完美平衡"的稀有性
@@ -1577,10 +1577,9 @@ export function analyzeWealthNobility(
   else if (overallScore >= 36) overallLevel = '拉';
   else overallLevel = '拉完了';
 
-  const passTag = overallScore >= 60 ? '及格' : '未及格';
   const apparentReport = `阳气(木火)${yangPower}%，阴气(金水)${yinPower}%，月气当令${monthQi.usageDirection === 'yin' ? '阳' : '阴'}，需补${monthQi.usageDirection === 'yin' ? '阴(金水)' : '阳(木火)'}用神力量${yongShenPower}%，气息${qiConflict}`;
 
-  const overallScoreText = `【${overallScore}分·${passTag}】`;
+  const overallScoreText = `【${overallScore}分】`;
   let overallDescHead = '';
   if (overallScore >= 90) overallDescHead = '阴阳二气俱足且充分显现，气息无冲突，水火既济之象。气机从心所欲不逾矩，能量密度极大，稳得住、顶得起、扛得下，事业家庭财富健康皆可夯实到底。';
   else if (overallScore >= 80) overallDescHead = '阴阳二气皆活、互根互用，可上可下、可进可退；做事有章法、处世有余地，在人群中天然压得住场面、拿得到资源。主出身不差、努力有回报、贵人有支撑。';

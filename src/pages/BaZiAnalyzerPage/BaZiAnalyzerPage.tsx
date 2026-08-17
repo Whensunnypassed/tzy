@@ -32,7 +32,7 @@ import {
   analyzeDaYunLiuNian,
   calculateYinYangBalance,
   calculateColdHotBalance,
-  analyzeTaiJiInChart,
+  analyzeTaiJiInChart, // 暂时停用：盘内存在太极模块已隐藏，恢复时启用
   extractSpecialTips,
   type MonthQiResult,
   type YongJiResult,
@@ -437,7 +437,7 @@ function getDefaultSolarTermTheme(): SolarTermTheme {
   );
 }
 
-// ============ 太极模块 · 库内参考原文提取 ============
+// ============ 太极模块 · 库内参考原文提取（暂时停用：盘内存在太极模块已隐藏，恢复时启用） ============
 type TaijiLite = { exists: boolean; taijiType: string };
 function computeTaiJiDbReferences(
   taiji: TaijiLite,
@@ -501,7 +501,7 @@ function computeTaiJiDbReferences(
 }
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '1.1.2';
+const APP_VERSION = '1.2.0';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -648,17 +648,7 @@ export default function BaZiAnalyzerPage() {
     }
   }, [daYunAnalysis, expandedDY]);
 
-  // 模块 2：盘内存在太极判定
-  const taiji = useMemo(() => {
-    if (!chart || !monthQi || !yongJi || !elementPower || !yinYangPct) return null;
-    return analyzeTaiJiInChart(chart, monthQi, yongJi, elementPower, yinYangPct);
-  }, [chart, monthQi, yongJi, elementPower, yinYangPct]);
-
-  // 模块 2 附加：太极库内参考（数据库 bazidata.ts 原文匹配）
-  const taiJiDbReferences = useMemo(() => {
-    if (!chart || !taiji) return [];
-    return computeTaiJiDbReferences(taiji, chart);
-  }, [chart, taiji]);
+  // 模块 2：盘内存在太极判定（暂时停用：模块已从 UI 隐藏，底层 analyzeTaiJiInChart / computeTaiJiDbReferences 保留，可随时恢复）
 
   // 模块 3：特别提示
   const specialTips = useMemo(() => {
@@ -666,7 +656,7 @@ export default function BaZiAnalyzerPage() {
     return extractSpecialTips(chart, monthQi, yongJi, pattern, allJiaziPillars);
   }, [chart, monthQi, yongJi, pattern, allJiaziPillars]);
 
-  const analyzedBoolean = analyzed && chart && monthQi && yongJi && elementPower && yinYangPct && coldHotPct && pattern && wealthNobility && daYunAnalysis && taiji && specialTips;
+  const analyzedBoolean = analyzed && chart && monthQi && yongJi && elementPower && yinYangPct && coldHotPct && pattern && wealthNobility && daYunAnalysis && specialTips;
 
   const renderMarkBadge = (mark: 'useful' | 'taboo' | 'neutral') => {
     if (mark === 'useful') return <Badge className="bg-emerald-500 hover:bg-emerald-600">用神</Badge>;
@@ -1753,20 +1743,20 @@ export default function BaZiAnalyzerPage() {
                       </div>
                     </div>
 
-                    {/* 4. 格局综合分 overallScore（0-100 · 60 及格，金字塔分布：S+ 仅约0.1%） */}
+                    {/* 4. 格局综合分 overallScore（0-100，金字塔分布：S+ 仅约0.1%） */}
                     {(() => {
                       const overall = wealthNobility?.overallScore ?? 0;
                       // 字母等级与 0-100 分严格对齐（金字塔分布：高分极稀有）
-                      // S+ ≥96（约0.1%） / S ≥90 / A+ ≥82 / A ≥72 / B+ ≥60(及格线) / B- ≥48 / C ≥36 / C- ≥24 / D <24
+                      // S+ ≥96（约0.1%） / S ≥90 / A+ ≥82 / A ≥72 / B+ ≥60 / B- ≥48 / C ≥36 / C- ≥24 / D <24
                       const letterLv =
                         overall >= 96 ? 'S+' : overall >= 90 ? 'S' : overall >= 82 ? 'A+' :
                         overall >= 72 ? 'A' : overall >= 60 ? 'B+' : overall >= 48 ? 'B-' :
                         overall >= 36 ? 'C' : overall >= 24 ? 'C-' : 'D';
-                      // 分档标签：高分档不再显示"及格"，避免"S+ 及格"的矛盾观感
+                      // 分档标签：按档位显示吉凶评价（不使用"及格/不及格"考试式框架）
                       const lvTag =
                         letterLv === 'S+' || letterLv === 'S' ? '极佳' :
                         letterLv === 'A+' || letterLv === 'A' ? '佳' :
-                        letterLv === 'B+' ? '及格' :
+                        letterLv === 'B+' ? '平顺' :
                         letterLv === 'B-' ? '欠佳' :
                         letterLv === 'C' || letterLv === 'C-' ? '偏差' : '极差';
                       const tagColor =
@@ -1820,11 +1810,10 @@ export default function BaZiAnalyzerPage() {
                             <span className="text-[28px] font-black tabular-nums leading-none" style={{ color: letterCol }}>
                               {overall}
                             </span>
-                            <span className="text-xs font-bold text-muted-foreground">/ 100 · 及格线 60</span>
+                            <span className="text-xs font-bold text-muted-foreground">/ 100</span>
                           </div>
-                          <div className="mt-2 relative h-2.5 w-full overflow-hidden rounded-full" style={{ backgroundColor: '#E5E7EB' }}>
-                            <div className="absolute left-0 top-0 h-full w-px" style={{ left: '60%', backgroundColor: '#0C0A09', height: '150%', top: '-25%' }} />
-                            <div className="relative h-full rounded-full transition-all"
+                          <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full" style={{ backgroundColor: '#E5E7EB' }}>
+                            <div className="h-full rounded-full transition-all"
                               style={{ width: `${Math.max(0, Math.min(100, overall))}%`, backgroundColor: letterCol }}
                             />
                           </div>
@@ -1905,202 +1894,7 @@ export default function BaZiAnalyzerPage() {
               </Card>
 
 
-              {/* 六、盘内存在太极 */}
-              <Card
-                id="section-taiji"
-                className="scroll-mt-6 overflow-hidden shadow-[0_4px_24px_-12px_rgba(0,0,0,0.08)]"
-                style={{
-                  borderLeft: `3px solid ${solarTermTheme.palette.primary}`,
-                  background: `linear-gradient(135deg, ${solarTermTheme.palette.primary}0A 0%, #FFFFFF 55%, ${solarTermTheme.palette.muted}12 100%)`,
-                }}
-              >
-                <div className="flex h-[3px] w-full">
-                  <div className="w-full" style={{ background: `linear-gradient(90deg, ${solarTermTheme.palette.primary}, ${solarTermTheme.palette.accent ?? solarTermTheme.palette.secondary}, ${solarTermTheme.palette.primary})` }} />
-                </div>
-                <CardHeader className="pt-8 pb-5 text-center">
-                  <CardTitle
-                    className="flex justify-center text-center text-[28px] font-black leading-tight md:text-[34px]"
-                    style={{ fontFamily: "'Noto Serif SC', serif", color: 'var(--foreground)', letterSpacing: '-0.01em' }}
-                  >
-                    盘内存在太极
-                  </CardTitle>
-                  <CardDescription
-                    className="mt-3 text-[15px] font-normal md:text-[16px]"
-                    style={{ fontFamily: "'Noto Serif SC', serif", opacity: 0.65, letterSpacing: '0.01em' }}
-                  >
-                    《自然易鉴》真机：<span className="mark-highlight">太极</span>成则命局有根，阴阳互根、水火既济，吉凶自有定数
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-5 text-sm leading-relaxed font-bold">
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div
-                      className="rounded-xl p-4 text-center"
-                      style={{
-                        backgroundColor: `${solarTermTheme.palette.primary}0D`,
-                        border: `1px solid ${solarTermTheme.palette.primary}22`,
-                      }}
-                    >
-                      <div className="text-[11px] font-black tracking-[0.25em] text-muted-foreground">盘内有什么太极</div>
-                      <div
-                        className="mt-3 text-[24px] font-black leading-[1.2] md:text-[30px]"
-                        style={{ fontFamily: "'Noto Serif SC', serif", color: 'var(--foreground)' }}
-                      >
-                        {taiji.taijiType}
-                      </div>
-                    </div>
-                    <div
-                      className="rounded-xl p-4 text-center"
-                      style={{
-                        backgroundColor:
-                          taiji.jiXiong === '大吉' ? 'rgba(16,185,129,0.10)'
-                          : taiji.jiXiong === '吉' ? 'rgba(16,185,129,0.07)'
-                          : taiji.jiXiong === '平' ? 'rgba(107,114,128,0.08)'
-                          : taiji.jiXiong === '凶' ? 'rgba(239,68,68,0.08)'
-                          : 'rgba(185,28,28,0.10)',
-                        border:
-                          `1px solid ${
-                            taiji.jiXiong === '大吉' ? 'rgba(16,185,129,0.35)'
-                            : taiji.jiXiong === '吉' ? 'rgba(16,185,129,0.25)'
-                            : taiji.jiXiong === '平' ? 'rgba(107,114,128,0.25)'
-                            : taiji.jiXiong === '凶' ? 'rgba(239,68,68,0.30)'
-                            : 'rgba(185,28,28,0.40)'
-                          }`,
-                      }}
-                    >
-                      <div className="text-[11px] font-black tracking-[0.25em] text-muted-foreground">此太极是吉是凶</div>
-                      <div
-                        className="mt-2 text-[32px] font-black leading-none"
-                        style={{
-                          fontFamily: "'Noto Serif SC', serif",
-                          color:
-                            taiji.jiXiong === '大吉' ? '#059669'
-                            : taiji.jiXiong === '吉' ? '#047857'
-                            : taiji.jiXiong === '平' ? '#374151'
-                            : taiji.jiXiong === '凶' ? '#DC2626'
-                            : '#B91C1C',
-                        }}
-                      >
-                        {taiji.jiXiong}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 太极吉凶所得 */}
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div
-                      className="rounded-xl p-4"
-                      style={{
-                        backgroundColor: 'rgba(16,185,129,0.07)',
-                        border: '1px solid rgba(16,185,129,0.25)',
-                      }}
-                    >
-                      <div className="mb-2 flex items-center justify-center gap-2 text-center text-sm font-black" style={{ fontFamily: "'Noto Serif SC', serif" }}>
-                        <span className="mark-highlight">太极之吉</span>所得
-                      </div>
-                      {taiji.gain.length > 0 ? (
-                        <ul className="space-y-1.5 pl-4 text-sm leading-relaxed text-emerald-900/90">
-                          {taiji.gain.map((g, i) => (
-                            <li key={`gain-${i}`} className="list-disc marker:text-emerald-600">{g}</li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <div className="text-center text-sm leading-relaxed text-emerald-900/70">（此命局暂无明显「太极之吉所得」显现）</div>
-                      )}
-                    </div>
-                    <div
-                      className="rounded-xl p-4"
-                      style={{
-                        backgroundColor: 'rgba(239,68,68,0.07)',
-                        border: '1px solid rgba(239,68,68,0.25)',
-                      }}
-                    >
-                      <div className="mb-2 flex items-center justify-center gap-2 text-center text-sm font-black" style={{ fontFamily: "'Noto Serif SC', serif" }}>
-                        <span className="mark-highlight">太极之凶</span>所失
-                      </div>
-                      {taiji.loss.length > 0 ? (
-                        <ul className="space-y-1.5 pl-4 text-sm leading-relaxed text-rose-900/90">
-                          {taiji.loss.map((l, i) => (
-                            <li key={`loss-${i}`} className="list-disc marker:text-rose-600">{l}</li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <div className="text-center text-sm leading-relaxed text-rose-900/70">（此命局暂无明显「太极之凶所失」显现）</div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 判定依据：全部中文 + 换行显示，长文本自动折行防止溢出 */}
-                  <div
-                    className="rounded-xl p-4 overflow-hidden"
-                    style={{
-                      backgroundColor: `${solarTermTheme.palette.primary}08`,
-                      border: `1px solid ${solarTermTheme.palette.primary}1C`,
-                    }}
-                  >
-                    <div className="mb-3 text-center text-xs font-black tracking-[0.2em] text-muted-foreground">判定依据</div>
-                    <div className="flex flex-col items-stretch justify-start gap-2">
-                      {taiji.evidence.map((ev, i) => (
-                        <div
-                          key={`ev-${i}`}
-                          className="w-full rounded-md border px-3 py-2 text-[12px] font-bold leading-relaxed whitespace-normal break-words"
-                          style={{
-                            borderColor: `${solarTermTheme.palette.primary}30`,
-                            backgroundColor: 'rgba(255,255,255,0.9)',
-                            color: 'var(--foreground)',
-                          }}
-                        >
-                          <span className="mr-2 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-black"
-                            style={{ backgroundColor: `${solarTermTheme.palette.primary}18`, color: `${solarTermTheme.palette.primary}` }}>
-                            {i + 1}
-                          </span>
-                          {ev}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* 库内参考：数据库 bazidata.ts 中对应的太极原文 */}
-                  <div
-                    className="rounded-xl p-4 overflow-hidden"
-                    style={{
-                      backgroundColor: 'rgba(15,23,42,0.06)',
-                      border: '1px solid rgba(15,23,42,0.16)',
-                    }}
-                  >
-                    <div className="mb-3 text-center text-xs font-black tracking-[0.2em] text-slate-600">库内参考</div>
-                    {taiJiDbReferences.length > 0 ? (
-                      <div className="flex flex-col items-stretch justify-start gap-2">
-                        {taiJiDbReferences.map((ref, i) => (
-                          <div
-                            key={`ref-${i}`}
-                            className="w-full rounded-md border px-3 py-2 text-[12px] font-bold leading-relaxed whitespace-normal break-words"
-                            style={{
-                              borderColor: 'rgba(15,23,42,0.25)',
-                              backgroundColor: 'rgba(248,250,252,0.95)',
-                              color: '#334155',
-                              fontFamily: "'Noto Serif SC', serif",
-                            }}
-                          >
-                            <span className="mr-2 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-black"
-                              style={{ backgroundColor: 'rgba(15,23,42,0.1)', color: '#334155' }}>
-                              {ref.tag}
-                            </span>
-                            {ref.text}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div
-                        className="text-center text-sm leading-relaxed"
-                        style={{ color: '#334155', fontFamily: "'Noto Serif SC', serif", opacity: 0.7 }}
-                      >
-                        （数据库此月令/干支/总纲中暂无直接对应太极原文，已以判定依据为准）
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+              {/* 六、盘内存在太极（暂时停用，模块已隐藏；底层 analyzeTaiJiInChart 逻辑保留在 baziAnalyzer.ts，可随时恢复） */}
 
 
               {/* 七、特别提示 */}
@@ -2362,10 +2156,9 @@ export default function BaZiAnalyzerPage() {
                 { id: 'dayun', label: '三、大运流年分析' },
                 { id: 'overview', label: '四、命主速览' },
                 { id: 'pie', label: '五、寒热气·阴阳气占比' },
-                { id: 'taiji', label: '六、盘内存在太极' },
-                { id: 'special-tips', label: '七、特别提示' },
-                { id: 'monthqi', label: '八、月气分析' },
-                { id: 'yongji', label: '九、用神忌神判断' },
+                { id: 'special-tips', label: '六、特别提示' },
+                { id: 'monthqi', label: '七、月气分析' },
+                { id: 'yongji', label: '八、用神忌神判断' },
               ].map((item) => (
                 <a
                   key={item.id}
