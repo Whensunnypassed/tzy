@@ -4,7 +4,7 @@
 //          JIAZI_PILLARS_BY_XUN, MONTH_QI_EXPANDED, CORE_MINGLI_RULES, CLASSIC_MINGLI_CASES, ULTIMATE_SUMMARY
 //          SHI_ER_CHANG_SHENG, WU_HU_DUN_MONTH_STEM, NIAN_YUE_TAIJI_DEFS, NIAN_YUE_TAIJI_CASES
 // 资料来源：《自然易鉴》（丁甲福） + 八字阴阳命理体系补充资料（reference/docs/03_八字阴阳命理·精炼整理.md）
-//          + 太极阴阳法·年月分析核心基础.md（年月太极：五虎遁/年干先天吉/年支三类作用/月令两仪/十二长生量化）
+//          + reference/docs/太极阴阳法·年月分析核心基础.md（年月太极：五虎遁/年干先天吉/年支三类作用/月令两仪/十二长生量化）
 
 export interface IHeavenlyStem {
   char: string
@@ -411,7 +411,7 @@ export const ULTIMATE_SUMMARY: IUltimateSummary[] = [
 ]
 
 // ============ 新增：《太极阴阳法·年月分析核心基础》归纳数据 ============
-// 资料来源：太极阴阳法·年月分析核心基础.md
+// 资料来源：reference/docs/太极阴阳法·年月分析核心基础.md
 // 体系总纲：年为命局根本，年月组合构成命局核心太极，日时为根本太极的动态应验环节；
 //           吉凶唯一依据为阴阳二气的存缺、损伤、平衡状态；十神仅表社会属性，不判富贵贫贱。
 
