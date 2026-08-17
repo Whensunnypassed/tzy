@@ -500,6 +500,9 @@ function computeTaiJiDbReferences(
   });
 }
 
+/** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
+const APP_VERSION = '1.0.0';
+
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('1990');
   const [month, setMonth] = useState('5');
@@ -1408,12 +1411,12 @@ export default function BaZiAnalyzerPage() {
                           style={{ backgroundColor: 'rgba(14,165,233,0.08)', border: '1px solid rgba(14,165,233,0.22)' }}
                         >
                           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                            <div className="text-sm font-bold" style={{ color: isCurrentDY ? '#0284C7' : '#B45309' }}>
+                            <div className="text-sm font-bold" style={{ color: isCurrentDY ? '#0284C7' : '#334155' }}>
                               <span className="mark-highlight">
                                 {isCurrentDY ? '当前大运' : '查看大运'}
                               </span>
                               {!isCurrentDY && (
-                                <span className="ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-black" style={{ backgroundColor: '#FEF3C7', color: '#92400E', border: '1px solid #F59E0B' }}>
+                                <span className="ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-black" style={{ backgroundColor: '#F3F4F6', color: '#334155', border: '1px solid #0C0A09' }}>
                                   点击下方大运行可切换
                                 </span>
                               )}
@@ -1489,7 +1492,7 @@ export default function BaZiAnalyzerPage() {
                                             >
                                               {dy.fortune}
                                               {dy.upgradeBonusApplied && (
-                                                <span className="ml-1 inline-flex items-center rounded-sm px-1 text-[9px] font-black" style={{ backgroundColor: '#F59E0B', color: '#ffffff' }}>
+                                                <span className="ml-1 inline-flex items-center rounded-sm px-1 text-[9px] font-black" style={{ backgroundColor: '#0C0A09', color: '#ffffff' }}>
                                                   +趋势
                                                 </span>
                                               )}
@@ -1556,7 +1559,7 @@ export default function BaZiAnalyzerPage() {
                                                           >
                                                             {ln.fortune}
                                                             {ln.upgradeBonusApplied && (
-                                                              <span className="ml-1 inline-flex items-center rounded-sm px-1 text-[8px] font-black" style={{ backgroundColor: '#F59E0B', color: '#ffffff' }}>
+                                                              <span className="ml-1 inline-flex items-center rounded-sm px-1 text-[8px] font-black" style={{ backgroundColor: '#0C0A09', color: '#ffffff' }}>
                                                                 +趋势
                                                               </span>
                                                             )}
@@ -1620,7 +1623,7 @@ export default function BaZiAnalyzerPage() {
                                   >
                                     <span>{ln.fortune}</span>
                                     {ln.upgradeBonusApplied && (
-                                      <span className="inline-flex items-center rounded-sm px-1 text-[8px] font-black" style={{ backgroundColor: '#F59E0B', color: '#ffffff' }}>
+                                      <span className="inline-flex items-center rounded-sm px-1 text-[8px] font-black" style={{ backgroundColor: '#0C0A09', color: '#ffffff' }}>
                                         +趋势
                                       </span>
                                     )}
@@ -1657,7 +1660,27 @@ export default function BaZiAnalyzerPage() {
                     <div key={`hero-bar-${i}`} className="flex-1" style={{ backgroundColor: c }} />
                   ))}
                 </div>
-                <CardContent className="pt-5">
+                <CardHeader className="pt-7 pb-1 text-center">
+                  <CardTitle
+                    className="flex justify-center text-center text-[28px] font-black leading-tight md:text-[34px]"
+                    style={{
+                      fontFamily: "'Noto Serif SC', serif",
+                      color: 'var(--foreground)',
+                      letterSpacing: '-0.01em',
+                    }}
+                  >
+                    命主速览
+                  </CardTitle>
+                  <CardDescription
+                    className="mt-3 text-[15px] font-normal md:text-[16px]"
+                    style={{
+                      fontFamily: "'Noto Serif SC', serif",
+                      opacity: 0.65,
+                      letterSpacing: '0.01em',
+                    }}
+                  >日主 · 格局 · 用神 · <span className="mark-highlight">整体定调</span>一图速览</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-3">
                   <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                     {/* 1. 日主 */}
                     <div
@@ -1994,11 +2017,11 @@ export default function BaZiAnalyzerPage() {
                   <div
                     className="rounded-xl p-4 overflow-hidden"
                     style={{
-                      backgroundColor: 'rgba(245,158,11,0.08)',
-                      border: '1px solid rgba(245,158,11,0.22)',
+                      backgroundColor: 'rgba(15,23,42,0.06)',
+                      border: '1px solid rgba(15,23,42,0.16)',
                     }}
                   >
-                    <div className="mb-3 text-center text-xs font-black tracking-[0.2em] text-amber-700">库内参考</div>
+                    <div className="mb-3 text-center text-xs font-black tracking-[0.2em] text-slate-600">库内参考</div>
                     {taiJiDbReferences.length > 0 ? (
                       <div className="flex flex-col items-stretch justify-start gap-2">
                         {taiJiDbReferences.map((ref, i) => (
@@ -2006,14 +2029,14 @@ export default function BaZiAnalyzerPage() {
                             key={`ref-${i}`}
                             className="w-full rounded-md border px-3 py-2 text-[12px] font-bold leading-relaxed whitespace-normal break-words"
                             style={{
-                              borderColor: 'rgba(245,158,11,0.35)',
-                              backgroundColor: 'rgba(255,251,235,0.95)',
-                              color: '#78350F',
+                              borderColor: 'rgba(15,23,42,0.25)',
+                              backgroundColor: 'rgba(248,250,252,0.95)',
+                              color: '#334155',
                               fontFamily: "'Noto Serif SC', serif",
                             }}
                           >
                             <span className="mr-2 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-black"
-                              style={{ backgroundColor: 'rgba(245,158,11,0.2)', color: '#B45309' }}>
+                              style={{ backgroundColor: 'rgba(15,23,42,0.1)', color: '#334155' }}>
                               {ref.tag}
                             </span>
                             {ref.text}
@@ -2023,7 +2046,7 @@ export default function BaZiAnalyzerPage() {
                     ) : (
                       <div
                         className="text-center text-sm leading-relaxed"
-                        style={{ color: '#B45309', fontFamily: "'Noto Serif SC', serif", opacity: 0.7 }}
+                        style={{ color: '#334155', fontFamily: "'Noto Serif SC', serif", opacity: 0.7 }}
                       >
                         （数据库此月令/干支/总纲中暂无直接对应太极原文，已以判定依据为准）
                       </div>
@@ -2038,12 +2061,12 @@ export default function BaZiAnalyzerPage() {
                 id="section-special-tips"
                 className="scroll-mt-6 overflow-hidden shadow-[0_4px_24px_-12px_rgba(0,0,0,0.08)]"
                 style={{
-                  borderLeft: '3px solid #F59E0B',
-                  background: `linear-gradient(180deg, #FFFFFF 0%, #FFFBEB 60%, ${solarTermTheme.palette.muted}14 100%)`,
+                  borderLeft: '3px solid #0C0A09',
+                  background: `linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 60%, ${solarTermTheme.palette.muted}14 100%)`,
                 }}
               >
                 <div className="flex h-[3px] w-full">
-                  <div className="w-full" style={{ background: 'linear-gradient(90deg, #F59E0B, #EF4444, #F59E0B, #7C3AED, #F59E0B)' }} />
+                  <div className="w-full" style={{ background: 'linear-gradient(90deg, #94A3B8, #EF4444, #94A3B8, #7C3AED, #94A3B8)' }} />
                 </div>
                 <CardHeader className="pt-8 pb-5 text-center">
                   <CardTitle
@@ -2063,7 +2086,7 @@ export default function BaZiAnalyzerPage() {
                   {specialTips.map((tip, i) => {
                     const tone =
                       tip.level === '关键'
-                        ? { title: '#7C2D12', bg: '#FEF3C7', border: '#F59E0B', ring: '#F59E0B', badgeBg: '#F59E0B', badgeText: '#fff', badgeLabel: '关键' }
+                        ? { title: '#0C0A09', bg: '#F3F4F6', border: '#6B7280', ring: '#4B5563', badgeBg: '#0C0A09', badgeText: '#fff', badgeLabel: '关键' }
                         : tip.level === '吉'
                           ? { title: '#064E3B', bg: '#D1FAE5', border: '#10B981', ring: '#059669', badgeBg: '#059669', badgeText: '#fff', badgeLabel: '吉' }
                           : tip.level === '凶'
@@ -2287,15 +2310,15 @@ export default function BaZiAnalyzerPage() {
                 报告目录
               </div>
               {[
-                { id: 'pillars', label: '一、四柱排盘' },
-                { id: 'mingju-pattern', label: '二、命局模式' },
-                { id: 'dayun', label: '三、大运流年' },
+                { id: 'pillars', label: '一、四柱排盘总览' },
+                { id: 'mingju-pattern', label: '二、命局模式分析' },
+                { id: 'dayun', label: '三、大运流年分析' },
                 { id: 'overview', label: '四、命主速览' },
-                { id: 'pie', label: '五、寒热·阴阳占比' },
+                { id: 'pie', label: '五、寒热气·阴阳气占比' },
                 { id: 'taiji', label: '六、盘内存在太极' },
                 { id: 'special-tips', label: '七、特别提示' },
                 { id: 'monthqi', label: '八、月气分析' },
-                { id: 'yongji', label: '九、用神判断' },
+                { id: 'yongji', label: '九、用神忌神判断' },
               ].map((item) => (
                 <a
                   key={item.id}
@@ -2344,6 +2367,9 @@ export default function BaZiAnalyzerPage() {
             你智哥的阴阳分析系统 · 以太极阴阳为体，以月气动应为用
           </p>
           <p className="mt-1 text-xs">本工具仅供命理研究与学习参考，不构成任何人生决策建议</p>
+          <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-[11px] font-bold text-muted-foreground">
+            v{APP_VERSION} · 正式版
+          </p>
         </div>
       </footer>
     </div>

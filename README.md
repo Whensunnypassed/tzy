@@ -2,6 +2,17 @@
 
 ## 灰灰 凤梨
 
+---
+
+## 版本信息
+
+- 当前版本：**v1.0.0**（正式版）
+- 更新记录：见 [CHANGELOG.md](./CHANGELOG.md)
+- 线上站点：https://whensunnypassed.github.io/tzy/
+- 版本号规则：正式版起采用语义化版本 `v主版本.次版本.修订号`；每次更新同步修改 `package.json`、页面页脚、CHANGELOG
+
+---
+
 # 技术使用
 - 前端: React 19 + TypeScript
 - 样式: Tailwind CSS v4
