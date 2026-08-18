@@ -411,8 +411,8 @@ function WealthPanel({
     <ol className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
       {items.map((it, i) => (
         <li key={it.year} className="flex items-center justify-between text-[12px] font-bold">
-          <span>
-            <span className="mr-1 inline-flex size-4 items-center justify-center rounded-full text-[9px] font-black text-white" style={{ background: accent }}>{i + 1}</span>
+          <span className="inline-flex items-center">
+            <span className="mr-2 inline-flex size-4 items-center justify-center rounded-full text-[9px] font-black text-white" style={{ background: accent }}>{i + 1}</span>
             <span>{it.year}年</span>
             <span className="ml-1 text-muted-foreground">·{it.ganzhi}</span>
             <span className="ml-1 text-muted-foreground">·{it.age}岁</span>
@@ -494,8 +494,8 @@ function EducationPanel({
           <ol className="grid grid-cols-2 gap-x-3 gap-y-1">
             {bestEducationYears.map((it, i) => (
               <li key={it.year} className="flex items-center justify-between text-[12px] font-bold">
-                <span>
-                  <span className="mr-1 inline-flex size-4 items-center justify-center rounded-full bg-emerald-500 text-[9px] font-black text-white">{i + 1}</span>
+                <span className="inline-flex items-center">
+                  <span className="mr-2 inline-flex size-4 items-center justify-center rounded-full bg-emerald-500 text-[9px] font-black text-white">{i + 1}</span>
                   <span>{it.year}年</span>
                   <span className="ml-1 text-muted-foreground">·{it.ganzhi}</span>
                   <span className="ml-1 text-muted-foreground">·{it.age}岁</span>
@@ -527,8 +527,8 @@ function RomanceVerdictPanel({
       {items.map((it, i) => (
         <li key={it.year} className="flex flex-col rounded-lg border border-white/60 bg-white/60 p-2">
           <div className="flex items-center justify-between text-[12px] font-black">
-            <span>
-              <span className="mr-1 inline-flex size-4 items-center justify-center rounded-full text-[9px] font-black text-white" style={{ background: accentBg }}>{i + 1}</span>
+            <span className="inline-flex items-center">
+              <span className="mr-2 inline-flex size-4 items-center justify-center rounded-full text-[9px] font-black text-white" style={{ background: accentBg }}>{i + 1}</span>
               <span>{it.year}年</span>
               <span className="ml-1 text-muted-foreground">·{it.ganzhi}</span>
               <span className="ml-1 text-muted-foreground">·{it.age}岁</span>
@@ -817,7 +817,7 @@ function computeTaiJiDbReferences(
 }
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.2.0';
+const APP_VERSION = '2.2.1';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -1044,11 +1044,17 @@ export default function BaZiAnalyzerPage() {
       }
       return null;
     };
-    const currentAge = typeof (chart as any).age === 'number' ? (chart as any).age as number : 0;
+    // 从 chart.birthInfo.solarDate（例："2005-02-01" 或 "2005/2/1"）提取阳历出生年份
+    const solarDateStr = chart.birthInfo?.solarDate ?? '';
+    const m = /^\s*(\d{4})/.exec(solarDateStr);
+    const birthYear = m ? parseInt(m[1], 10) : NaN;
     const estimateAge = (year: number, rawAge?: number): number => {
-      if (typeof rawAge === 'number') return rawAge;
-      const diff = year - currentYear;
-      return Math.max(0, currentAge + diff);
+      if (typeof rawAge === 'number' && rawAge >= 0) return rawAge;
+      if (Number.isFinite(birthYear)) return Math.max(0, year - birthYear);
+      // 若 birthYear 解析失败（极少见），再退回 currentYear 差 + 当前年龄估算
+      const rawCurrentAge = (chart as any).age;
+      const ca = typeof rawCurrentAge === 'number' ? rawCurrentAge : 0;
+      return Math.max(0, ca + (year - currentYear));
     };
 
     // 仅保留当年及未来年份（或含 0..3 年前，做参考，但默认只展示 >= currentYear）
@@ -1065,17 +1071,18 @@ export default function BaZiAnalyzerPage() {
       if (!gz) continue;
       const age = estimateAge(r.year, r.age);
       const { loveScore, marriageScore, loveHits, marriageHits } = scoreRomanceForYear(gz.stem, gz.branch, chart);
-      if (loveScore > 0) loveArr.push({ year: r.year, ganzhi: gz.ganzhiStr, age, score: loveScore, hits: loveHits });
-      if (marriageScore > 0) marriageArr.push({ year: r.year, ganzhi: gz.ganzhiStr, age, score: marriageScore, hits: marriageHits });
+      // 伦理/场景年龄门槛：16 岁以下不可能恋爱；18 岁以下不可能结婚
+      if (loveScore > 0 && age >= 16) loveArr.push({ year: r.year, ganzhi: gz.ganzhiStr, age, score: loveScore, hits: loveHits });
+      if (marriageScore > 0 && age >= 18) marriageArr.push({ year: r.year, ganzhi: gz.ganzhiStr, age, score: marriageScore, hits: marriageHits });
 
       const w = scoreWealthForYear(gz.stem, gz.branch, chart, r.displayScore ?? 0, yongJi);
-      wealthArr.push({ year: r.year, ganzhi: gz.ganzhiStr, age, score: w });
+      if (age >= 18) wealthArr.push({ year: r.year, ganzhi: gz.ganzhiStr, age, score: w }); // 18 岁以下无事业求财
 
       const n = scoreNobilityForYear(gz.stem, gz.branch, chart, r.displayScore ?? 0, yongJi);
-      nobilityArr.push({ year: r.year, ganzhi: gz.ganzhiStr, age, score: n });
+      if (age >= 18) nobilityArr.push({ year: r.year, ganzhi: gz.ganzhiStr, age, score: n });
 
       const e = scoreEducationForYear(gz.stem, gz.branch, chart, r.displayScore ?? 0, yongJi);
-      eduArr.push({ year: r.year, ganzhi: gz.ganzhiStr, age, score: e });
+      if (age >= 6) eduArr.push({ year: r.year, ganzhi: gz.ganzhiStr, age, score: e }); // 6 岁才入学
     }
 
     const byScoreDesc = (a: any, b: any) => b.score - a.score;
