@@ -38,6 +38,20 @@ import {
   type YongJiResult,
 } from '@/utils/baziAnalyzer';
 import {
+  analyzeXiangYi,
+  analyzeWealthVerdict,
+  analyzeRomanceVerdict,
+  analyzeEducationVerdict,
+  analyzeEarthXiJi,
+  evaluateRomanceForGZ,
+  type XiangYiVerdict,
+  type WealthVerdict,
+  type RomanceVerdict,
+  type EducationVerdict,
+  type EarthXiJiResult,
+  type RomanceFlag,
+} from '@/utils/xiangfaAnalyzer';
+import {
   ELEMENT_PALETTE_FORMAL,
   getSolarTermThemeByBirthDate,
   type SolarTermTheme,
@@ -319,6 +333,169 @@ function DaYunCurveChart({
   );
 }
 
+// ============ 「象意·财富·感情·学历」栏目：论断面板（数据书为最终参考） ============
+function VerdictPanel({
+  subtitle,
+  inputs,
+  matched,
+  result,
+  references,
+  disclaimer,
+  accent = 'sky',
+}: {
+  subtitle: string;
+  inputs: Array<{ label: string; value: string }>;
+  matched: boolean;
+  result: string;
+  references: string[];
+  disclaimer?: string;
+  accent?: 'sky' | 'emerald' | 'rose' | 'amber';
+}) {
+  const accentMeta: Record<string, { border: string; bg: string; text: string; tag: string }> = {
+    sky: { border: 'rgba(14,165,233,0.25)', bg: 'rgba(14,165,233,0.06)', text: '#0369A1', tag: '#0EA5E9' },
+    emerald: { border: 'rgba(16,185,129,0.25)', bg: 'rgba(16,185,129,0.06)', text: '#047857', tag: '#10B981' },
+    rose: { border: 'rgba(244,63,94,0.25)', bg: 'rgba(244,63,94,0.06)', text: '#BE123C', tag: '#F43F5E' },
+    amber: { border: 'rgba(245,158,11,0.28)', bg: 'rgba(245,158,11,0.07)', text: '#B45309', tag: '#F59E0B' },
+  };
+  const am = accentMeta[accent];
+  return (
+    <div className="space-y-3">
+      <div className="text-sm font-bold text-muted-foreground" style={{ fontFamily: "'Noto Serif SC', serif" }}>{subtitle}</div>
+      {/* 导入的既有模块数据 */}
+      <div className="flex flex-wrap gap-2">
+        {inputs.map((it) => (
+          <span key={it.label} className="rounded-lg border bg-white/70 px-2 py-1 text-[11px] font-bold" style={{ borderColor: am.border, color: 'var(--foreground)' }}>
+            <span className="text-muted-foreground">{it.label}：</span>{it.value}
+          </span>
+        ))}
+      </div>
+      {/* 查询论断 */}
+      <div className="rounded-xl p-4" style={{ border: `1px solid ${am.border}`, background: am.bg }}>
+        <div className="mb-1.5 flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-black text-white" style={{ background: am.tag }}>
+            查询论断
+          </span>
+          {!matched && disclaimer && (
+            <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+              {disclaimer}
+            </span>
+          )}
+        </div>
+        <p className="text-sm leading-relaxed font-bold text-foreground">{result}</p>
+      </div>
+      {/* 数据书依据 */}
+      <details className="group rounded-xl border border-border/60 bg-card/50 p-3">
+        <summary className="cursor-pointer text-xs font-black text-muted-foreground transition-colors group-open:text-foreground">
+          象法依据
+        </summary>
+        <ul className="mt-2 space-y-1.5">
+          {references.map((r, i) => (
+            <li key={i} className="text-xs leading-relaxed font-bold text-muted-foreground">· {r}</li>
+          ))}
+        </ul>
+      </details>
+    </div>
+  );
+}
+
+// ============ 感情论断面板（含 恋爱/结婚 小logo） ============
+function RomanceVerdictPanel({ verdict }: { verdict: RomanceVerdict }) {
+  return (
+    <div className="space-y-3">
+      <div className="text-sm font-bold text-muted-foreground" style={{ fontFamily: "'Noto Serif SC', serif" }}>感情 · 异性缘与婚姻情缘</div>
+      <div className="flex flex-wrap gap-2">
+        {verdict.inputs.map((it) => (
+          <span key={it.label} className="rounded-lg border border-rose-200 bg-white/70 px-2 py-1 text-[11px] font-bold" style={{ color: 'var(--foreground)' }}>
+            <span className="text-muted-foreground">{it.label}：</span>{it.value}
+          </span>
+        ))}
+      </div>
+      <div className="rounded-xl p-4" style={{ border: '1px solid rgba(244,63,94,0.25)', background: 'rgba(244,63,94,0.06)' }}>
+        <div className="mb-1.5 flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-black text-white">查询论断</span>
+          {verdict.love && (
+            <span className="inline-flex size-5 items-center justify-center rounded-full bg-pink-500 text-[11px] font-black leading-none text-white">♥</span>
+          )}
+          {verdict.marriage && (
+            <span className="inline-flex size-5 items-center justify-center rounded-full bg-rose-600 text-[11px] font-black leading-none text-white">喜</span>
+          )}
+          {!verdict.matched && verdict.disclaimer && (
+            <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">{verdict.disclaimer}</span>
+          )}
+        </div>
+        <p className="text-sm leading-relaxed font-bold text-foreground">{verdict.result}</p>
+      </div>
+      <details className="group rounded-xl border border-border/60 bg-card/50 p-3">
+        <summary className="cursor-pointer text-xs font-black text-muted-foreground transition-colors group-open:text-foreground">
+          象法依据
+        </summary>
+        <ul className="mt-2 space-y-1.5">
+          {verdict.reference.map((r, i) => (
+            <li key={i} className="text-xs leading-relaxed font-bold text-muted-foreground">· {r}</li>
+          ))}
+        </ul>
+      </details>
+    </div>
+  );
+}
+
+// ============ 象意论断面板（日主五行象法） ============
+function XiangYiPanel({ verdict }: { verdict: XiangYiVerdict }) {
+  return (
+    <div className="space-y-4">
+      <div className="text-sm font-bold text-muted-foreground" style={{ fontFamily: "'Noto Serif SC', serif" }}>
+        象意 · 五行本源象法（以日主{verdict.dayMaster.stem}{verdict.dayMaster.elementName}为中心）
+      </div>
+      <div className="rounded-xl p-4" style={{ border: '1px solid rgba(14,165,233,0.25)', background: 'rgba(14,165,233,0.06)' }}>
+        <div className="mb-1.5 flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center rounded-full bg-sky-500 px-2 py-0.5 text-[10px] font-black text-white">日主象意</span>
+          <span className="text-xs font-black" style={{ color: '#0369A1' }}>{verdict.dayMaster.stem} · {verdict.dayMaster.elementName} · {verdict.dayMaster.fourSymbol}</span>
+        </div>
+        <p className="text-sm leading-relaxed font-bold text-foreground">{verdict.dayMaster.stemTraits}</p>
+        <p className="mt-2 text-sm leading-relaxed font-bold text-muted-foreground">{verdict.dayMaster.nature}</p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <div className="rounded-lg bg-white/60 p-2.5">
+            <div className="text-xs font-black text-sky-700">核心类象</div>
+            <ul className="mt-1 space-y-1">
+              {verdict.dayMaster.imagery.map((img, i) => (
+                <li key={i} className="text-xs leading-relaxed font-bold text-muted-foreground">· {img}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="space-y-2">
+            <div className="rounded-lg bg-white/60 p-2.5">
+              <div className="text-xs font-black text-sky-700">人体 · 才艺</div>
+              <p className="mt-1 text-xs leading-relaxed font-bold text-muted-foreground">{verdict.dayMaster.body}</p>
+              <p className="mt-1 text-xs leading-relaxed font-bold text-muted-foreground">{verdict.dayMaster.talent}</p>
+            </div>
+            <div className="rounded-lg bg-white/60 p-2.5">
+              <div className="text-xs font-black text-sky-700">吉凶异化</div>
+              <p className="mt-1 text-xs leading-relaxed font-bold text-muted-foreground">{verdict.dayMaster.jiXiong}</p>
+            </div>
+          </div>
+        </div>
+        <div className="mt-3 rounded-lg bg-white/60 p-2.5">
+          <div className="text-xs font-black text-sky-700">月令流转</div>
+          <p className="mt-1 text-xs leading-relaxed font-bold text-muted-foreground">{verdict.dayMaster.monthFlow}</p>
+        </div>
+      </div>
+      <details className="group rounded-xl border border-border/60 bg-card/50 p-3">
+        <summary className="cursor-pointer text-xs font-black text-muted-foreground transition-colors group-open:text-foreground">
+          四柱干支象意一览
+        </summary>
+        <div className="mt-2 grid gap-2 sm:grid-cols-2 md:grid-cols-4">
+          {verdict.pillars.map((p, i) => (
+            <div key={i} className="rounded-lg border border-border/60 bg-white/60 p-2.5">
+              <div className="text-xs font-black">{p.position}柱 {p.gz}（{p.elementName}）</div>
+              <p className="mt-1 text-[11px] leading-relaxed font-bold text-muted-foreground">{p.stemTraits}</p>
+            </div>
+          ))}
+        </div>
+      </details>
+    </div>
+  );
+}
+
 // ============ 辅助：角标后加红色感叹号（好到不好的下坡提醒） ============
 const DownAlertBadge = ({ show }: { show?: boolean }) => {
   if (!show) return null;
@@ -501,7 +678,7 @@ function computeTaiJiDbReferences(
 }
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '1.2.1';
+const APP_VERSION = '2.0.0';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -659,12 +836,81 @@ export default function BaZiAnalyzerPage() {
     return extractSpecialTips(chart, monthQi, yongJi, pattern, allJiaziPillars);
   }, [chart, monthQi, yongJi, pattern, allJiaziPillars]);
 
+  // ===== 新栏目「象意·财富·感情·学历」数据（数据书优先级 2，独立于既有模块）=====
+  const xiangYi = useMemo<XiangYiVerdict | null>(() => {
+    if (!chart) return null;
+    return analyzeXiangYi(chart, monthQi);
+  }, [chart, monthQi]);
+
+  const wealthVerdict = useMemo<WealthVerdict | null>(() => {
+    if (!chart || !wealthNobility) return null;
+    return analyzeWealthVerdict(chart, monthQi, wealthNobility, elementPower);
+  }, [chart, monthQi, wealthNobility, elementPower]);
+
+  const romanceVerdict = useMemo<RomanceVerdict | null>(() => {
+    if (!chart) return null;
+    return analyzeRomanceVerdict(chart);
+  }, [chart]);
+
+  const educationVerdict = useMemo<EducationVerdict | null>(() => {
+    if (!chart) return null;
+    return analyzeEducationVerdict(chart, yongJi, elementPower);
+  }, [chart, yongJi, elementPower]);
+
+  // 用神忌神判断·土专区
+  const earthXiJi = useMemo<EarthXiJiResult | null>(() => {
+    if (!chart) return null;
+    return analyzeEarthXiJi(chart, monthQi);
+  }, [chart, monthQi]);
+
+  // 大运流年情缘接口：按干支建立 爱心(恋爱)/喜字(结婚) 标记查询表
+  const romanceMap = useMemo(() => {
+    const map: Record<string, RomanceFlag> = {};
+    if (!chart || !daYunAnalysis) return map;
+    const put = (gz: string, s: string, b: string) => {
+      const key = gz || `${s}${b}`;
+      if (!map[key]) map[key] = evaluateRomanceForGZ(s, b, chart);
+    };
+    daYunAnalysis.daYunWithFortune.forEach((dy: any) => {
+      put(`${dy.stem}${dy.branch}`, dy.stem, dy.branch);
+      (dy.liuNian10 || []).forEach((ln: any) => {
+        if (ln && ln.ganzhi && ln.ganzhi.length === 2) put(ln.ganzhi, ln.ganzhi[0], ln.ganzhi[1]);
+      });
+    });
+    daYunAnalysis.recentLiuNian.forEach((ln: any) => {
+      if (ln && ln.ganzhi && ln.ganzhi.length === 2) put(ln.ganzhi, ln.ganzhi[0], ln.ganzhi[1]);
+    });
+    return map;
+  }, [chart, daYunAnalysis]);
+
   const analyzedBoolean = analyzed && chart && monthQi && yongJi && elementPower && yinYangPct && coldHotPct && pattern && wealthNobility && daYunAnalysis && specialTips;
 
   const renderMarkBadge = (mark: 'useful' | 'taboo' | 'neutral') => {
     if (mark === 'useful') return <Badge className="bg-emerald-500 hover:bg-emerald-600">用神</Badge>;
     if (mark === 'taboo') return <Badge variant="destructive">忌神</Badge>;
     return <Badge variant="secondary">中性</Badge>;
+  };
+
+  // 大运流年·情缘小logo：♥ 恋爱可能 / 喜 结婚可能（依据《象法》数据书感情篇）
+  const romanceBadge = (gz: string) => {
+    const flag = romanceMap[gz];
+    if (!flag || (!flag.love && !flag.marriage)) {
+      return <span className="text-[11px] font-bold text-muted-foreground/60">—</span>;
+    }
+    return (
+      <span className="inline-flex items-center gap-1" title={flag.reason}>
+        {flag.marriage && (
+          <span className="inline-flex size-5 items-center justify-center rounded-full bg-rose-600 text-[11px] font-black leading-none text-white shadow-sm ring-1 ring-rose-300">
+            喜
+          </span>
+        )}
+        {flag.love && (
+          <span className="inline-flex size-5 items-center justify-center rounded-full bg-pink-500 text-[11px] font-black leading-none text-white shadow-sm ring-1 ring-pink-300">
+            ♥
+          </span>
+        )}
+      </span>
+    );
   };
 
   // ===== MVP 分数明细组件 =====
@@ -1452,7 +1698,20 @@ export default function BaZiAnalyzerPage() {
                         </div>
 
                         <div>
-                          <div className="mb-2 text-sm font-bold"><span className="mark-highlight">八步大运</span></div>
+                          <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <div className="text-sm font-bold"><span className="mark-highlight">八步大运</span></div>
+                            <div className="flex items-center gap-3 text-[10px] font-bold text-muted-foreground">
+                              <span className="inline-flex items-center gap-1">
+                                <span className="inline-flex size-4 items-center justify-center rounded-full bg-pink-500 text-[9px] font-black leading-none text-white">♥</span>
+                                恋爱可能
+                              </span>
+                              <span className="inline-flex items-center gap-1">
+                                <span className="inline-flex size-4 items-center justify-center rounded-full bg-rose-600 text-[9px] font-black leading-none text-white">喜</span>
+                                结婚可能
+                              </span>
+                              <span className="text-muted-foreground/60">（依据《象法》数据书·感情篇，悬停查看理由）</span>
+                            </div>
+                          </div>
                           <div className="w-full overflow-x-auto">
                             <Table>
                               <TableHeader>
@@ -1463,7 +1722,7 @@ export default function BaZiAnalyzerPage() {
                                   <TableHead className="whitespace-nowrap">年份</TableHead>
                                   <TableHead className="whitespace-nowrap">总判</TableHead>
                                   <TableHead className="whitespace-nowrap">综合分</TableHead>
-                                  <TableHead className="whitespace-nowrap">Top 作用</TableHead>
+                                  <TableHead className="whitespace-nowrap">情缘</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
@@ -1524,10 +1783,8 @@ export default function BaZiAnalyzerPage() {
                                             </div>
                                           </TableCell>
                                           <TableCell>
-                                            <div className="max-w-xs space-y-0.5 text-[11px] leading-snug text-muted-foreground">
-                                              {dy.topReasons.slice(0, 2).map((r: string, i: number) => (
-                                                <div key={i} className="line-clamp-1">· {r}</div>
-                                              ))}
+                                            <div className="flex items-center gap-1">
+                                              {romanceBadge(`${dy.stem}${dy.branch}`)}
                                             </div>
                                           </TableCell>
                                         </TableRow>
@@ -1572,8 +1829,11 @@ export default function BaZiAnalyzerPage() {
                                                         </div>
                                                       </div>
                                                       <div className="mt-1 flex items-end justify-between">
-                                                        <div className="text-sm font-black" style={{ color: lmeta.text, fontFamily: "'Noto Serif SC', serif" }}>
-                                                          {ln.ganzhi}
+                                                        <div className="flex items-center gap-1.5">
+                                                          <div className="text-sm font-black" style={{ color: lmeta.text, fontFamily: "'Noto Serif SC', serif" }}>
+                                                            {ln.ganzhi}
+                                                          </div>
+                                                          {romanceBadge(ln.ganzhi)}
                                                         </div>
                                                         <div
                                                           className="text-sm font-bold tabular-nums"
@@ -1620,7 +1880,10 @@ export default function BaZiAnalyzerPage() {
                                   }}
                                 >
                                   <div className="text-xs font-bold text-muted-foreground">{ln.year}</div>
-                                  <div className="mt-0.5 text-base font-bold" style={{ color: meta.text }}>{ln.ganzhi}</div>
+                                  <div className="mt-0.5 flex items-center justify-center gap-1.5">
+                                    <div className="text-base font-bold" style={{ color: meta.text }}>{ln.ganzhi}</div>
+                                    {romanceBadge(ln.ganzhi)}
+                                  </div>
                                   <div
                                     className="mt-1 flex items-center justify-center gap-1.5 text-xs font-black flex-wrap"
                                     style={{ color: meta.labelColor, letterSpacing: '0.06em' }}
@@ -2121,7 +2384,110 @@ export default function BaZiAnalyzerPage() {
                     </div>
                   </div>
 
+                  {/* 土专区：中宫承载制衡之气（数据书优先级 2，独立判定是否取用土） */}
+                  {earthXiJi && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="text-sm font-bold text-amber-800"><span className="mark-highlight">土</span>（中宫·承载制衡）</div>
+                        <span
+                          className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-black"
+                          style={{
+                            background: earthXiJi.decision === 'useful' ? '#F59E0B' : earthXiJi.decision === 'taboo' ? '#B45309' : '#A8A29E',
+                            color: '#FFFFFF',
+                          }}
+                        >
+                          {earthXiJi.overall}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-sm leading-relaxed font-bold text-muted-foreground">{earthXiJi.reason}</p>
+                      {earthXiJi.details.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {earthXiJi.details.map((d) => (
+                            <span
+                              key={d.ganzhi}
+                              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold"
+                              style={{
+                                background: d.mark === 'useful' ? '#FEF3C7' : d.mark === 'taboo' ? '#FDE68A' : '#F5F5F4',
+                                color: 'var(--foreground)',
+                                border: `1px solid ${d.mark === 'useful' ? '#F59E0B' : d.mark === 'taboo' ? '#B45309' : '#D6D3D1'}`,
+                              }}
+                              title={d.note}
+                            >
+                              {d.ganzhi}
+                              <span className="text-[10px] font-black" style={{ color: d.mark === 'useful' ? '#B45309' : d.mark === 'taboo' ? '#92400E' : '#78716C' }}>
+                                {d.mark === 'useful' ? '宜用' : d.mark === 'taboo' ? '忌' : '调和'}
+                              </span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <p className="text-sm leading-relaxed font-bold text-muted-foreground">{yongJi.description}</p>
+                </CardContent>
+              </Card>
+
+
+              {/* 十、象意·财富·感情·学历（《象法》数据书，优先级 2，最终参考） */}
+              <Card
+                id="section-xiangfa"
+                className="scroll-mt-6 shadow-[0_4px_24px_-12px_rgba(0,0,0,0.08)]"
+                style={{ borderLeft: `3px solid ${solarTermTheme.palette.accent}` }}
+              >
+                <CardHeader className="pt-8 pb-5 text-center">
+                  <CardTitle
+                    className="flex justify-center text-center text-[28px] font-black leading-tight md:text-[34px]"
+                    style={{
+                      fontFamily: "'Noto Serif SC', serif",
+                      color: 'var(--foreground)',
+                      letterSpacing: '-0.01em',
+                    }}
+                  >
+                    象意
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {xiangYi && wealthVerdict && romanceVerdict && educationVerdict ? (
+                    <Tabs defaultValue="xiangyi" className="w-full">
+                      <TabsList className="w-full justify-center">
+                        <TabsTrigger value="xiangyi">象意</TabsTrigger>
+                        <TabsTrigger value="wealth">财富</TabsTrigger>
+                        <TabsTrigger value="romance">感情</TabsTrigger>
+                        <TabsTrigger value="education">学历</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="xiangyi" className="mt-4">
+                        <XiangYiPanel verdict={xiangYi} />
+                      </TabsContent>
+                      <TabsContent value="wealth" className="mt-4">
+                        <VerdictPanel
+                          subtitle="财富 · 富贵财官"
+                          inputs={wealthVerdict.inputs}
+                          matched={wealthVerdict.matched}
+                          result={wealthVerdict.result}
+                          references={wealthVerdict.reference}
+                          disclaimer={wealthVerdict.disclaimer}
+                          accent="amber"
+                        />
+                      </TabsContent>
+                      <TabsContent value="romance" className="mt-4">
+                        <RomanceVerdictPanel verdict={romanceVerdict} />
+                      </TabsContent>
+                      <TabsContent value="education" className="mt-4">
+                        <VerdictPanel
+                          subtitle="学历 · 十神学业考试"
+                          inputs={educationVerdict.inputs}
+                          matched={educationVerdict.matched}
+                          result={educationVerdict.result}
+                          references={educationVerdict.reference}
+                          disclaimer={educationVerdict.disclaimer}
+                          accent="emerald"
+                        />
+                      </TabsContent>
+                    </Tabs>
+                  ) : (
+                    <p className="text-center text-sm font-bold text-muted-foreground">数据计算中，请稍候…</p>
+                  )}
                 </CardContent>
               </Card>
 
@@ -2162,6 +2528,7 @@ export default function BaZiAnalyzerPage() {
                 { id: 'special-tips', label: '六、特别提示' },
                 { id: 'monthqi', label: '七、月气分析' },
                 { id: 'yongji', label: '八、用神忌神判断' },
+                { id: 'xiangfa', label: '九、象意' },
               ].map((item) => (
                 <a
                   key={item.id}
