@@ -1,4 +1,4 @@
-import React, { Fragment, useState, useMemo, useEffect, useRef } from 'react';
+﻿import React, { Fragment, useState, useMemo, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,10 +44,15 @@ import {
   analyzeEducationVerdict,
   analyzeEarthXiJi,
   evaluateRomanceForGZ,
+  scoreRomanceForYear,
+  scoreWealthForYear,
+  scoreNobilityForYear,
+  scoreEducationForYear,
   type XiangYiVerdict,
   type WealthVerdict,
   type RomanceVerdict,
   type EducationVerdict,
+  type YearRomanceScore,
   type EarthXiJiResult,
   type RomanceFlag,
 } from '@/utils/xiangfaAnalyzer';
@@ -392,8 +397,32 @@ function VerdictPanel({
   );
 }
 
-// ============ 财富论断面板（只展示最终档位与自然语言结论，无中间过程） ============
-function WealthPanel({ verdict }: { verdict: WealthVerdict }) {
+// ============ 财富论断面板（档位 + 最利求财/事业年份，按可能性从高到低排） ============
+function WealthPanel({
+  verdict,
+  bestWealthYears,
+  bestNobilityYears,
+}: {
+  verdict: WealthVerdict;
+  bestWealthYears: Array<{ year: number; ganzhi: string; score: number; age: number }>;
+  bestNobilityYears: Array<{ year: number; ganzhi: string; score: number; age: number }>;
+}) {
+  const renderYearList = (items: Array<{ year: number; ganzhi: string; score: number; age: number }>, accent: string, accentText: string) => (
+    <ol className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
+      {items.map((it, i) => (
+        <li key={it.year} className="flex items-center justify-between text-[12px] font-bold">
+          <span>
+            <span className="mr-1 inline-flex size-4 items-center justify-center rounded-full text-[9px] font-black text-white" style={{ background: accent }}>{i + 1}</span>
+            <span>{it.year}年</span>
+            <span className="ml-1 text-muted-foreground">·{it.ganzhi}</span>
+            <span className="ml-1 text-muted-foreground">·{it.age}岁</span>
+          </span>
+          <span style={{ color: accentText }}>{it.score >= 0 ? '+' : ''}{it.score}分</span>
+        </li>
+      ))}
+    </ol>
+  );
+
   return (
     <div className="space-y-3">
       <div className="text-sm font-bold text-muted-foreground" style={{ fontFamily: "'Noto Serif SC', serif" }}>财富 · 富贵财官</div>
@@ -418,20 +447,33 @@ function WealthPanel({ verdict }: { verdict: WealthVerdict }) {
         </div>
       </div>
       <div className="rounded-xl p-4" style={{ border: '1px solid rgba(245,158,11,0.28)', background: 'rgba(245,158,11,0.06)' }}>
-        <div className="mb-1.5 flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-black text-white" style={{ background: '#F59E0B' }}>查询论断</span>
-          {!verdict.matched && verdict.disclaimer && (
-            <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">{verdict.disclaimer}</span>
-          )}
-        </div>
-        <p className="text-sm leading-relaxed font-bold text-foreground">{verdict.result}</p>
+        <div className="mb-2 text-[13px] font-black" style={{ color: '#B45309' }}>最利求财年份（按可能性从高到低）</div>
+        {bestWealthYears.length === 0 ? (
+          <p className="text-xs leading-relaxed font-bold text-muted-foreground">暂无足够流年数据可排序。</p>
+        ) : (
+          renderYearList(bestWealthYears, '#F59E0B', '#B45309')
+        )}
+      </div>
+      <div className="rounded-xl p-4" style={{ border: '1px solid rgba(14,165,233,0.25)', background: 'rgba(14,165,233,0.06)' }}>
+        <div className="mb-2 text-[13px] font-black" style={{ color: '#0369A1' }}>最利事业地位年份（按可能性从高到低）</div>
+        {bestNobilityYears.length === 0 ? (
+          <p className="text-xs leading-relaxed font-bold text-muted-foreground">暂无足够流年数据可排序。</p>
+        ) : (
+          renderYearList(bestNobilityYears, '#0EA5E9', '#0369A1')
+        )}
       </div>
     </div>
   );
 }
 
-// ============ 学历论断面板（只展示最终档位与自然语言结论，无中间过程） ============
-function EducationPanel({ verdict }: { verdict: EducationVerdict }) {
+// ============ 学历论断面板（档位 + 最利学业/考试年份，按可能性从高到低排） ============
+function EducationPanel({
+  verdict,
+  bestEducationYears,
+}: {
+  verdict: EducationVerdict;
+  bestEducationYears: Array<{ year: number; ganzhi: string; score: number; age: number }>;
+}) {
   return (
     <div className="space-y-3">
       <div className="text-sm font-bold text-muted-foreground" style={{ fontFamily: "'Noto Serif SC', serif" }}>学历 · 十神学业考试（10 档·量化）</div>
@@ -445,61 +487,92 @@ function EducationPanel({ verdict }: { verdict: EducationVerdict }) {
         <p className="text-xs leading-relaxed font-bold text-muted-foreground">{verdict.levelDesc}</p>
       </div>
       <div className="rounded-xl p-4" style={{ border: '1px solid rgba(16,185,129,0.25)', background: 'rgba(16,185,129,0.05)' }}>
-        <div className="mb-1.5 flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-black text-white" style={{ background: '#10B981' }}>查询论断</span>
-          {!verdict.matched && verdict.disclaimer && (
-            <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">{verdict.disclaimer}</span>
-          )}
-        </div>
-        <p className="text-sm leading-relaxed font-bold text-foreground">{verdict.result}</p>
+        <div className="mb-2 text-[13px] font-black" style={{ color: '#047857' }}>最利学业 / 考试年份（按可能性从高到低）</div>
+        {bestEducationYears.length === 0 ? (
+          <p className="text-xs leading-relaxed font-bold text-muted-foreground">暂无足够流年数据可排序。</p>
+        ) : (
+          <ol className="grid grid-cols-2 gap-x-3 gap-y-1">
+            {bestEducationYears.map((it, i) => (
+              <li key={it.year} className="flex items-center justify-between text-[12px] font-bold">
+                <span>
+                  <span className="mr-1 inline-flex size-4 items-center justify-center rounded-full bg-emerald-500 text-[9px] font-black text-white">{i + 1}</span>
+                  <span>{it.year}年</span>
+                  <span className="ml-1 text-muted-foreground">·{it.ganzhi}</span>
+                  <span className="ml-1 text-muted-foreground">·{it.age}岁</span>
+                </span>
+                <span style={{ color: '#047857' }}>{it.score >= 0 ? '+' : ''}{it.score}分</span>
+              </li>
+            ))}
+          </ol>
+        )}
       </div>
     </div>
   );
 }
 
-// ============ 感情论断面板（含 恋爱/结婚 应期提示） ============
-function RomanceVerdictPanel({ verdict }: { verdict: RomanceVerdict }) {
+// ============ 感情论断面板（只列具体 YYYY 年：恋爱可能 / 结婚，按可能性从高到低排列） ============
+function RomanceVerdictPanel({
+  bestLoveYears,
+  bestMarriageYears,
+}: {
+  bestLoveYears: Array<{ year: number; ganzhi: string; score: number; age: number; hits: string[] }>;
+  bestMarriageYears: Array<{ year: number; ganzhi: string; score: number; age: number; hits: string[] }>;
+}) {
+  const renderTimingList = (
+    items: Array<{ year: number; ganzhi: string; score: number; age: number; hits: string[] }>,
+    accent: string,
+    accentBg: string,
+  ) => (
+    <ol className="mt-2 space-y-1.5">
+      {items.map((it, i) => (
+        <li key={it.year} className="flex flex-col rounded-lg border border-white/60 bg-white/60 p-2">
+          <div className="flex items-center justify-between text-[12px] font-black">
+            <span>
+              <span className="mr-1 inline-flex size-4 items-center justify-center rounded-full text-[9px] font-black text-white" style={{ background: accentBg }}>{i + 1}</span>
+              <span>{it.year}年</span>
+              <span className="ml-1 text-muted-foreground">·{it.ganzhi}</span>
+              <span className="ml-1 text-muted-foreground">·{it.age}岁</span>
+            </span>
+            <span style={{ color: accent }}>{it.score}分</span>
+          </div>
+          {it.hits.length > 0 && (
+            <div className="mt-0.5 flex flex-wrap gap-1">
+              {it.hits.slice(0, 3).map((h) => (
+                <span key={h} className="rounded-md border px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground" style={{ borderColor: `${accentBg}33`, background: `${accentBg}0D` }}>{h}</span>
+              ))}
+            </div>
+          )}
+        </li>
+      ))}
+    </ol>
+  );
+
   return (
     <div className="space-y-3">
       <div className="text-sm font-bold text-muted-foreground" style={{ fontFamily: "'Noto Serif SC', serif" }}>感情 · 异性缘与婚姻情缘</div>
-      <div className="flex flex-wrap gap-2">
-        {verdict.inputs.map((it) => (
-          <span key={it.label} className="rounded-lg border border-rose-200 bg-white/70 px-2 py-1 text-[11px] font-bold" style={{ color: 'var(--foreground)' }}>
-            <span className="text-muted-foreground">{it.label}：</span>{it.value}
-          </span>
-        ))}
+
+      <div className="rounded-xl border border-pink-200 bg-pink-50/50 p-4">
+        <div className="mb-2 flex items-center gap-1.5">
+          <span className="inline-flex size-4 items-center justify-center rounded-full bg-pink-500 text-[9px] font-black leading-none text-white">♥</span>
+          <span className="text-xs font-black text-pink-700">恋爱可能时间如下（按可能性从高到低排列）</span>
+        </div>
+        {bestLoveYears.length === 0 ? (
+          <p className="text-xs leading-relaxed font-bold text-muted-foreground">暂无足够流年数据；恋爱应期需逢岁运桃花或异性星引动之年方显。</p>
+        ) : (
+          renderTimingList(bestLoveYears, '#BE185D', '#EC4899')
+        )}
       </div>
-      <div className="rounded-xl p-4" style={{ border: '1px solid rgba(244,63,94,0.25)', background: 'rgba(244,63,94,0.06)' }}>
-        <div className="mb-1.5 flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-black text-white">查询论断</span>
-          {/* 严格互斥：结婚(喜) ＞ 恋爱(♥)，查询论断区只显示最高档徽标 */}
-          {verdict.marriage ? (
-            <span className="inline-flex size-5 items-center justify-center rounded-full bg-rose-600 text-[11px] font-black leading-none text-white">喜</span>
-          ) : verdict.love ? (
-            <span className="inline-flex size-5 items-center justify-center rounded-full bg-pink-500 text-[11px] font-black leading-none text-white">♥</span>
-          ) : null}
-          {!verdict.matched && verdict.disclaimer && (
-            <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">{verdict.disclaimer}</span>
-          )}
+
+      <div className="rounded-xl border border-rose-200 bg-rose-50/50 p-4">
+        <div className="mb-2 flex items-center gap-1.5">
+          <span className="inline-flex size-4 items-center justify-center rounded-full bg-rose-600 text-[9px] font-black leading-none text-white">喜</span>
+          <span className="text-xs font-black text-rose-700">结婚时间如下（按可能性从高到低排列）</span>
         </div>
-        <p className="text-sm leading-relaxed font-bold text-foreground">{verdict.result}</p>
-      </div>
-      {/* 最容易恋爱 / 结婚的年份应期 */}
-      <div className="grid gap-2 md:grid-cols-2">
-        <div className="rounded-xl border border-pink-200 bg-pink-50/50 p-3">
-          <div className="mb-1 flex items-center gap-1.5">
-            <span className="inline-flex size-4 items-center justify-center rounded-full bg-pink-500 text-[9px] font-black leading-none text-white">♥</span>
-            <span className="text-xs font-black text-pink-700">最容易恋爱</span>
-          </div>
-          <p className="text-xs leading-relaxed font-bold text-muted-foreground">{verdict.loveTiming}</p>
-        </div>
-        <div className="rounded-xl border border-rose-200 bg-rose-50/50 p-3">
-          <div className="mb-1 flex items-center gap-1.5">
-            <span className="inline-flex size-4 items-center justify-center rounded-full bg-rose-600 text-[9px] font-black leading-none text-white">喜</span>
-            <span className="text-xs font-black text-rose-700">最容易结婚</span>
-          </div>
-          <p className="text-xs leading-relaxed font-bold text-muted-foreground">{verdict.marriageTiming}</p>
-        </div>
+        {bestMarriageYears.length === 0 ? (
+          <p className="text-xs leading-relaxed font-bold text-muted-foreground">暂无足够流年数据；结婚应期需逢岁运合冲夫妻宫之年方显。</p>
+        ) : (
+          renderTimingList(bestMarriageYears, '#9F1239', '#E11D48')
+        )}
       </div>
     </div>
   );
@@ -922,6 +995,104 @@ export default function BaZiAnalyzerPage() {
     if (!chart) return null;
     return analyzeEducationVerdict(chart, yongJi, elementPower);
   }, [chart, yongJi, elementPower]);
+
+  // ===== 象法·应期年份排序（按可能性从高到低排列，展示结论年份，不展示中间过程与数据库规则）=====
+  type ScoredTimingYear = { year: number; ganzhi: string; age: number; score: number; hits: string[] };
+  type ScoredYear = { year: number; ganzhi: string; age: number; score: number };
+
+  const { bestLoveYears, bestMarriageYears, bestWealthYears, bestNobilityYears, bestEducationYears } = useMemo<{
+    bestLoveYears: ScoredTimingYear[];
+    bestMarriageYears: ScoredTimingYear[];
+    bestWealthYears: ScoredYear[];
+    bestNobilityYears: ScoredYear[];
+    bestEducationYears: ScoredYear[];
+  }>(() => {
+    if (!chart || !daYunAnalysis || !yongJi || !elementPower) {
+      return { bestLoveYears: [], bestMarriageYears: [], bestWealthYears: [], bestNobilityYears: [], bestEducationYears: [] };
+    }
+    // 收集所有有 year/ganzhi/age 的流年：大运下辖的流年（liuNian10）和 recentLiuNian
+    type RawLN = { year: number; ganzhi?: string | [string, string] | { 0: string; 1: string } | any; age?: number; displayScore?: number };
+    const raws: RawLN[] = [];
+    const pushOne = (raw: any) => {
+      if (!raw || typeof raw.year !== 'number') return;
+      if (!raw.ganzhi) return;
+      raws.push(raw as RawLN);
+    };
+    (daYunAnalysis.daYunWithFortune || []).forEach((dy: any) => {
+      (dy.liuNian10 || []).forEach(pushOne);
+    });
+    (daYunAnalysis.recentLiuNian || []).forEach(pushOne);
+
+    // 去重：按 year 只保留一个（若重复则优先保留有 displayScore 的）
+    const dedupMap = new Map<number, RawLN>();
+    for (const r of raws) {
+      const existing = dedupMap.get(r.year);
+      if (!existing || (r.displayScore != null && existing.displayScore == null)) {
+        dedupMap.set(r.year, r);
+      }
+    }
+    const all = Array.from(dedupMap.values());
+
+    const unpackGZ = (raw: RawLN): { stem: string; branch: string; ganzhiStr: string } | null => {
+      const gz = raw.ganzhi;
+      if (!gz) return null;
+      if (typeof gz === 'string' && gz.length >= 2) return { stem: gz[0], branch: gz[1], ganzhiStr: gz.slice(0, 2) };
+      if (Array.isArray(gz) && typeof gz[0] === 'string' && typeof gz[1] === 'string') return { stem: gz[0], branch: gz[1], ganzhiStr: `${gz[0]}${gz[1]}` };
+      if (typeof gz === 'object' && typeof (gz as any)[0] === 'string' && typeof (gz as any)[1] === 'string') {
+        const o = gz as any;
+        return { stem: o[0], branch: o[1], ganzhiStr: `${o[0]}${o[1]}` };
+      }
+      return null;
+    };
+    const currentAge = typeof (chart as any).age === 'number' ? (chart as any).age as number : 0;
+    const estimateAge = (year: number, rawAge?: number): number => {
+      if (typeof rawAge === 'number') return rawAge;
+      const diff = year - currentYear;
+      return Math.max(0, currentAge + diff);
+    };
+
+    // 仅保留当年及未来年份（或含 0..3 年前，做参考，但默认只展示 >= currentYear）
+    const forward = all.filter((r) => r.year >= currentYear);
+
+    const loveArr: ScoredTimingYear[] = [];
+    const marriageArr: ScoredTimingYear[] = [];
+    const wealthArr: ScoredYear[] = [];
+    const nobilityArr: ScoredYear[] = [];
+    const eduArr: ScoredYear[] = [];
+
+    for (const r of forward) {
+      const gz = unpackGZ(r);
+      if (!gz) continue;
+      const age = estimateAge(r.year, r.age);
+      const { loveScore, marriageScore, loveHits, marriageHits } = scoreRomanceForYear(gz.stem, gz.branch, chart);
+      if (loveScore > 0) loveArr.push({ year: r.year, ganzhi: gz.ganzhiStr, age, score: loveScore, hits: loveHits });
+      if (marriageScore > 0) marriageArr.push({ year: r.year, ganzhi: gz.ganzhiStr, age, score: marriageScore, hits: marriageHits });
+
+      const w = scoreWealthForYear(gz.stem, gz.branch, chart, r.displayScore ?? 0, yongJi);
+      wealthArr.push({ year: r.year, ganzhi: gz.ganzhiStr, age, score: w });
+
+      const n = scoreNobilityForYear(gz.stem, gz.branch, chart, r.displayScore ?? 0, yongJi);
+      nobilityArr.push({ year: r.year, ganzhi: gz.ganzhiStr, age, score: n });
+
+      const e = scoreEducationForYear(gz.stem, gz.branch, chart, r.displayScore ?? 0, yongJi);
+      eduArr.push({ year: r.year, ganzhi: gz.ganzhiStr, age, score: e });
+    }
+
+    const byScoreDesc = (a: any, b: any) => b.score - a.score;
+    loveArr.sort(byScoreDesc);
+    marriageArr.sort(byScoreDesc);
+    wealthArr.sort(byScoreDesc);
+    nobilityArr.sort(byScoreDesc);
+    eduArr.sort(byScoreDesc);
+
+    return {
+      bestLoveYears: loveArr.slice(0, 8),
+      bestMarriageYears: marriageArr.slice(0, 8),
+      bestWealthYears: wealthArr.slice(0, 10),
+      bestNobilityYears: nobilityArr.slice(0, 10),
+      bestEducationYears: eduArr.slice(0, 10),
+    };
+  }, [chart, daYunAnalysis, yongJi, currentYear]);
 
   // 用神忌神判断·土专区
   const earthXiJi = useMemo<EarthXiJiResult | null>(() => {
@@ -2540,13 +2711,13 @@ export default function BaZiAnalyzerPage() {
                         <XiangYiPanel verdict={xiangYi} />
                       </TabsContent>
                       <TabsContent value="wealth" className="mt-4">
-                        <WealthPanel verdict={wealthVerdict} />
+                        <WealthPanel verdict={wealthVerdict} bestWealthYears={bestWealthYears} bestNobilityYears={bestNobilityYears} />
                       </TabsContent>
                       <TabsContent value="romance" className="mt-4">
-                        <RomanceVerdictPanel verdict={romanceVerdict} />
+                        <RomanceVerdictPanel bestLoveYears={bestLoveYears} bestMarriageYears={bestMarriageYears} />
                       </TabsContent>
                       <TabsContent value="education" className="mt-4">
-                        <EducationPanel verdict={educationVerdict} />
+                        <EducationPanel verdict={educationVerdict} bestEducationYears={bestEducationYears} />
                       </TabsContent>
                     </Tabs>
                   ) : (

@@ -503,6 +503,189 @@ export function analyzeEducationVerdict(
 }
 
 // ============================================================
+// ============================================================
+// 五（扩展）、具体年份的恋爱/结婚强度评分（用于按可能性从高到低排序具体 YYYY 年）
+// 条件权重严格依据《象法》数据书·感情篇与 evaluateRomanceForGZ 的判断逻辑；
+// 所有评分仅服务外显年份列表，不改变核心 baziAnalyzer / bazidata 任何逻辑。
+// ============================================================
+export interface YearRomanceScore {
+  loveScore: number;
+  marriageScore: number;
+  loveHits: string[];
+  marriageHits: string[];
+}
+
+export function scoreRomanceForYear(stem: string, branch: string, chart: BaZiChart): YearRomanceScore {
+  const isMale = chart.gender === 'male';
+  const dayEl = STEM_ELEMENTS[chart.day.stem];
+  const oppositeEl = isMale ? KE_MAP[dayEl] : Object.keys(KE_MAP).find((k) => KE_MAP[k] === dayEl) || 'water';
+  const oppositeName = isMale ? '财星(妻星)' : '官星(夫星)';
+  const dayBranch = chart.day.branch;
+  const stemEl = STEM_ELEMENTS[stem];
+  const branchEl = BRANCH_ELEMENTS[branch];
+  const oppositeMet = stemEl === oppositeEl || branchEl === oppositeEl;
+
+  const loveHits: string[] = [];
+  const marriageHits: string[] = [];
+  let loveScore = 0;
+  let marriageScore = 0;
+
+  // —— 恋爱分（越旺越靠前）——
+  if (PEACH_BRANCHES.includes(branch)) { loveScore += 4; loveHits.push(`桃花${branch}`); }
+  if (oppositeMet) { loveScore += 3; loveHits.push(`${oppositeName}现`); }
+
+  const isHe = DI_ZHI_LIU_HE[branch + dayBranch] || DI_ZHI_LIU_HE[dayBranch + branch];
+  const isChong = LIU_CHONG_PAIRS[branch + dayBranch] || LIU_CHONG_PAIRS[dayBranch + branch];
+  const isFuYin = branch === dayBranch;
+  const isSanHe = SAN_HE_GROUPS.some((g) => g.members.includes(branch) && g.members.includes(dayBranch));
+  const isSanHui = SAN_HUI_GROUPS.some((g) => g.members.includes(branch) && g.members.includes(dayBranch));
+  const chenXu = (dayBranch === '辰' && branch === '戌') || (dayBranch === '戌' && branch === '辰');
+
+  if (isHe) { loveScore += 5; loveHits.push(`六合夫妻宫${dayBranch}`); }
+  if (isSanHe || isSanHui) { loveScore += 3; loveHits.push(`三合/三会夫妻宫`); }
+  if (isChong) { loveScore += 2; loveHits.push(`冲夫妻宫${dayBranch}`); }
+  if (isFuYin) { loveScore += 2; loveHits.push(`夫妻宫伏吟${dayBranch}`); }
+  if (chenXu) { loveScore += 2; loveHits.push(`辰戌相见`); }
+
+  // —— 结婚分（比恋爱更严，必须婚姻宫强引动+异性缘实质）——
+  if (isHe && oppositeMet) { marriageScore += 12; marriageHits.push(`六合夫妻宫+${oppositeName}现`); }
+  else if (isHe && PEACH_BRANCHES.includes(branch)) { marriageScore += 9; marriageHits.push(`六合夫妻宫+桃花${branch}`); }
+  else if (isHe) { marriageScore += 5; marriageHits.push(`六合夫妻宫（弱：无异性星/桃花）`); }
+
+  if (isSanHe && oppositeMet) { marriageScore += 9; marriageHits.push(`三合夫妻宫+${oppositeName}现`); }
+  else if (isSanHe && PEACH_BRANCHES.includes(branch)) { marriageScore += 7; marriageHits.push(`三合夫妻宫+桃花${branch}`); }
+  else if (isSanHe) { marriageScore += 4; marriageHits.push(`三合夫妻宫（弱）`); }
+
+  if (isSanHui && oppositeMet) { marriageScore += 8; marriageHits.push(`三会夫妻宫+${oppositeName}现`); }
+  else if (isSanHui) { marriageScore += 3; marriageHits.push(`三会夫妻宫`); }
+
+  if (isChong && oppositeMet) { marriageScore += 8; marriageHits.push(`冲夫妻宫+${oppositeName}现`); }
+  else if (isChong && PEACH_BRANCHES.includes(branch)) { marriageScore += 6; marriageHits.push(`冲夫妻宫+桃花${branch}`); }
+  else if (isChong) { marriageScore += 3; marriageHits.push(`冲夫妻宫`); }
+
+  if (isFuYin && oppositeMet) { marriageScore += 5; marriageHits.push(`夫妻宫伏吟+${oppositeName}现`); }
+
+  if (chenXu && (oppositeMet || PEACH_BRANCHES.includes(branch))) {
+    marriageScore += 7;
+    marriageHits.push(`辰戌相见+${oppositeMet ? `${oppositeName}现` : `桃花${branch}`}`);
+  } else if (chenXu) {
+    marriageScore += 2;
+    marriageHits.push(`辰戌相见（波动）`);
+  }
+
+  return { loveScore, marriageScore, loveHits, marriageHits };
+}
+
+// ============================================================
+// 五（扩展 2）、具体流年：财富/事业/学业 年度得分（用于"最利 X 年份"从高到低排序）
+// —— 复用底层既有 displayScore（阴阳喜用分，已经充分反映该岁运对命局的价值），
+//    再叠加《象法》数据书的"载体/十神"加权作为排序区分度，绝对不改动任何底层得分。
+// ============================================================
+const YANG_CARRIERS: Record<string, string[]> = { wood: ['甲'], fire: ['丙'], earth: ['戊'], metal: ['庚'], water: ['壬'] };
+const YIN_CARRIERS: Record<string, string[]> = { metal: ['辛'], water: ['癸'], fire: ['丁'] };
+const SHI_SHEN_WEALTH_KEYWORDS = ['财'];
+const SHI_SHEN_GUANSHA_KEYWORDS = ['官', '杀'];
+const SHI_SHEN_YIN_KEYWORDS = ['印'];
+const SHI_SHEN_SHISHANG_KEYWORDS = ['食', '伤'];
+
+/** 利求财年度：displayScore为底 + 富载体/财星加分 + 金水土财富方向加分（忌神方向扣） */
+export function scoreWealthForYear(
+  stem: string,
+  branch: string,
+  chart: BaZiChart,
+  displayScore: number,
+  yongJi: { usefulElements: string[]; tabooElements: string[] } | null,
+): number {
+  const base = Math.round((displayScore ?? 0) * 2); // 阴阳喜用分 ×2 做底（±26 → ±52）
+  const stemEl = STEM_ELEMENTS[stem];
+  const branchEl = BRANCH_ELEMENTS[branch];
+  const useful = new Set(yongJi?.usefulElements ?? []);
+  const taboo = new Set(yongJi?.tabooElements ?? []);
+  let bonus = 0;
+  // 富载体（阳干 甲丙戊壬）：布气之年
+  if (Object.values(YANG_CARRIERS).flat().includes(stem)) bonus += 5;
+  // 贵载体（阴干 庚辛癸）：转化之年（对财富也有平台价值）
+  if (Object.values(YIN_CARRIERS).flat().includes(stem)) bonus += 2;
+  // 财星（我克）透干/支现
+  const dayEl = STEM_ELEMENTS[chart.day.stem];
+  const caiEl = KE_MAP[dayEl]; // 我克为财
+  if (stemEl === caiEl || branchEl === caiEl) bonus += 6;
+  // 生克喜用
+  [stemEl, branchEl].forEach((el) => {
+    if (useful.has(el)) bonus += 4;
+    else if (taboo.has(el)) bonus -= 4;
+  });
+  return base + bonus;
+}
+
+/** 利事业地位（贵寿）年度：displayScore为底 + 贵载体/官杀加分 */
+export function scoreNobilityForYear(
+  stem: string,
+  branch: string,
+  chart: BaZiChart,
+  displayScore: number,
+  yongJi: { usefulElements: string[]; tabooElements: string[] } | null,
+): number {
+  const base = Math.round((displayScore ?? 0) * 2);
+  const stemEl = STEM_ELEMENTS[stem];
+  const branchEl = BRANCH_ELEMENTS[branch];
+  const useful = new Set(yongJi?.usefulElements ?? []);
+  const taboo = new Set(yongJi?.tabooElements ?? []);
+  const dayEl = STEM_ELEMENTS[chart.day.stem];
+  const guanEl = Object.keys(KE_MAP).find((k) => KE_MAP[k] === dayEl) || 'water'; // 克我为官
+  let bonus = 0;
+  // 贵载体（庚辛癸）——阴干收敛成型，主贵
+  if (Object.values(YIN_CARRIERS).flat().includes(stem)) bonus += 6;
+  // 官杀（克我）透干/支现
+  if (stemEl === guanEl || branchEl === guanEl) bonus += 5;
+  // 富载体亦加分（平台对地位有助力）
+  if (Object.values(YANG_CARRIERS).flat().includes(stem)) bonus += 2;
+  [stemEl, branchEl].forEach((el) => {
+    if (useful.has(el)) bonus += 4;
+    else if (taboo.has(el)) bonus -= 4;
+  });
+  return base + bonus;
+}
+
+/** 利学业/考试年度：displayScore为底 + 印星得用 + 食伤得用加分 */
+export function scoreEducationForYear(
+  stem: string,
+  branch: string,
+  chart: BaZiChart,
+  displayScore: number,
+  yongJi: { usefulElements: string[]; tabooElements: string[] } | null,
+): number {
+  const base = Math.round((displayScore ?? 0) * 2);
+  const stemEl = STEM_ELEMENTS[stem];
+  const branchEl = BRANCH_ELEMENTS[branch];
+  const useful = new Set(yongJi?.usefulElements ?? []);
+  const taboo = new Set(yongJi?.tabooElements ?? []);
+  let bonus = 0;
+  // 印星：学术根基（生我者为印）——这里用干支五行"生我"判断
+  const dayEl = STEM_ELEMENTS[chart.day.stem];
+  const SHENG_WO: Record<string, string> = { water: 'metal', metal: 'earth', earth: 'fire', fire: 'wood', wood: 'water' };
+  const yinEl = SHENG_WO[dayEl] || 'water';
+  if (stemEl === yinEl || branchEl === yinEl) {
+    bonus += 7;
+    if (useful.has(yinEl)) bonus += 3; // 印为用神，加倍
+  }
+  // 食伤：发挥输出（我生者）——这里用"我生"判断
+  const WO_SHENG: Record<string, string> = { wood: 'fire', fire: 'earth', earth: 'metal', metal: 'water', water: 'wood' };
+  const shiShangEl = WO_SHENG[dayEl] || 'fire';
+  if (stemEl === shiShangEl || branchEl === shiShangEl) {
+    bonus += 4;
+    if (useful.has(shiShangEl)) bonus += 2;
+  }
+  // 官杀：自律压力（适度有利考试），按克我判断
+  const guanEl = Object.keys(KE_MAP).find((k) => KE_MAP[k] === dayEl) || 'water';
+  if (stemEl === guanEl || branchEl === guanEl) bonus += 2;
+  [stemEl, branchEl].forEach((el) => {
+    if (useful.has(el)) bonus += 3;
+    else if (taboo.has(el)) bonus -= 3;
+  });
+  return base + bonus;
+}
+
 // 五、大运流年情缘接口（爱心=恋爱可能 / 喜字=结婚可能）
 // ============================================================
 export interface RomanceFlag {
