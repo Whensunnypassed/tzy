@@ -392,16 +392,11 @@ function VerdictPanel({
   );
 }
 
-// ============ 感情论断面板（含 恋爱/结婚 小logo + 核心规则 + 恋爱/结婚应期） ============
+// ============ 感情论断面板（含 恋爱/结婚 应期提示） ============
 function RomanceVerdictPanel({ verdict }: { verdict: RomanceVerdict }) {
   return (
     <div className="space-y-3">
       <div className="text-sm font-bold text-muted-foreground" style={{ fontFamily: "'Noto Serif SC', serif" }}>感情 · 异性缘与婚姻情缘</div>
-      {/* 数据书核心规则 */}
-      <div className="rounded-xl border border-rose-200 bg-white/70 p-3">
-        <div className="text-xs font-black text-rose-700">《象法》核心规则</div>
-        <p className="mt-1 text-sm leading-relaxed font-bold text-foreground">{verdict.coreRule}</p>
-      </div>
       <div className="flex flex-wrap gap-2">
         {verdict.inputs.map((it) => (
           <span key={it.label} className="rounded-lg border border-rose-200 bg-white/70 px-2 py-1 text-[11px] font-bold" style={{ color: 'var(--foreground)' }}>

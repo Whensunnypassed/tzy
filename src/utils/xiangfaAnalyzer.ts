@@ -160,8 +160,7 @@ export function analyzeWealthVerdict(
     { label: '资源宫位', value: `${caiOuter ? '财星在他宫(年月)' : ''}${caiOuter && guanOuter ? '、' : ''}${guanOuter ? '官星在他宫(年月)' : (caiShenPresent || guanShenPresent ? '财官多在我宫(日时)' : '—')}` },
   ];
 
-  // 数据书判定
-  const refs: string[] = [];
+  // 综合判定（结果结论为最终展示给用户，不暴露任何内部数据书原文）
   const richLevel = wealthNobility ? wealthNobility.wealthScore : 50;
   const nobleLevel = wealthNobility ? wealthNobility.nobilityScore : 50;
   let result = '';
@@ -169,24 +168,22 @@ export function analyzeWealthVerdict(
   const nobleDesc = nobleLevel >= 70 ? '贵气较旺' : nobleLevel >= 45 ? '贵气平常' : '贵气偏薄';
 
   if (yangPower >= 28 || (yangCarrier.length > 0 && richLevel >= 60)) {
-    result += `富象主：阳气(木火)${yangPower.toFixed(1)}%，木火为富源，${caiShenPresent ? '且财星（妻星/资源）有现' : '财星不显'}——${richDesc}。${WEALTH_RULES.rich}`;
-    refs.push(WEALTH_RULES.rich);
+    result += `富象主：阳气(木火)${yangPower.toFixed(1)}%，木火旺相为富源根基，${caiShenPresent ? '且财星（妻星/资源）有现' : '财星不显'}——${richDesc}。`;
   } else {
-    result += `富象不显：阳气(木火)仅${yangPower.toFixed(1)}%，木火为富源却偏弱，求财需借岁运补足——${richDesc}。`;
+    result += `富象不显：阳气(木火)仅${yangPower.toFixed(1)}%，木火偏弱富源不足，求财需借岁运补足——${richDesc}。`;
   }
   if (yinPower >= 28 || (yinCarrier.length > 0 && nobleLevel >= 60)) {
-    result += `贵象主：阴气(金水)${yinPower.toFixed(1)}%，金水为贵源，${guanShenPresent ? '且官杀（管控/地位）有现' : '官杀不显'}——${nobleDesc}。${WEALTH_RULES.noble}`;
-    refs.push(WEALTH_RULES.noble);
+    result += `贵象主：阴气(金水)${yinPower.toFixed(1)}%，金水旺相为贵源根基，${guanShenPresent ? '且官杀（管控/地位）有现' : '官杀不显'}——${nobleDesc}。`;
   } else {
-    result += `贵象不显：阴气(金水)仅${yinPower.toFixed(1)}%，金水为贵源却偏弱，贵气多凭个人修为积累——${nobleDesc}。`;
+    result += `贵象不显：阴气(金水)仅${yinPower.toFixed(1)}%，金水偏弱贵源不足，贵气多凭个人修为积累——${nobleDesc}。`;
   }
-  // 宫位关联
   if (caiShenPresent || guanShenPresent) {
-    result += ` ${WEALTH_RULES.palace}${caiOuter || guanOuter ? `本局财官多居他宫（年月），需「${WEALTH_RULES.outerGain.slice(18, 40)}」与日主关联方可落袋为用。` : `本局财官多居我宫（日时），为日主自身所得资源。`}`;
-    refs.push(WEALTH_RULES.palace);
+    result += caiOuter || guanOuter
+      ? ' 财官多居他宫（年月），属外部社会资源，需与日主自身产生刑冲合害、干合藏透等关系，方可转化为自身所能掌握的财富与地位。'
+      : ' 财官多居我宫（日时），资源禀赋贴身，多可凭自身能力与后天积累直接落袋为用。';
   }
   if (richLevel >= 70 && nobleLevel >= 70) {
-    result += ' 富贵双全之象，然需以格局阴阳平衡为最终归依。';
+    result += ' 富贵双全之象，然仍需以格局阴阳平衡为最终归依。';
   }
 
   const matched = caiShenPresent || guanShenPresent || yangCarrier.length > 0 || yinCarrier.length > 0;
@@ -194,7 +191,7 @@ export function analyzeWealthVerdict(
     inputs,
     matched,
     result,
-    reference: refs.length > 0 ? refs : [WEALTH_RULES.gainRule],
+    reference: [],
     disclaimer: matched ? undefined : NOT_MATCHED_DISCLAIMER,
   };
 }
@@ -210,8 +207,6 @@ export interface RomanceVerdict {
   result: string;
   reference: string[];
   disclaimer?: string;
-  // 新增：数据书核心规则 + 恋爱/结婚应期
-  coreRule: string;              // 数据书核心规则（天干为异性缘基础、地支为情缘实质）
   loveTiming: string;            // 最利恋爱的年份/流年应期
   marriageTiming: string;        // 最利结婚的年份/流年应期
   peachBranches: string[];       // 命局桃花地支（子午卯酉）
@@ -265,29 +260,25 @@ export function analyzeRomanceVerdict(
     { label: '辰戌相见', value: hasChenXu ? '有（人事波折）' : '无' },
   ];
 
-  let result = ROMANCE_RULES.core;
-  const refs: string[] = [ROMANCE_RULES.core];
+  // —— 结论（综合分析，不含任何内部原文引用）——
+  let result = '';
   const love = spouseStarInStem || peach.length > 0 || palaceTriggered;
   let marriage = spouseInPalace;
 
   if (spouseStarInStem) {
-    result += ` ${oppositeName}透于天干，异性缘基础显现；天干仅为异性缘基础，地支为情缘实质。`;
-    refs.push(ROMANCE_RULES.zhengYuan);
+    result += ` ${oppositeName}透出天干，异性缘基础显现；不过天干多为缘分表象，感情实质需结合地支合冲与夫妻宫引动综合判断。`;
   }
   if (spouseInPalace) {
-    result += ` ${oppositeName}入夫妻宫（日支${dayBranch}），为正缘之象（${ROMANCE_RULES.zhengYuan.slice(9)}）。`;
+    result += ` ${oppositeName}正落夫妻宫（日支${dayBranch}），属正缘之象，名分内的正统情缘较为稳固。`;
     marriage = true;
-    refs.push(ROMANCE_RULES.zhengYuan);
   } else if (palaceTriggered) {
-    result += ` 夫妻宫（日支${dayBranch}）被其他地支合冲引动，婚姻宫有应期，逢岁运合冲时感情之事易显。`;
+    result += ` 夫妻宫（日支${dayBranch}）被其他地支合冲引动，婚姻宫有应期，逢岁运再合冲时感情之事易显。`;
   }
   if (peach.length > 0) {
-    result += ` 命带桃花（${peach.join('·')}），异性缘旺、魅力外显；官星不入夫妻宫而与食伤交融者，易生外情桃花（${ROMANCE_RULES.taoHua.slice(0, 28)}）。`;
-    refs.push(ROMANCE_RULES.taoHua);
+    result += ` 命带桃花（${peach.join('·')}），异性缘旺、魅力外显；若桃花逢合冲或异性星未入正宫，感情关系可能较为分散、易生外情桃花。`;
   }
   if (hasChenXu) {
-    result += ` 辰戌相见，必引动婚姻、六亲、人事波动（${ROMANCE_RULES.chenXu.slice(6, 44)}）。`;
-    refs.push(ROMANCE_RULES.chenXu);
+    result += ' 辰戌相见，婚恋与家庭人事易生波折，遇辰戌之年尤为明显；并非品行问题，多为情感与家庭的选择与磨合。';
   }
 
   const matched = spouseStarInStem || spouseInPalace || peach.length > 0 || hasChenXu;
@@ -316,9 +307,8 @@ export function analyzeRomanceVerdict(
     love,
     marriage,
     result,
-    reference: refs,
+    reference: [],
     disclaimer: matched ? undefined : NOT_MATCHED_DISCLAIMER,
-    coreRule: ROMANCE_RULES.core,
     loveTiming,
     marriageTiming,
     peachBranches: peach,
@@ -409,7 +399,7 @@ export function scoreEducationLevel(
   // 格局用神力量（决定学历上限）
   if (elementPower) {
     let yongPower = 0;
-    useful.forEach((el) => { yongPower += elementPower[el] ?? 0; });
+    useful.forEach((el) => { yongPower += (elementPower as Record<string, number>)[el] ?? 0; });
     const total = (elementPower.wood + elementPower.fire + elementPower.earth + elementPower.metal + elementPower.water) || 1;
     const bonus = Math.round(Math.min(1, Math.max(0, yongPower / total)) * EDUCATION_SCORING.patternMax);
     if (bonus > 0) { score += bonus; reasons.push(`用神力量占比加成 +${bonus}`); }
@@ -461,35 +451,25 @@ export function analyzeEducationVerdict(
     { label: '印星用忌', value: yinIsUseful ? '印为用神（得用）' : yinStar > 0 ? '印非核心用神' : '—' },
   ];
 
-  const refs: string[] = [];
+  // 综合判定（自然语言结论，不含任何数据书原文）
   let result = '';
-  const balanceShort = EDUCATION_RULES.balance.slice(0, 26);
-  const yinShort = EDUCATION_RULES.yin.slice(9, 30);
   if (yinStar > 0 && caiStar > 0) {
-    result += `财印双现（印${yinStar}位、财${caiStar}位），学业核心太极「财印平衡」成立；${yinIsUseful ? '印星得用，学识根基扎实，学有所成。' : `印星未得核心用神之力，学识转化成果需借岁运引动（${balanceShort}）。`}`;
-    refs.push(EDUCATION_RULES.balance);
-    refs.push(EDUCATION_RULES.yin);
-    refs.push(EDUCATION_RULES.cai);
+    result += `财印双现（印${yinStar}位、财${caiStar}位），学业核心太极「财印平衡」成立；${yinIsUseful ? '印星得用，学识根基扎实，学有所成、成果易落地。' : '印星未得核心用神之力，学识转化成果需借岁运引动，考试发挥须配合大运流年。'}`;
   } else if (yinStar > 0) {
-    result += `印星为根（${yinStar}位），学识根基厚实；但财星未现，缺乏「成果载体」，${yinIsUseful ? `得用则学业平顺（${yinShort}）。` : '印未得用则知识偏满而难落地，需岁运财星引动。'}`;
-    refs.push(EDUCATION_RULES.yin);
-    if (shiShang > 0) { result += ` 食伤${shiShang}位，输出发挥尚可；${EDUCATION_RULES.shiShang.slice(8, 30)}。`; refs.push(EDUCATION_RULES.shiShang); }
+    result += `印星为根（${yinStar}位），学识根基厚实；但财星未现，缺乏成果落地的载体，${yinIsUseful ? '得用则学业平顺、知识体系稳固。' : '印未得用则知识偏满而难落地，需岁运财星引动方显成果。'}`;
+    if (shiShang > 0) { result += ` 食伤${shiShang}位，输出与发挥层面尚可，考场表达有加分；若过度无制则易分心贪玩。`; }
   } else if (caiStar > 0) {
-    result += `财星为成果载体（${caiStar}位），然印星未现，知识根基偏薄；${EDUCATION_RULES.cai.slice(9, 34)}。`;
-    refs.push(EDUCATION_RULES.cai);
+    result += `财星为成果载体（${caiStar}位），然印星未现、知识根基偏薄，往往考场临时发挥尚可，却难成深厚持久的学识积累。`;
   } else {
-    result += `印星、财星均未透出，学业核心太极不显；`;
+    result += `印星、财星均未透出，学业核心太极不显，需靠岁运补入方能真正显效。`;
   }
   if (guanSha > 0) {
-    result += ` 官杀${guanSha}位，${EDUCATION_RULES.guanSha.slice(8, 30)}。`;
-    refs.push(EDUCATION_RULES.guanSha);
+    result += ` 官杀${guanSha}位，适度则代表自律与压力驱动利于学业坚持；若无制过旺则易因压力过载产生厌学抵触。`;
   }
   if (biJie > 0) {
-    result += ` 比劫${biJie}位，${EDUCATION_RULES.biJie.slice(8, 30)}。`;
-    refs.push(EDUCATION_RULES.biJie);
+    result += ` 比劫${biJie}位，适度代表同辈间的良性竞争与互助进步；过旺则易分心玩乐、专注力溃散。`;
   }
-  result += ` 文理倾向：${subject}（${EDUCATION_RULES.liKe2.slice(0, 24)}）。`;
-  refs.push(subject.includes('理科') ? EDUCATION_RULES.liKe2 : EDUCATION_RULES.liKe);
+  result += ` 文理倾向：${subject}。`;
 
   const matched = yinStar > 0 || caiStar > 0;
 
@@ -501,7 +481,7 @@ export function analyzeEducationVerdict(
     inputs,
     matched,
     result,
-    reference: refs.length > 0 ? refs : [EDUCATION_RULES.balance],
+    reference: [],
     disclaimer: matched ? undefined : NOT_MATCHED_DISCLAIMER,
     score: scored.score,
     level: scored.level,
