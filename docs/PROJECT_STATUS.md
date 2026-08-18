@@ -1,7 +1,7 @@
 # 项目状态总览（PROJECT STATUS）
 
 > 本文件用于其他模型/开发者快速接手项目，了解当前版本、已完成工作与同步流程。
-> 最后更新：v2.1.0
+> 最后更新：v2.3.0
 
 ---
 
@@ -9,9 +9,9 @@
 
 **项目**：`tzy` — 沛然堂 · 八字命理智能分析系统（React + Vite + Tailwind v4）
 **仓库**：`Whensunnypassed/tzy`（GitHub，main 分支）
-**当前版本**：**v2.2.1 · 正式版**（`package.json` 与 `BaZiAnalyzerPage.tsx` 中 `APP_VERSION` 两处同步维护）
+**当前版本**：**v2.3.0 · 正式版**（`package.json` 与 `BaZiAnalyzerPage.tsx` 中 `APP_VERSION` 两处同步维护）
 **线上地址**：https://whensunnypassed.github.io/tzy/ （由 gh-pages 分支驱动部署）
-**工作区状态**：已提交 v2.2.1（v2.2.0 应期列表年龄算法修复 + 场景年龄门槛）。
+**工作区状态**：已提交 v2.3.0（按需求移除「象意→感情/学历」两 Tab + 大运流年 ♥/喜 情缘徽标/情缘列）。
 
 ---
 
@@ -36,6 +36,7 @@
 | **v2.1.0** | `5c11a4b` | **感情应期 + 学历量化打分增强**：<br>① **感情页补核心规则与应期**：补显《象法》核心规则（天干为异性缘基础、地支为情缘实质）；新增「最容易恋爱」「最容易结婚」应期卡片——恋爱应期按桃花(子午卯酉)、异性星(男财/女官)流年、六合/三合/三会夫妻宫引动；结婚应期按六合/冲/三合夫妻宫、异性星入夫妻宫引动之年（含辰戌之年人事波动）<br>② **学历 10 档量化打分**：新增学历评价标准（辍学/小学/初中/高中/三本/二本/一本/211/985/顶级学校），0-100 分打分制（基础 50 分 + 印星根基 ±22/12/14 + 财印平衡 ±16/4/14 + 食伤 ±8/10 + 官杀 ±6/8 + 比劫 ±4/6 + 格局用神力量 +0~10），学历页显示档位徽标与打分依据明细；`xiangfa.md` 源文档同步追加第八篇章<br>③ **移除象法依据**：「象意」模块四个标签页不再展示「象法依据」折叠区及任何数据库原文引用<br>④ 数据书 `xiangfaData.ts` 新增 `EDUCATION_LEVELS`/`EDUCATION_SCORING`，分析引擎 `xiangfaAnalyzer.ts` 新增 `scoreEducationLevel` 并增强感情/学历返回；不改动原数据库与底层逻辑<br>⑤ 版本号 2.0.1 → 2.1.0 |
 | **v2.2.0** | `620e815d`（后续提交含版本号更新） | **象法三面板结论化 + 应期年份量化排序（UI去过程，只给客户看结果）**：<br>① **情缘徽标严格互斥**：感情页/大运流年「爱心♥(恋爱)」与「喜(结婚)」不同时出现，结婚优先级高于恋爱（引擎层 evaluateRomanceForGZ 强制 love=false + UI 层兜底）；16岁前不显示任何情缘徽标，16-18 岁仅显示恋爱，18 岁起方显示「婚」<br>② **感情面板改为直接列年份**：`RomanceVerdictPanel` 移除「查询论断+自然语言+输入依据+应期描述」大段文本，改为两栏——「恋爱可能时间如下（按可能性从高到低）」「结婚时间如下（按可能性从高到低）」，每栏展示 `YYYY 年 · 干支 · XX 岁（XX 分）`，按内部命中条件加权得分从高到低排前 8 名<br>③ **财富/事业面板改为结论化**：`WealthPanel` 保留财富层级/事业地位两个命盘结论小卡，移除「查询论断+verdict.result」；新增两栏应期列表——「最利求财年份（按可能性从高到低）」「最利事业地位年份（按可能性从高到低）」各前 10 名，含 `±XX 分`<br>④ **学历面板改为结论化**：`EducationPanel` 保留学历档位命盘结论小卡，移除「查询论断+verdict.result」；新增「最利学业/考试年份（按可能性从高到低）」前 10 名<br>⑤ **底层评分引擎不改动**：直接复用 `xiangfaAnalyzer.ts` 已有的 `scoreRomanceForYear / scoreWealthForYear / scoreNobilityForYear / scoreEducationForYear`；仅在 `BaZiAnalyzerBody` 内新增 useMemo 对所有当年及未来流年去重、打分、按可能性从高到低排序后截取；不改动核心数据库 `bazidata.ts` 与底层 `baziCalculator.ts / baziAnalyzer.ts`<br>⑥ 版本号 2.1.0 → 2.2.0 |
 | **v2.2.1** | （本提交） | **v2.2.0 应期列表严重 bug 修复**：<br>① **年龄算法修复（最严重）**：v2.2.0 中 `liuNian10 / recentLiuNian` 接口原本**没有 age 字段**（100% fallback），又错用了不存在的 `chart.age`（恒为 undefined→0），导致所有年份年龄退化为 `year - currentYear`（例：2005 年生→2026 年显示 0 岁、2046 年显示 20 岁）；改为从 `chart.birthInfo.solarDate` 正则提取阳历出生年，`age = year - birthYear` 精确计算，修复用户反馈"2046 丙寅怎么可能 20 岁"<br>② **应期场景年龄门槛（避免 0 岁求财/3 岁恋爱）**：恋爱应期仅保留 `age ≥ 16`，结婚应期仅保留 `age ≥ 18`，求财/事业应期仅保留 `age ≥ 18`，学业应期仅保留 `age ≥ 6`；修复用户反馈"八岁/0 岁怎么会赚钱呢 / 3 岁怎么恋爱呢"<br>③ **排名数字与年份视觉/文本分离**：v2.2.0 排名徽标 `mr-1` 间距太小，复制纯文本时 `1 + 2074 年` 粘成 `12074 年`；三个面板（Wealth/Education/Romance）排名徽标统一 `mr-2` + 父容器 `inline-flex items-center`，视觉与复制时都明确分隔<br>④ 版本号 2.2.0 → 2.2.1 |
+| **v2.3.0** | （本提交） | **按需求裁剪象意模块 + 移除大运流年 ♥/喜 情缘徽标**（仅改外显 UI，不动底层引擎 `xiangfaAnalyzer.ts` 函数）：<br>① **象法模块去「感情/学历」**：原「象意」区 4 个标签页「象意 / 财富 / 感情 / 学历」收敛为 2 个「象意 / 财富」；`RomanceVerdictPanel / EducationPanel` 不再渲染，对应 `romanceVerdict / educationVerdict / bestLoveYears / bestMarriageYears / bestEducationYears` 的页面层 useMemo 一并移除（避免无用计算），`EducationPanel` 定义删除<br>② **大运流年 ♥/喜 情缘功能去除**：删除「八步大运」标题右侧「♥ 恋爱可能 / 喜 结婚可能 / 感情篇 / 16 岁前不提示恋爱婚」图例说明整段；八步大运表格删除「情缘」列（表头 `TableHead` 及每行尾 `TableCell` 一并删除，展开行 `colSpan` 从 7 缩为 6）；下辖十年流年卡片及近年流年卡片上的粉色 ♥ / 红色 喜 徽标（`romanceBadge`）两处渲染全部移除；页面层 `romanceMap`（含 `evaluateRomanceForGZ` 调用）与 `romanceBadge` 函数删除（底层 `xiangfaAnalyzer.ts` 的 `evaluateRomanceForGZ / scoreRomanceForYear / scoreEducationForYear / analyzeRomanceVerdict / analyzeEducationVerdict` 引擎函数保持不动，未来恢复只需在页面层重新接回即可）<br>③ 版本号 2.2.1 → 2.3.0 |
 
 ---
 

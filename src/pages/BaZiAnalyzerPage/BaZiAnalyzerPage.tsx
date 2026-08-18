@@ -40,21 +40,12 @@ import {
 import {
   analyzeXiangYi,
   analyzeWealthVerdict,
-  analyzeRomanceVerdict,
-  analyzeEducationVerdict,
   analyzeEarthXiJi,
-  evaluateRomanceForGZ,
-  scoreRomanceForYear,
   scoreWealthForYear,
   scoreNobilityForYear,
-  scoreEducationForYear,
   type XiangYiVerdict,
   type WealthVerdict,
-  type RomanceVerdict,
-  type EducationVerdict,
-  type YearRomanceScore,
   type EarthXiJiResult,
-  type RomanceFlag,
 } from '@/utils/xiangfaAnalyzer';
 import {
   ELEMENT_PALETTE_FORMAL,
@@ -466,49 +457,6 @@ function WealthPanel({
   );
 }
 
-// ============ 学历论断面板（档位 + 最利学业/考试年份，按可能性从高到低排） ============
-function EducationPanel({
-  verdict,
-  bestEducationYears,
-}: {
-  verdict: EducationVerdict;
-  bestEducationYears: Array<{ year: number; ganzhi: string; score: number; age: number }>;
-}) {
-  return (
-    <div className="space-y-3">
-      <div className="text-sm font-bold text-muted-foreground" style={{ fontFamily: "'Noto Serif SC', serif" }}>学历 · 十神学业考试（10 档·量化）</div>
-      <div className="rounded-xl border p-4" style={{ border: '1px solid rgba(16,185,129,0.25)', background: 'rgba(16,185,129,0.06)' }}>
-        <div className="mb-1.5 flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-black text-white">学历档位</span>
-          <span className="inline-flex items-center rounded-full bg-white/80 px-2.5 py-0.5 text-[13px] font-black" style={{ border: '1px solid rgba(16,185,129,0.25)' }}>
-            {verdict.level}<span className="ml-1" style={{ color: '#047857' }}>· {verdict.score} 分</span>
-          </span>
-        </div>
-        <p className="text-xs leading-relaxed font-bold text-muted-foreground">{verdict.levelDesc}</p>
-      </div>
-      <div className="rounded-xl p-4" style={{ border: '1px solid rgba(16,185,129,0.25)', background: 'rgba(16,185,129,0.05)' }}>
-        <div className="mb-2 text-[13px] font-black" style={{ color: '#047857' }}>最利学业 / 考试年份（按可能性从高到低）</div>
-        {bestEducationYears.length === 0 ? (
-          <p className="text-xs leading-relaxed font-bold text-muted-foreground">暂无足够流年数据可排序。</p>
-        ) : (
-          <ol className="grid grid-cols-2 gap-x-3 gap-y-1">
-            {bestEducationYears.map((it, i) => (
-              <li key={it.year} className="flex items-center justify-between text-[12px] font-bold">
-                <span className="inline-flex items-center">
-                  <span className="mr-2 inline-flex size-4 items-center justify-center rounded-full bg-emerald-500 text-[9px] font-black text-white">{i + 1}</span>
-                  <span>{it.year}年</span>
-                  <span className="ml-1 text-muted-foreground">·{it.ganzhi}</span>
-                  <span className="ml-1 text-muted-foreground">·{it.age}岁</span>
-                </span>
-                <span style={{ color: '#047857' }}>{it.score >= 0 ? '+' : ''}{it.score}分</span>
-              </li>
-            ))}
-          </ol>
-        )}
-      </div>
-    </div>
-  );
-}
 
 // ============ 感情论断面板（只列具体 YYYY 年：恋爱可能 / 结婚，按可能性从高到低排列） ============
 function RomanceVerdictPanel({
@@ -817,7 +765,7 @@ function computeTaiJiDbReferences(
 }
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.2.1';
+const APP_VERSION = '2.3.0';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -986,29 +934,15 @@ export default function BaZiAnalyzerPage() {
     return analyzeWealthVerdict(chart, monthQi, wealthNobility, elementPower);
   }, [chart, monthQi, wealthNobility, elementPower]);
 
-  const romanceVerdict = useMemo<RomanceVerdict | null>(() => {
-    if (!chart) return null;
-    return analyzeRomanceVerdict(chart);
-  }, [chart]);
-
-  const educationVerdict = useMemo<EducationVerdict | null>(() => {
-    if (!chart) return null;
-    return analyzeEducationVerdict(chart, yongJi, elementPower);
-  }, [chart, yongJi, elementPower]);
-
   // ===== 象法·应期年份排序（按可能性从高到低排列，展示结论年份，不展示中间过程与数据库规则）=====
-  type ScoredTimingYear = { year: number; ganzhi: string; age: number; score: number; hits: string[] };
   type ScoredYear = { year: number; ganzhi: string; age: number; score: number };
 
-  const { bestLoveYears, bestMarriageYears, bestWealthYears, bestNobilityYears, bestEducationYears } = useMemo<{
-    bestLoveYears: ScoredTimingYear[];
-    bestMarriageYears: ScoredTimingYear[];
+  const { bestWealthYears, bestNobilityYears } = useMemo<{
     bestWealthYears: ScoredYear[];
     bestNobilityYears: ScoredYear[];
-    bestEducationYears: ScoredYear[];
   }>(() => {
     if (!chart || !daYunAnalysis || !yongJi || !elementPower) {
-      return { bestLoveYears: [], bestMarriageYears: [], bestWealthYears: [], bestNobilityYears: [], bestEducationYears: [] };
+      return { bestWealthYears: [], bestNobilityYears: [] };
     }
     // 收集所有有 year/ganzhi/age 的流年：大运下辖的流年（liuNian10）和 recentLiuNian
     type RawLN = { year: number; ganzhi?: string | [string, string] | { 0: string; 1: string } | any; age?: number; displayScore?: number };
@@ -1060,46 +994,30 @@ export default function BaZiAnalyzerPage() {
     // 仅保留当年及未来年份（或含 0..3 年前，做参考，但默认只展示 >= currentYear）
     const forward = all.filter((r) => r.year >= currentYear);
 
-    const loveArr: ScoredTimingYear[] = [];
-    const marriageArr: ScoredTimingYear[] = [];
     const wealthArr: ScoredYear[] = [];
     const nobilityArr: ScoredYear[] = [];
-    const eduArr: ScoredYear[] = [];
 
     for (const r of forward) {
       const gz = unpackGZ(r);
       if (!gz) continue;
       const age = estimateAge(r.year, r.age);
-      const { loveScore, marriageScore, loveHits, marriageHits } = scoreRomanceForYear(gz.stem, gz.branch, chart);
-      // 伦理/场景年龄门槛：16 岁以下不可能恋爱；18 岁以下不可能结婚
-      if (loveScore > 0 && age >= 16) loveArr.push({ year: r.year, ganzhi: gz.ganzhiStr, age, score: loveScore, hits: loveHits });
-      if (marriageScore > 0 && age >= 18) marriageArr.push({ year: r.year, ganzhi: gz.ganzhiStr, age, score: marriageScore, hits: marriageHits });
 
       const w = scoreWealthForYear(gz.stem, gz.branch, chart, r.displayScore ?? 0, yongJi);
       if (age >= 18) wealthArr.push({ year: r.year, ganzhi: gz.ganzhiStr, age, score: w }); // 18 岁以下无事业求财
 
       const n = scoreNobilityForYear(gz.stem, gz.branch, chart, r.displayScore ?? 0, yongJi);
       if (age >= 18) nobilityArr.push({ year: r.year, ganzhi: gz.ganzhiStr, age, score: n });
-
-      const e = scoreEducationForYear(gz.stem, gz.branch, chart, r.displayScore ?? 0, yongJi);
-      if (age >= 6) eduArr.push({ year: r.year, ganzhi: gz.ganzhiStr, age, score: e }); // 6 岁才入学
     }
 
     const byScoreDesc = (a: any, b: any) => b.score - a.score;
-    loveArr.sort(byScoreDesc);
-    marriageArr.sort(byScoreDesc);
     wealthArr.sort(byScoreDesc);
     nobilityArr.sort(byScoreDesc);
-    eduArr.sort(byScoreDesc);
 
     return {
-      bestLoveYears: loveArr.slice(0, 8),
-      bestMarriageYears: marriageArr.slice(0, 8),
       bestWealthYears: wealthArr.slice(0, 10),
       bestNobilityYears: nobilityArr.slice(0, 10),
-      bestEducationYears: eduArr.slice(0, 10),
     };
-  }, [chart, daYunAnalysis, yongJi, currentYear]);
+  }, [chart, daYunAnalysis, yongJi, elementPower, currentYear]);
 
   // 用神忌神判断·土专区
   const earthXiJi = useMemo<EarthXiJiResult | null>(() => {
@@ -1107,61 +1025,12 @@ export default function BaZiAnalyzerPage() {
     return analyzeEarthXiJi(chart, monthQi);
   }, [chart, monthQi]);
 
-  // 大运流年情缘接口：按干支建立 爱心(恋爱)/喜字(结婚) 标记查询表
-  const romanceMap = useMemo(() => {
-    const map: Record<string, RomanceFlag> = {};
-    if (!chart || !daYunAnalysis) return map;
-    const put = (gz: string, s: string, b: string) => {
-      const key = gz || `${s}${b}`;
-      if (!map[key]) map[key] = evaluateRomanceForGZ(s, b, chart);
-    };
-    daYunAnalysis.daYunWithFortune.forEach((dy: any) => {
-      put(`${dy.stem}${dy.branch}`, dy.stem, dy.branch);
-      (dy.liuNian10 || []).forEach((ln: any) => {
-        if (ln && ln.ganzhi && ln.ganzhi.length === 2) put(ln.ganzhi, ln.ganzhi[0], ln.ganzhi[1]);
-      });
-    });
-    daYunAnalysis.recentLiuNian.forEach((ln: any) => {
-      if (ln && ln.ganzhi && ln.ganzhi.length === 2) put(ln.ganzhi, ln.ganzhi[0], ln.ganzhi[1]);
-    });
-    return map;
-  }, [chart, daYunAnalysis]);
-
   const analyzedBoolean = analyzed && chart && monthQi && yongJi && elementPower && yinYangPct && coldHotPct && pattern && wealthNobility && daYunAnalysis && specialTips;
 
   const renderMarkBadge = (mark: 'useful' | 'taboo' | 'neutral') => {
     if (mark === 'useful') return <Badge className="bg-emerald-500 hover:bg-emerald-600">用神</Badge>;
     if (mark === 'taboo') return <Badge variant="destructive">忌神</Badge>;
     return <Badge variant="secondary">中性</Badge>;
-  };
-
-  // 大运流年·情缘小logo：♥ 恋爱可能 / 喜 结婚可能（依据《象法》数据书感情篇）
-  // 伦理约束：16 岁前不显示任何恋爱/婚徽标；16-18 岁仅显示恋爱；18 岁起才显示「婚」。
-  // 大运行徽标按「起运年龄」判定，流年卡片按当年实际年龄判定。
-  // 严格互斥规则：结婚(喜) ＞ 恋爱(♥)，同一干支只显示最高档徽标，绝不并显爱心与喜（引擎层已保证，此处再加渲染兜底）。
-  const romanceBadge = (gz: string, age?: number) => {
-    const flag = romanceMap[gz];
-    const canLove = typeof age === 'number' ? age >= 16 : true;
-    const canMarry = typeof age === 'number' ? age >= 18 : true;
-    const marriage = !!flag?.marriage && canMarry;
-    const love = marriage ? false : (!!flag?.love && canLove); // 兜底：有喜则无♥
-    if (!love && !marriage) {
-      return <span className="text-[11px] font-bold text-muted-foreground/60">—</span>;
-    }
-    return (
-      <span className="inline-flex items-center gap-1" title={flag?.reason}>
-        {marriage ? (
-          <span className="inline-flex size-5 items-center justify-center rounded-full bg-rose-600 text-[11px] font-black leading-none text-white shadow-sm ring-1 ring-rose-300">
-            喜
-          </span>
-        ) : null}
-        {!marriage && love ? (
-          <span className="inline-flex size-5 items-center justify-center rounded-full bg-pink-500 text-[11px] font-black leading-none text-white shadow-sm ring-1 ring-pink-300">
-            ♥
-          </span>
-        ) : null}
-      </span>
-    );
   };
 
   // ===== MVP 分数明细组件 =====
@@ -1958,17 +1827,6 @@ export default function BaZiAnalyzerPage() {
                         <div>
                           <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
                             <div className="text-sm font-bold"><span className="mark-highlight">八步大运</span></div>
-                            <div className="flex items-center gap-3 text-[10px] font-bold text-muted-foreground">
-                              <span className="inline-flex items-center gap-1">
-                                <span className="inline-flex size-4 items-center justify-center rounded-full bg-pink-500 text-[9px] font-black leading-none text-white">♥</span>
-                                恋爱可能
-                              </span>
-                              <span className="inline-flex items-center gap-1">
-                                <span className="inline-flex size-4 items-center justify-center rounded-full bg-rose-600 text-[9px] font-black leading-none text-white">喜</span>
-                                结婚可能
-                              </span>
-                              <span className="text-muted-foreground/60">（依据《象法》数据书·感情篇，悬停查看理由；16 岁前不提示恋爱/婚，18 岁起才提示婚）</span>
-                            </div>
                           </div>
                           <div className="w-full overflow-x-auto">
                             <Table>
@@ -1980,7 +1838,6 @@ export default function BaZiAnalyzerPage() {
                                   <TableHead className="whitespace-nowrap">年份</TableHead>
                                   <TableHead className="whitespace-nowrap">总判</TableHead>
                                   <TableHead className="whitespace-nowrap">综合分</TableHead>
-                                  <TableHead className="whitespace-nowrap">情缘</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
@@ -2040,15 +1897,10 @@ export default function BaZiAnalyzerPage() {
                                               <ScoreBreakdown row={dy} />
                                             </div>
                                           </TableCell>
-                                          <TableCell>
-                                            <div className="flex items-center gap-1">
-                                              {romanceBadge(`${dy.stem}${dy.branch}`, dy.startAge)}
-                                            </div>
-                                          </TableCell>
                                         </TableRow>
                                         {isOpen && (
                                           <TableRow className="bg-gradient-to-b from-sky-50/40 to-white/0 hover:bg-inherit">
-                                            <TableCell colSpan={7} className="border-t border-dashed border-sky-200/60 px-2 py-4 sm:px-6">
+                                            <TableCell colSpan={6} className="border-t border-dashed border-sky-200/60 px-2 py-4 sm:px-6">
                                               <div className="mb-2 flex items-center justify-between">
                                                 <div className="text-xs font-semibold text-sky-800">
                                                   {dy.stem}
@@ -2091,7 +1943,6 @@ export default function BaZiAnalyzerPage() {
                                                           <div className="text-sm font-black" style={{ color: lmeta.text, fontFamily: "'Noto Serif SC', serif" }}>
                                                             {ln.ganzhi}
                                                           </div>
-                                                          {romanceBadge(ln.ganzhi, dy.startAge + (ln.year - dy.startYear))}
                                                         </div>
                                                         <div
                                                           className="text-sm font-bold tabular-nums"
@@ -2140,7 +1991,6 @@ export default function BaZiAnalyzerPage() {
                                   <div className="text-xs font-bold text-muted-foreground">{ln.year}</div>
                                   <div className="mt-0.5 flex items-center justify-center gap-1.5">
                                     <div className="text-base font-bold" style={{ color: meta.text }}>{ln.ganzhi}</div>
-                                    {romanceBadge(ln.ganzhi, ageForYear(ln.year) ?? 0)}
                                   </div>
                                   <div
                                     className="mt-1 flex items-center justify-center gap-1.5 text-xs font-black flex-wrap"
@@ -2706,25 +2556,17 @@ export default function BaZiAnalyzerPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {xiangYi && wealthVerdict && romanceVerdict && educationVerdict ? (
+                  {xiangYi && wealthVerdict ? (
                     <Tabs defaultValue="xiangyi" className="w-full">
                       <TabsList className="w-full justify-center">
                         <TabsTrigger value="xiangyi">象意</TabsTrigger>
                         <TabsTrigger value="wealth">财富</TabsTrigger>
-                        <TabsTrigger value="romance">感情</TabsTrigger>
-                        <TabsTrigger value="education">学历</TabsTrigger>
                       </TabsList>
                       <TabsContent value="xiangyi" className="mt-4">
                         <XiangYiPanel verdict={xiangYi} />
                       </TabsContent>
                       <TabsContent value="wealth" className="mt-4">
                         <WealthPanel verdict={wealthVerdict} bestWealthYears={bestWealthYears} bestNobilityYears={bestNobilityYears} />
-                      </TabsContent>
-                      <TabsContent value="romance" className="mt-4">
-                        <RomanceVerdictPanel bestLoveYears={bestLoveYears} bestMarriageYears={bestMarriageYears} />
-                      </TabsContent>
-                      <TabsContent value="education" className="mt-4">
-                        <EducationPanel verdict={educationVerdict} bestEducationYears={bestEducationYears} />
                       </TabsContent>
                     </Tabs>
                   ) : (
