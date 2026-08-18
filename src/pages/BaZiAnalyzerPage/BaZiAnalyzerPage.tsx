@@ -765,7 +765,7 @@ function computeTaiJiDbReferences(
 }
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.4.0';
+const APP_VERSION = '2.4.1';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -774,6 +774,7 @@ export default function BaZiAnalyzerPage() {
   const [hour, setHour] = useState('0');
   const [minute, setMinute] = useState('0');
   const [gender, setGender] = useState<'male' | 'female'>('male');
+  const [fullBirthInput, setFullBirthInput] = useState('');
   const [chart, setChart] = useState<BaZiChart | null>(null);
   const [analyzed, setAnalyzed] = useState(false);
   const [solarTermTheme, setSolarTermTheme] = useState<SolarTermTheme>(() => getDefaultSolarTermTheme());
@@ -1265,20 +1266,38 @@ export default function BaZiAnalyzerPage() {
               // —— 常用快选常量（无需额外文件，直接内联，保持代码结构简单）——
               const POPULAR_YEARS = [1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010];
               const LUNAR_MONTHS = ['正', '二', '三', '四', '五', '六', '七', '八', '九', '十', '冬', '腊']; // 对应阳历 1-12 月
-              const SHICHEN = [
-                { name: '子', h: 23, range: '23:00-00:59' },
-                { name: '丑', h: 1, range: '01:00-02:59' },
-                { name: '寅', h: 3, range: '03:00-04:59' },
-                { name: '卯', h: 5, range: '05:00-06:59' },
-                { name: '辰', h: 7, range: '07:00-08:59' },
-                { name: '巳', h: 9, range: '09:00-10:59' },
-                { name: '午', h: 11, range: '11:00-12:59' },
-                { name: '未', h: 13, range: '13:00-14:59' },
-                { name: '申', h: 15, range: '15:00-16:59' },
-                { name: '酉', h: 17, range: '17:00-18:59' },
-                { name: '戌', h: 19, range: '19:00-20:59' },
-                { name: '亥', h: 21, range: '21:00-22:59' },
-              ];
+              // 完整生辰字符串解析：支持 199910012000（YYYYMMDDHHmm）等格式，自动去分隔符
+              const parseFullBirthStr = (raw: string): { ok: boolean; y?: string; mo?: string; d?: string; h?: string; mi?: string; msg?: string } => {
+                const s = String(raw ?? '').replace(/\D/g, ''); // 去所有非数字（空格/-/:/. 等）
+                if (s.length < 8 || s.length > 12) {
+                  return { ok: false, msg: '长度不对：需 阳历 年(4)月(2)日(2)[时(2)分(2)]，例 199910012000' };
+                }
+                const padLen = 12 - s.length;
+                const full = s + '0'.repeat(Math.max(0, padLen)); // 不足时分位自动补 0
+                const yStr = full.slice(0, 4);
+                const moStr = full.slice(4, 6);
+                const dStr = full.slice(6, 8);
+                const hStr = full.slice(8, 10);
+                const miStr = full.slice(10, 12);
+                const yNum = parseInt(yStr, 10);
+                const moNum = parseInt(moStr, 10);
+                const dNum = parseInt(dStr, 10);
+                const hNum = parseInt(hStr, 10);
+                const miNum = parseInt(miStr, 10);
+                if (!(yNum >= 1800 && yNum <= 2100)) return { ok: false, msg: `年份 ${yStr} 不在支持范围 1800-2100` };
+                if (!(moNum >= 1 && moNum <= 12)) return { ok: false, msg: `月份 ${moStr} 非法（应为 01-12）` };
+                if (!(dNum >= 1 && dNum <= 31)) return { ok: false, msg: `日期 ${dStr} 非法（应为 01-31）` };
+                if (!(hNum >= 0 && hNum <= 23)) return { ok: false, msg: `小时 ${hStr} 非法（应为 00-23）` };
+                if (!(miNum >= 0 && miNum <= 59)) return { ok: false, msg: `分钟 ${miStr} 非法（应为 00-59）` };
+                return {
+                  ok: true,
+                  y: String(yNum),
+                  mo: String(moNum),
+                  d: String(dNum),
+                  h: String(hNum),
+                  mi: String(miNum),
+                };
+              };
 
               const accent = solarTermTheme.palette.primary; // 随今日节气变色（延续现有节气主题，不破坏统一性）
               const accentSoft = `${accent}1A`;
@@ -1338,6 +1357,71 @@ export default function BaZiAnalyzerPage() {
 
               return (
                 <div className="space-y-7">
+                  {/* 00 完整生辰快速输入（一条栏：粘贴 199910012000 → 自动拆分 年月日时分）*/}
+                  <div className="rounded-2xl p-5" style={{ background: accentSoft, border: `1px solid ${accentLine}` }}>
+                    <FieldStepBadge n={0} label="完整生辰 · 一键输入" />
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                      <div className="flex-1 space-y-2">
+                        <Label className="!text-[12px] !font-bold tracking-widest" style={{ fontFamily: "'Noto Serif SC', serif" }}>
+                          阳历生辰串 <span className="font-normal text-muted-foreground/80">（支持 199910012000 / 1999-10-01 20:00 / 19991001 等格式，自动去分隔符）</span>
+                        </Label>
+                        <Input
+                          type="text"
+                          inputMode="text"
+                          value={fullBirthInput}
+                          onChange={(e) => setFullBirthInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const r = parseFullBirthStr(fullBirthInput);
+                              if (!r.ok || !r.y || !r.mo || !r.d || !r.h || !r.mi) { toast.error(r.msg ?? '格式错误'); return; }
+                              setYear(r.y); setMonth(r.mo); setDay(r.d); setHour(r.h); setMinute(r.mi);
+                              toast.success(`已解析：${r.y}年${Number(r.mo)}月${Number(r.d)}日 ${String(r.h).padStart(2,'0')}:${String(r.mi).padStart(2,'0')}`);
+                            }
+                          }}
+                          placeholder="例：199910012000（1999年10月1日20时00分）"
+                          className="!h-12 !px-4 !text-base font-black tracking-widest tabular-nums focus-visible:ring-0"
+                          style={{
+                            fontFamily: "'Noto Serif SC', serif",
+                            background: '#ffffff',
+                            border: `1.5px solid ${accentLine}`,
+                            color: 'var(--foreground)',
+                            boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
+                            letterSpacing: '0.06em',
+                          }}
+                        />
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-bold leading-relaxed tracking-wider text-muted-foreground/75" style={{ fontFamily: "'Noto Serif SC', serif" }}>
+                          <span>格式：</span>
+                          <span className="rounded-md bg-white/80 px-2 py-0.5 tabular-nums" style={{ border: `1px dashed ${accentLine}` }}>YYYYMMDDHHmm</span>
+                          <span className="text-muted-foreground/50">→ 8位仅年月日时自动补 00 分，10位补 0 分</span>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={() => {
+                          const r = parseFullBirthStr(fullBirthInput);
+                          if (!r.ok || !r.y || !r.mo || !r.d || !r.h || !r.mi) { toast.error(r.msg ?? '格式错误'); return; }
+                          setYear(r.y); setMonth(r.mo); setDay(r.d); setHour(r.h); setMinute(r.mi);
+                          toast.success(`已解析：${r.y}年${Number(r.mo)}月${Number(r.d)}日 ${String(r.h).padStart(2,'0')}:${String(r.mi).padStart(2,'0')}`);
+                        }}
+                        className="font-bold transition-all active:scale-[0.98] hover:-translate-y-0.5 hover:shadow-lg"
+                        style={{
+                          height: '48px',
+                          paddingLeft: '24px',
+                          paddingRight: '24px',
+                          fontFamily: "'Noto Serif SC', serif",
+                          background: `linear-gradient(135deg, ${accent} 0%, ${accent}E6 100%)`,
+                          color: '#ffffff',
+                          border: `1.5px solid ${accent}`,
+                          boxShadow: `0 12px 26px -12px ${accent}BB`,
+                        }}
+                      >
+                        解析并填入
+                      </Button>
+                    </div>
+                  </div>
+
                   {/* 第 1-2 行：① 年 / ② 月日 */}
                   <div className="grid gap-5 lg:grid-cols-5">
                     {/* ① 出生年份（占 2 列）*/}
@@ -1478,7 +1562,7 @@ export default function BaZiAnalyzerPage() {
                       </div>
                     </div>
 
-                    {/* ④ 出生时分（占 3 列，小时/分钟 + 十二时辰快选）*/}
+                    {/* ④ 出生时分（占 3 列，仅按 0-23 小时 / 0-59 分钟下拉选择）*/}
                     <div className="rounded-2xl p-5 lg:col-span-3" style={{ background: accentSoft, border: `1px solid ${accentLine}` }}>
                       <FieldStepBadge n={4} label="出生时分" />
                       <div className="grid gap-4 md:grid-cols-2">
@@ -1511,26 +1595,6 @@ export default function BaZiAnalyzerPage() {
                               ))}
                             </SelectContent>
                           </Select>
-                        </div>
-                      </div>
-                      <div className="mt-3">
-                        <div className="mb-1.5 text-[10px] font-bold tracking-widest text-muted-foreground/80" style={{ fontFamily: "'Noto Serif SC', serif" }}>
-                          · 十二时辰快选（自动填入该时辰起点时 · 00 分）·
-                        </div>
-                        <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-12">
-                          {SHICHEN.map((s) => (
-                            <ChipButton
-                              key={s.name}
-                              active={hour === String(s.h)}
-                              onClick={() => {
-                                setHour(String(s.h));
-                                setMinute('0');
-                              }}
-                              title={`${s.name}时 · ${s.range}`}
-                            >
-                              {s.name}
-                            </ChipButton>
-                          ))}
                         </div>
                       </div>
                     </div>
