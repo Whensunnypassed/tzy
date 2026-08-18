@@ -1,7 +1,7 @@
 # 项目状态总览（PROJECT STATUS）
 
 > 本文件用于其他模型/开发者快速接手项目，了解当前版本、已完成工作与同步流程。
-> 最后更新：v2.3.0
+> 最后更新：v2.4.0
 
 ---
 
@@ -9,9 +9,9 @@
 
 **项目**：`tzy` — 沛然堂 · 八字命理智能分析系统（React + Vite + Tailwind v4）
 **仓库**：`Whensunnypassed/tzy`（GitHub，main 分支）
-**当前版本**：**v2.3.0 · 正式版**（`package.json` 与 `BaZiAnalyzerPage.tsx` 中 `APP_VERSION` 两处同步维护）
+**当前版本**：**v2.4.0 · 正式版**（`package.json` 与 `BaZiAnalyzerPage.tsx` 中 `APP_VERSION` 两处同步维护）
 **线上地址**：https://whensunnypassed.github.io/tzy/ （由 gh-pages 分支驱动部署）
-**工作区状态**：已提交 v2.3.0（按需求移除「象意→感情/学历」两 Tab + 大运流年 ♥/喜 情缘徽标/情缘列）。
+**工作区状态**：已提交 v2.4.0（前端设计插件优化输入出生信息：典雅东方新中式 + 四步编号字段卡片 + 常用年/农历月/十二时辰快选 + 性别大按钮 + 朱印提交按钮）。
 
 ---
 
@@ -37,6 +37,7 @@
 | **v2.2.0** | `620e815d`（后续提交含版本号更新） | **象法三面板结论化 + 应期年份量化排序（UI去过程，只给客户看结果）**：<br>① **情缘徽标严格互斥**：感情页/大运流年「爱心♥(恋爱)」与「喜(结婚)」不同时出现，结婚优先级高于恋爱（引擎层 evaluateRomanceForGZ 强制 love=false + UI 层兜底）；16岁前不显示任何情缘徽标，16-18 岁仅显示恋爱，18 岁起方显示「婚」<br>② **感情面板改为直接列年份**：`RomanceVerdictPanel` 移除「查询论断+自然语言+输入依据+应期描述」大段文本，改为两栏——「恋爱可能时间如下（按可能性从高到低）」「结婚时间如下（按可能性从高到低）」，每栏展示 `YYYY 年 · 干支 · XX 岁（XX 分）`，按内部命中条件加权得分从高到低排前 8 名<br>③ **财富/事业面板改为结论化**：`WealthPanel` 保留财富层级/事业地位两个命盘结论小卡，移除「查询论断+verdict.result」；新增两栏应期列表——「最利求财年份（按可能性从高到低）」「最利事业地位年份（按可能性从高到低）」各前 10 名，含 `±XX 分`<br>④ **学历面板改为结论化**：`EducationPanel` 保留学历档位命盘结论小卡，移除「查询论断+verdict.result」；新增「最利学业/考试年份（按可能性从高到低）」前 10 名<br>⑤ **底层评分引擎不改动**：直接复用 `xiangfaAnalyzer.ts` 已有的 `scoreRomanceForYear / scoreWealthForYear / scoreNobilityForYear / scoreEducationForYear`；仅在 `BaZiAnalyzerBody` 内新增 useMemo 对所有当年及未来流年去重、打分、按可能性从高到低排序后截取；不改动核心数据库 `bazidata.ts` 与底层 `baziCalculator.ts / baziAnalyzer.ts`<br>⑥ 版本号 2.1.0 → 2.2.0 |
 | **v2.2.1** | （本提交） | **v2.2.0 应期列表严重 bug 修复**：<br>① **年龄算法修复（最严重）**：v2.2.0 中 `liuNian10 / recentLiuNian` 接口原本**没有 age 字段**（100% fallback），又错用了不存在的 `chart.age`（恒为 undefined→0），导致所有年份年龄退化为 `year - currentYear`（例：2005 年生→2026 年显示 0 岁、2046 年显示 20 岁）；改为从 `chart.birthInfo.solarDate` 正则提取阳历出生年，`age = year - birthYear` 精确计算，修复用户反馈"2046 丙寅怎么可能 20 岁"<br>② **应期场景年龄门槛（避免 0 岁求财/3 岁恋爱）**：恋爱应期仅保留 `age ≥ 16`，结婚应期仅保留 `age ≥ 18`，求财/事业应期仅保留 `age ≥ 18`，学业应期仅保留 `age ≥ 6`；修复用户反馈"八岁/0 岁怎么会赚钱呢 / 3 岁怎么恋爱呢"<br>③ **排名数字与年份视觉/文本分离**：v2.2.0 排名徽标 `mr-1` 间距太小，复制纯文本时 `1 + 2074 年` 粘成 `12074 年`；三个面板（Wealth/Education/Romance）排名徽标统一 `mr-2` + 父容器 `inline-flex items-center`，视觉与复制时都明确分隔<br>④ 版本号 2.2.0 → 2.2.1 |
 | **v2.3.0** | （本提交） | **按需求裁剪象意模块 + 移除大运流年 ♥/喜 情缘徽标**（仅改外显 UI，不动底层引擎 `xiangfaAnalyzer.ts` 函数）：<br>① **象法模块去「感情/学历」**：原「象意」区 4 个标签页「象意 / 财富 / 感情 / 学历」收敛为 2 个「象意 / 财富」；`RomanceVerdictPanel / EducationPanel` 不再渲染，对应 `romanceVerdict / educationVerdict / bestLoveYears / bestMarriageYears / bestEducationYears` 的页面层 useMemo 一并移除（避免无用计算），`EducationPanel` 定义删除<br>② **大运流年 ♥/喜 情缘功能去除**：删除「八步大运」标题右侧「♥ 恋爱可能 / 喜 结婚可能 / 感情篇 / 16 岁前不提示恋爱婚」图例说明整段；八步大运表格删除「情缘」列（表头 `TableHead` 及每行尾 `TableCell` 一并删除，展开行 `colSpan` 从 7 缩为 6）；下辖十年流年卡片及近年流年卡片上的粉色 ♥ / 红色 喜 徽标（`romanceBadge`）两处渲染全部移除；页面层 `romanceMap`（含 `evaluateRomanceForGZ` 调用）与 `romanceBadge` 函数删除（底层 `xiangfaAnalyzer.ts` 的 `evaluateRomanceForGZ / scoreRomanceForYear / scoreEducationForYear / analyzeRomanceVerdict / analyzeEducationVerdict` 引擎函数保持不动，未来恢复只需在页面层重新接回即可）<br>③ 版本号 2.2.1 → 2.3.0 |
+| **v2.4.0** | （本提交） | **前端设计插件优化输入出生信息（典雅东方·新中式）· 方便客户使用**（调用 trae-remote-official:frontend-design，视觉与 UX 全面重做，不影响后端/引擎）：<br>① **视觉体系**：告别"AI 紫色渐变 + Inter 套模板"，采用「典雅东方·新中式」风格，配色沿用现有随节气变化的主色 `solarTermTheme.palette.primary`（不破坏节气主题统一性），四步字段卡片使用淡色月白衬底 + 细朱丝栏虚线分隔线（`accentSoft/accentLine`），全 Noto Serif SC 衬线字体，整体古典但不失现代感<br>② **四步编号字段卡片**：从「一、生日 / 二、时辰与性别」两分组升级为 **01 出生年份 / 02 出生月日 / 03 命主性别 / 04 出生时分** 4 张独立圆角卡片，每张左上都带渐变填充徽标编号（01/02/03/04）+ 标题 + 虚线延伸，客户一眼知道"从哪一步开始、第几步是什么"<br>③ **① 出生年份·常用年份一键填入**：10 颗常用年快选 Chip 按钮（1965 / 1970 / 1975 / 1980 / 1985 / 1990 / 1995 / 2000 / 2005 / 2010），点一下直接填好年份，免输数字（大部分咨询客户集中在这 10 个年份区间，大幅减少手输错误）；输入框 h-12 大字号（18px）、粗衬线，placeholder 改为更符合中文习惯的「例：1990」<br>④ **② 出生月日·农历月快选**：12 颗农历月 Chip（正/二/三/四/五/六/七/八/九/十/冬/腊 → 对应阳历 1~12 月），客户习惯说"我正月出生"也能直接点选；月份下拉项本身也标注「正月 · 1 月」双文案<br>⑤ **③ 命主性别·乾造/坤造左右大按钮**：不再使用下拉 Select（客户要点两次才看到只有两个选项），改为 h-16、50/50 并列的大号分段按钮：左「乾造 · 男命 · Yang」、右「坤造 · 女命 · Yin」，选中态有渐变 + 厚阴影 + 内白边高光（坤造用玫瑰红区分），一眼可见两个选项，单手点就行<br>⑥ **④ 出生时分·十二时辰快选**：客户一般只知道"我午时/子时出生"，一排 12 颗地支 Chip（子丑寅卯辰巳午未申酉戌亥，title 悬停展示对应 24 小时时间范围），点一下自动 setHour(该时辰起点) + setMinute('0')，不用在下拉里翻 24 小时<br>⑦ **朱印质感"一键排盘分析"主按钮**：h-58 大尺寸 + 14px 圆角 + 厚阴影（`0 20px 40px -14px`）+ 2px 内白边高光 + 底部深色内嵌阴影（模拟传统命理朱印按下的立体感），tracking 0.22em 字距加宽衬线字，hover 上浮 2px、active 下沉 1px，有"盖印"的触感；提交按钮移到右下角视觉焦点位，辅助按钮（载入示例/重新排盘 + "数据本地计算"提示）移到左下角层级更低<br>⑧ 版本号 2.3.0 → 2.4.0 |
 
 ---
 

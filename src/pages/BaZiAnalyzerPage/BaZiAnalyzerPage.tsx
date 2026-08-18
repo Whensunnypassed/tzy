@@ -765,7 +765,7 @@ function computeTaiJiDbReferences(
 }
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.3.0';
+const APP_VERSION = '2.4.0';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -1260,155 +1260,347 @@ export default function BaZiAnalyzerPage() {
             </div>
           </CardHeader>
           <CardContent className="pt-2">
-            {/* 表单采用 3 行分组：核心生日 + 性别时分 + 地区 */}
-            <div className="space-y-5">
-              <div>
-                <div
-                  className="mb-2 text-[11px] font-bold uppercase tracking-widest"
+            {/* 新中式典雅输入：四步编号字段卡片 + 快选按钮（方便客户使用）*/}
+            {(() => {
+              // —— 常用快选常量（无需额外文件，直接内联，保持代码结构简单）——
+              const POPULAR_YEARS = [1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010];
+              const LUNAR_MONTHS = ['正', '二', '三', '四', '五', '六', '七', '八', '九', '十', '冬', '腊']; // 对应阳历 1-12 月
+              const SHICHEN = [
+                { name: '子', h: 23, range: '23:00-00:59' },
+                { name: '丑', h: 1, range: '01:00-02:59' },
+                { name: '寅', h: 3, range: '03:00-04:59' },
+                { name: '卯', h: 5, range: '05:00-06:59' },
+                { name: '辰', h: 7, range: '07:00-08:59' },
+                { name: '巳', h: 9, range: '09:00-10:59' },
+                { name: '午', h: 11, range: '11:00-12:59' },
+                { name: '未', h: 13, range: '13:00-14:59' },
+                { name: '申', h: 15, range: '15:00-16:59' },
+                { name: '酉', h: 17, range: '17:00-18:59' },
+                { name: '戌', h: 19, range: '19:00-20:59' },
+                { name: '亥', h: 21, range: '21:00-22:59' },
+              ];
+
+              const accent = solarTermTheme.palette.primary; // 随今日节气变色（延续现有节气主题，不破坏统一性）
+              const accentSoft = `${accent}1A`;
+              const accentLine = `${accent}55`;
+
+              const FieldStepBadge = ({ n, label }: { n: number; label: string }) => (
+                <div className="mb-3 flex items-center gap-3">
+                  <div
+                    className="inline-flex size-7 items-center justify-center rounded-full text-[11px] font-black text-white shadow-sm"
+                    style={{
+                      background: `linear-gradient(135deg, ${accent} 0%, ${accent}DD 100%)`,
+                      boxShadow: `0 6px 16px -8px ${accent}AA`,
+                      fontFamily: "'Noto Serif SC', serif",
+                    }}
+                  >
+                    {String(n).padStart(2, '0')}
+                  </div>
+                  <div
+                    className="text-[13px] font-black tracking-[0.18em]"
+                    style={{ color: 'var(--foreground)', fontFamily: "'Noto Serif SC', serif" }}
+                  >
+                    {label}
+                  </div>
+                  <div className="ml-2 flex-1 border-t border-dashed" style={{ borderColor: accentLine, opacity: 0.5 }} />
+                </div>
+              );
+
+              const ChipButton = ({
+                active,
+                onClick,
+                children,
+                title,
+              }: {
+                active?: boolean;
+                onClick: () => void;
+                children: React.ReactNode;
+                title?: string;
+              }) => (
+                <button
+                  type="button"
+                  onClick={onClick}
+                  title={title}
+                  className="group inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-[12px] font-bold transition-all active:scale-[0.96] hover:-translate-y-0.5"
                   style={{
-                    color: `var(--st-primary)`,
-                    opacity: 0.85,
                     fontFamily: "'Noto Serif SC', serif",
-                    letterSpacing: '0.2em',
+                    background: active ? `${accent}` : 'rgba(255,255,255,0.85)',
+                    color: active ? '#ffffff' : 'var(--foreground)',
+                    border: `1px solid ${active ? accent : accentLine}`,
+                    boxShadow: active
+                      ? `0 8px 20px -8px ${accent}BB, inset 0 0 0 1px rgba(255,255,255,0.25)`
+                      : '0 2px 4px -2px rgba(15,23,42,0.06)',
                   }}
                 >
-                  一、生日
-                </div>
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label className="font-medium">出生年份</Label>
-                    <Input type="number" value={year} onChange={(e) => setYear(e.target.value)} placeholder="如 2000" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-medium">月份</Label>
-                    <Select value={month} onValueChange={setMonth}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="月份" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 12 }, (_, i) => (
-                          <SelectItem key={i + 1} value={String(i + 1)}>
-                            {i + 1} 月
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-medium">日期</Label>
-                    <Select value={day} onValueChange={setDay}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="日期" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 31 }, (_, i) => (
-                          <SelectItem key={i + 1} value={String(i + 1)}>
-                            {i + 1} 日
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
+                  {children}
+                </button>
+              );
 
-              <div>
-                <div
-                  className="mb-2 text-[11px] font-bold uppercase tracking-widest"
-                  style={{
-                    color: `var(--st-primary)`,
-                    opacity: 0.85,
-                    fontFamily: "'Noto Serif SC', serif",
-                    letterSpacing: '0.2em',
-                  }}
-                >
-                  二、时辰与性别
-                </div>
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label className="font-medium">性别</Label>
-                    <Select value={gender} onValueChange={(v) => setGender(v as 'male' | 'female')}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="性别" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="male">男（乾造）</SelectItem>
-                        <SelectItem value="female">女（坤造）</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-medium">出生小时</Label>
-                    <Select value={hour} onValueChange={setHour}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="时" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 24 }, (_, i) => (
-                          <SelectItem key={i} value={String(i)}>
-                            {i.toString().padStart(2, '0')} 时
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-medium">出生分钟</Label>
-                    <Select value={minute} onValueChange={setMinute}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="分" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 60 }, (_, i) => (
-                          <SelectItem key={i} value={String(i)}>
-                            {i.toString().padStart(2, '0')} 分
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-            </div>
+              return (
+                <div className="space-y-7">
+                  {/* 第 1-2 行：① 年 / ② 月日 */}
+                  <div className="grid gap-5 lg:grid-cols-5">
+                    {/* ① 出生年份（占 2 列）*/}
+                    <div className="rounded-2xl p-5 lg:col-span-2" style={{ background: accentSoft, border: `1px solid ${accentLine}` }}>
+                      <FieldStepBadge n={1} label="出生年份" />
+                      <div className="space-y-2">
+                        <Input
+                          type="number"
+                          value={year}
+                          onChange={(e) => setYear(e.target.value)}
+                          placeholder="例：1990"
+                          className="!h-12 !px-4 !text-lg font-black tracking-wider focus-visible:ring-0"
+                          style={{
+                            fontFamily: "'Noto Serif SC', serif",
+                            background: '#ffffff',
+                            border: `1.5px solid ${accentLine}`,
+                            color: 'var(--foreground)',
+                            boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
+                          }}
+                        />
+                      </div>
+                      <div className="mt-3">
+                        <div className="mb-1.5 text-[10px] font-bold tracking-widest text-muted-foreground/80" style={{ fontFamily: "'Noto Serif SC', serif" }}>
+                          · 常用年份一键填入 ·
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {POPULAR_YEARS.map((y) => (
+                            <ChipButton
+                              key={y}
+                              active={year === String(y)}
+                              onClick={() => setYear(String(y))}
+                              title={`一键填入 ${y} 年`}
+                            >
+                              {y}
+                            </ChipButton>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
 
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <Button
-                size="lg"
-                onClick={handleAnalyze}
-                className="min-w-[160px] font-bold tracking-wide transition-all active:scale-[0.98] hover:scale-[1.02] hover:shadow-xl"
-                style={{
-                  backgroundColor: `var(--st-primary)`,
-                  color: '#ffffff',
-                  boxShadow: `0 8px 28px -10px ${solarTermTheme.palette.primary}80`,
-                  height: '46px',
-                }}
-              >
-                一键排盘分析
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={fillExample}
-                className="font-bold"
-                style={{
-                  borderColor: `${solarTermTheme.palette.primary}44`,
-                  color: 'var(--foreground)',
-                  height: '46px',
-                }}
-              >
-                载入示例
-              </Button>
-              {analyzed && (
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={handleReset}
-                  style={{ height: '46px', color: 'var(--foreground)' }}
-                >
-                  重新排盘
-                </Button>
-              )}
-            </div>
+                    {/* ② 出生月日（占 3 列）*/}
+                    <div className="rounded-2xl p-5 lg:col-span-3" style={{ background: accentSoft, border: `1px solid ${accentLine}` }}>
+                      <FieldStepBadge n={2} label="出生月日" />
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label className="!text-[12px] !font-bold tracking-widest" style={{ fontFamily: "'Noto Serif SC', serif" }}>月份</Label>
+                          <Select value={month} onValueChange={setMonth}>
+                            <SelectTrigger className="!h-12 !text-base !font-black" style={{ background: '#fff', border: `1.5px solid ${accentLine}`, color: 'var(--foreground)' }}>
+                              <SelectValue placeholder="请选择月份" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: 12 }, (_, i) => (
+                                <SelectItem key={i + 1} value={String(i + 1)} className="!text-sm !font-bold">
+                                  {LUNAR_MONTHS[i]}月 · {i + 1} 月
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="!text-[12px] !font-bold tracking-widest" style={{ fontFamily: "'Noto Serif SC', serif" }}>日期</Label>
+                          <Select value={day} onValueChange={setDay}>
+                            <SelectTrigger className="!h-12 !text-base !font-black" style={{ background: '#fff', border: `1.5px solid ${accentLine}`, color: 'var(--foreground)' }}>
+                              <SelectValue placeholder="请选择日期" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: 31 }, (_, i) => (
+                                <SelectItem key={i + 1} value={String(i + 1)} className="!text-sm !font-bold">
+                                  {i + 1} 日
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="mt-3">
+                        <div className="mb-1.5 text-[10px] font-bold tracking-widest text-muted-foreground/80" style={{ fontFamily: "'Noto Serif SC', serif" }}>
+                          · 农历月快选 ·
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {LUNAR_MONTHS.map((lm, i) => (
+                            <ChipButton
+                              key={lm}
+                              active={month === String(i + 1)}
+                              onClick={() => setMonth(String(i + 1))}
+                              title={`${lm}月 = 阳历 ${i + 1} 月`}
+                            >
+                              {lm}月
+                            </ChipButton>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 第 3-4 行：③ 性别 / ④ 时分 */}
+                  <div className="grid gap-5 lg:grid-cols-5">
+                    {/* ③ 命主性别（占 2 列，左右大按钮，不再下拉）*/}
+                    <div className="rounded-2xl p-5 lg:col-span-2" style={{ background: accentSoft, border: `1px solid ${accentLine}` }}>
+                      <FieldStepBadge n={3} label="命主性别" />
+                      <div className="mt-1 grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setGender('male')}
+                          className="group inline-flex h-16 flex-col items-center justify-center rounded-xl transition-all active:scale-[0.98] hover:-translate-y-0.5"
+                          style={{
+                            fontFamily: "'Noto Serif SC', serif",
+                            background: gender === 'male' ? `linear-gradient(135deg, ${accent} 0%, ${accent}E6 100%)` : '#ffffff',
+                            color: gender === 'male' ? '#ffffff' : 'var(--foreground)',
+                            border: `2px solid ${gender === 'male' ? accent : accentLine}`,
+                            boxShadow:
+                              gender === 'male'
+                                ? `0 14px 30px -14px ${accent}DD, inset 0 0 0 1px rgba(255,255,255,0.35)`
+                                : '0 2px 6px -3px rgba(15,23,42,0.08)',
+                          }}
+                        >
+                          <div className="text-[18px] font-black leading-none">乾造</div>
+                          <div className="mt-1 text-[11px] font-bold opacity-90 tracking-widest">男命 · Yang</div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setGender('female')}
+                          className="group inline-flex h-16 flex-col items-center justify-center rounded-xl transition-all active:scale-[0.98] hover:-translate-y-0.5"
+                          style={{
+                            fontFamily: "'Noto Serif SC', serif",
+                            background: gender === 'female' ? `linear-gradient(135deg, #BE185D 0%, #9D174D 100%)` : '#ffffff',
+                            color: gender === 'female' ? '#ffffff' : 'var(--foreground)',
+                            border: `2px solid ${gender === 'female' ? '#BE185D' : accentLine}`,
+                            boxShadow:
+                              gender === 'female'
+                                ? `0 14px 30px -14px rgba(190, 24, 93, 0.75), inset 0 0 0 1px rgba(255,255,255,0.35)`
+                                : '0 2px 6px -3px rgba(15,23,42,0.08)',
+                          }}
+                        >
+                          <div className="text-[18px] font-black leading-none">坤造</div>
+                          <div className="mt-1 text-[11px] font-bold opacity-90 tracking-widest">女命 · Yin</div>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* ④ 出生时分（占 3 列，小时/分钟 + 十二时辰快选）*/}
+                    <div className="rounded-2xl p-5 lg:col-span-3" style={{ background: accentSoft, border: `1px solid ${accentLine}` }}>
+                      <FieldStepBadge n={4} label="出生时分" />
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label className="!text-[12px] !font-bold tracking-widest" style={{ fontFamily: "'Noto Serif SC', serif" }}>出生小时</Label>
+                          <Select value={hour} onValueChange={setHour}>
+                            <SelectTrigger className="!h-12 !text-base !font-black" style={{ background: '#fff', border: `1.5px solid ${accentLine}`, color: 'var(--foreground)' }}>
+                              <SelectValue placeholder="时" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: 24 }, (_, i) => (
+                                <SelectItem key={i} value={String(i)} className="!text-sm !font-bold">
+                                  {i.toString().padStart(2, '0')} 时
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="!text-[12px] !font-bold tracking-widest" style={{ fontFamily: "'Noto Serif SC', serif" }}>出生分钟</Label>
+                          <Select value={minute} onValueChange={setMinute}>
+                            <SelectTrigger className="!h-12 !text-base !font-black" style={{ background: '#fff', border: `1.5px solid ${accentLine}`, color: 'var(--foreground)' }}>
+                              <SelectValue placeholder="分" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: 60 }, (_, i) => (
+                                <SelectItem key={i} value={String(i)} className="!text-sm !font-bold">
+                                  {i.toString().padStart(2, '0')} 分
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="mt-3">
+                        <div className="mb-1.5 text-[10px] font-bold tracking-widest text-muted-foreground/80" style={{ fontFamily: "'Noto Serif SC', serif" }}>
+                          · 十二时辰快选（自动填入该时辰起点时 · 00 分）·
+                        </div>
+                        <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-12">
+                          {SHICHEN.map((s) => (
+                            <ChipButton
+                              key={s.name}
+                              active={hour === String(s.h)}
+                              onClick={() => {
+                                setHour(String(s.h));
+                                setMinute('0');
+                              }}
+                              title={`${s.name}时 · ${s.range}`}
+                            >
+                              {s.name}
+                            </ChipButton>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 提交按钮：朱印质感主按钮 + 次要辅助按钮 */}
+                  <div
+                    className="flex flex-col items-stretch gap-3 border-t pt-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
+                    style={{ borderColor: accentLine }}
+                  >
+                    <div className="order-2 flex flex-wrap items-center gap-3 sm:order-1">
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={fillExample}
+                        className="font-bold transition-all active:scale-[0.98] hover:-translate-y-0.5 hover:shadow-lg"
+                        style={{
+                          borderColor: accentLine,
+                          background: '#ffffff',
+                          color: 'var(--foreground)',
+                          height: '48px',
+                          paddingLeft: '20px',
+                          paddingRight: '20px',
+                          fontFamily: "'Noto Serif SC', serif",
+                        }}
+                      >
+                        载入示例
+                      </Button>
+                      {analyzed && (
+                        <Button
+                          variant="outline"
+                          size="lg"
+                          onClick={handleReset}
+                          className="font-bold transition-all active:scale-[0.98] hover:-translate-y-0.5 hover:shadow-lg"
+                          style={{ height: '48px', color: 'var(--foreground)', borderColor: accentLine, background: '#ffffff', fontFamily: "'Noto Serif SC', serif" }}
+                        >
+                          重新排盘
+                        </Button>
+                      )}
+                      <div
+                        className="hidden text-[10px] font-bold leading-relaxed tracking-widest text-muted-foreground/70 sm:block"
+                        style={{ fontFamily: "'Noto Serif SC', serif" }}
+                      >
+                        数据均在本地计算 · 不上传云端
+                      </div>
+                    </div>
+                    <div className="order-1 sm:order-2">
+                      <Button
+                        size="lg"
+                        onClick={handleAnalyze}
+                        className="min-w-[220px] !text-base font-black tracking-[0.22em] transition-all active:translate-y-[1px] active:scale-[0.99] hover:-translate-y-[2px]"
+                        style={{
+                          background: `linear-gradient(135deg, ${accent} 0%, ${accent}E0 100%)`,
+                          color: '#ffffff',
+                          height: '58px',
+                          paddingLeft: '34px',
+                          paddingRight: '34px',
+                          borderRadius: '14px',
+                          fontFamily: "'Noto Serif SC', serif",
+                          boxShadow: `0 20px 40px -14px ${accent}99, inset 0 0 0 2px rgba(255,255,255,0.22), inset 0 -10px 20px -10px rgba(0,0,0,0.18)`,
+                          border: `1.5px solid ${accent}`,
+                        }}
+                      >
+                        一键排盘分析
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
 
