@@ -333,23 +333,23 @@ function DaYunCurveChart({
   );
 }
 
-// ============ 「象意·财富·感情·学历」栏目：论断面板（数据书为最终参考） ============
+// ============ 「象意·财富·感情·学历」栏目：论断面板（不展示数据库原文） ============
 function VerdictPanel({
   subtitle,
   inputs,
   matched,
   result,
-  references,
   disclaimer,
   accent = 'sky',
+  score,
 }: {
   subtitle: string;
   inputs: Array<{ label: string; value: string }>;
   matched: boolean;
   result: string;
-  references: string[];
   disclaimer?: string;
   accent?: 'sky' | 'emerald' | 'rose' | 'amber';
+  score?: { value: number; label: string }; // 可选：量化分数徽标（如学历档位）
 }) {
   const accentMeta: Record<string, { border: string; bg: string; text: string; tag: string }> = {
     sky: { border: 'rgba(14,165,233,0.25)', bg: 'rgba(14,165,233,0.06)', text: '#0369A1', tag: '#0EA5E9' },
@@ -375,6 +375,11 @@ function VerdictPanel({
           <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-black text-white" style={{ background: am.tag }}>
             查询论断
           </span>
+          {score && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2.5 py-0.5 text-[11px] font-black" style={{ border: `1px solid ${am.border}`, color: 'var(--foreground)' }}>
+              {score.label}<span style={{ color: am.text }}> · {score.value} 分</span>
+            </span>
+          )}
           {!matched && disclaimer && (
             <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
               {disclaimer}
@@ -383,26 +388,20 @@ function VerdictPanel({
         </div>
         <p className="text-sm leading-relaxed font-bold text-foreground">{result}</p>
       </div>
-      {/* 数据书依据 */}
-      <details className="group rounded-xl border border-border/60 bg-card/50 p-3">
-        <summary className="cursor-pointer text-xs font-black text-muted-foreground transition-colors group-open:text-foreground">
-          象法依据
-        </summary>
-        <ul className="mt-2 space-y-1.5">
-          {references.map((r, i) => (
-            <li key={i} className="text-xs leading-relaxed font-bold text-muted-foreground">· {r}</li>
-          ))}
-        </ul>
-      </details>
     </div>
   );
 }
 
-// ============ 感情论断面板（含 恋爱/结婚 小logo） ============
+// ============ 感情论断面板（含 恋爱/结婚 小logo + 核心规则 + 恋爱/结婚应期） ============
 function RomanceVerdictPanel({ verdict }: { verdict: RomanceVerdict }) {
   return (
     <div className="space-y-3">
       <div className="text-sm font-bold text-muted-foreground" style={{ fontFamily: "'Noto Serif SC', serif" }}>感情 · 异性缘与婚姻情缘</div>
+      {/* 数据书核心规则 */}
+      <div className="rounded-xl border border-rose-200 bg-white/70 p-3">
+        <div className="text-xs font-black text-rose-700">《象法》核心规则</div>
+        <p className="mt-1 text-sm leading-relaxed font-bold text-foreground">{verdict.coreRule}</p>
+      </div>
       <div className="flex flex-wrap gap-2">
         {verdict.inputs.map((it) => (
           <span key={it.label} className="rounded-lg border border-rose-200 bg-white/70 px-2 py-1 text-[11px] font-bold" style={{ color: 'var(--foreground)' }}>
@@ -425,16 +424,23 @@ function RomanceVerdictPanel({ verdict }: { verdict: RomanceVerdict }) {
         </div>
         <p className="text-sm leading-relaxed font-bold text-foreground">{verdict.result}</p>
       </div>
-      <details className="group rounded-xl border border-border/60 bg-card/50 p-3">
-        <summary className="cursor-pointer text-xs font-black text-muted-foreground transition-colors group-open:text-foreground">
-          象法依据
-        </summary>
-        <ul className="mt-2 space-y-1.5">
-          {verdict.reference.map((r, i) => (
-            <li key={i} className="text-xs leading-relaxed font-bold text-muted-foreground">· {r}</li>
-          ))}
-        </ul>
-      </details>
+      {/* 最容易恋爱 / 结婚的年份应期 */}
+      <div className="grid gap-2 md:grid-cols-2">
+        <div className="rounded-xl border border-pink-200 bg-pink-50/50 p-3">
+          <div className="mb-1 flex items-center gap-1.5">
+            <span className="inline-flex size-4 items-center justify-center rounded-full bg-pink-500 text-[9px] font-black leading-none text-white">♥</span>
+            <span className="text-xs font-black text-pink-700">最容易恋爱</span>
+          </div>
+          <p className="text-xs leading-relaxed font-bold text-muted-foreground">{verdict.loveTiming}</p>
+        </div>
+        <div className="rounded-xl border border-rose-200 bg-rose-50/50 p-3">
+          <div className="mb-1 flex items-center gap-1.5">
+            <span className="inline-flex size-4 items-center justify-center rounded-full bg-rose-600 text-[9px] font-black leading-none text-white">喜</span>
+            <span className="text-xs font-black text-rose-700">最容易结婚</span>
+          </div>
+          <p className="text-xs leading-relaxed font-bold text-muted-foreground">{verdict.marriageTiming}</p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -678,7 +684,7 @@ function computeTaiJiDbReferences(
 }
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.0.0';
+const APP_VERSION = '2.1.0';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -892,19 +898,25 @@ export default function BaZiAnalyzerPage() {
   };
 
   // 大运流年·情缘小logo：♥ 恋爱可能 / 喜 结婚可能（依据《象法》数据书感情篇）
-  const romanceBadge = (gz: string) => {
+  // 伦理约束：16 岁前不显示任何恋爱/婚徽标；16-18 岁仅显示恋爱；18 岁起才显示「婚」。
+  // 大运行徽标按「起运年龄」判定，流年卡片按当年实际年龄判定。
+  const romanceBadge = (gz: string, age?: number) => {
     const flag = romanceMap[gz];
-    if (!flag || (!flag.love && !flag.marriage)) {
+    const canLove = typeof age === 'number' ? age >= 16 : true;
+    const canMarry = typeof age === 'number' ? age >= 18 : true;
+    const love = !!flag?.love && canLove;
+    const marriage = !!flag?.marriage && canMarry;
+    if (!love && !marriage) {
       return <span className="text-[11px] font-bold text-muted-foreground/60">—</span>;
     }
     return (
-      <span className="inline-flex items-center gap-1" title={flag.reason}>
-        {flag.marriage && (
+      <span className="inline-flex items-center gap-1" title={flag?.reason}>
+        {marriage && (
           <span className="inline-flex size-5 items-center justify-center rounded-full bg-rose-600 text-[11px] font-black leading-none text-white shadow-sm ring-1 ring-rose-300">
             喜
           </span>
         )}
-        {flag.love && (
+        {love && (
           <span className="inline-flex size-5 items-center justify-center rounded-full bg-pink-500 text-[11px] font-black leading-none text-white shadow-sm ring-1 ring-pink-300">
             ♥
           </span>
@@ -1664,6 +1676,13 @@ export default function BaZiAnalyzerPage() {
                       })),
                     };
 
+                    // 由流年年份推算命主年龄（落在哪一步大运，就用该运起始年龄 + 年差）；找不到所属大运则返回 undefined
+                    const ageForYear = (year: number): number | undefined => {
+                      const dy = daYunAnalysis.daYunWithFortune.find((d: any) => year >= d.startYear && year <= d.endYear);
+                      if (!dy) return undefined;
+                      return dy.startAge + (year - dy.startYear);
+                    };
+
                     return (
                       <>
                         <div
@@ -1709,7 +1728,7 @@ export default function BaZiAnalyzerPage() {
                                 <span className="inline-flex size-4 items-center justify-center rounded-full bg-rose-600 text-[9px] font-black leading-none text-white">喜</span>
                                 结婚可能
                               </span>
-                              <span className="text-muted-foreground/60">（依据《象法》数据书·感情篇，悬停查看理由）</span>
+                              <span className="text-muted-foreground/60">（依据《象法》数据书·感情篇，悬停查看理由；16 岁前不提示恋爱/婚，18 岁起才提示婚）</span>
                             </div>
                           </div>
                           <div className="w-full overflow-x-auto">
@@ -1784,7 +1803,7 @@ export default function BaZiAnalyzerPage() {
                                           </TableCell>
                                           <TableCell>
                                             <div className="flex items-center gap-1">
-                                              {romanceBadge(`${dy.stem}${dy.branch}`)}
+                                              {romanceBadge(`${dy.stem}${dy.branch}`, dy.startAge)}
                                             </div>
                                           </TableCell>
                                         </TableRow>
@@ -1833,7 +1852,7 @@ export default function BaZiAnalyzerPage() {
                                                           <div className="text-sm font-black" style={{ color: lmeta.text, fontFamily: "'Noto Serif SC', serif" }}>
                                                             {ln.ganzhi}
                                                           </div>
-                                                          {romanceBadge(ln.ganzhi)}
+                                                          {romanceBadge(ln.ganzhi, dy.startAge + (ln.year - dy.startYear))}
                                                         </div>
                                                         <div
                                                           className="text-sm font-bold tabular-nums"
@@ -1882,7 +1901,7 @@ export default function BaZiAnalyzerPage() {
                                   <div className="text-xs font-bold text-muted-foreground">{ln.year}</div>
                                   <div className="mt-0.5 flex items-center justify-center gap-1.5">
                                     <div className="text-base font-bold" style={{ color: meta.text }}>{ln.ganzhi}</div>
-                                    {romanceBadge(ln.ganzhi)}
+                                    {romanceBadge(ln.ganzhi, ageForYear(ln.year) ?? 0)}
                                   </div>
                                   <div
                                     className="mt-1 flex items-center justify-center gap-1.5 text-xs font-black flex-wrap"
@@ -2465,7 +2484,6 @@ export default function BaZiAnalyzerPage() {
                           inputs={wealthVerdict.inputs}
                           matched={wealthVerdict.matched}
                           result={wealthVerdict.result}
-                          references={wealthVerdict.reference}
                           disclaimer={wealthVerdict.disclaimer}
                           accent="amber"
                         />
@@ -2475,13 +2493,13 @@ export default function BaZiAnalyzerPage() {
                       </TabsContent>
                       <TabsContent value="education" className="mt-4">
                         <VerdictPanel
-                          subtitle="学历 · 十神学业考试"
+                          subtitle="学历 · 十神学业考试（量化打分 10 档）"
                           inputs={educationVerdict.inputs}
                           matched={educationVerdict.matched}
                           result={educationVerdict.result}
-                          references={educationVerdict.reference}
                           disclaimer={educationVerdict.disclaimer}
                           accent="emerald"
+                          score={{ value: educationVerdict.score, label: educationVerdict.level }}
                         />
                       </TabsContent>
                     </Tabs>

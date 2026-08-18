@@ -133,3 +133,45 @@ export const EDUCATION_RULES = {
   liKe2: '理科（理性、逻辑、推演）：金水为主，水主智、主筹算、主逻辑，金主严谨规则；水旺有制、金水相涵者多擅长理科。',
   age: '岁运为应期：原局为基础，考试、升学、学历成型均以岁运引动平衡为定论。',
 };
+
+// ---------- 五、学历评价标准（量化打分制度 · 10 档） ----------
+// 依据：第二篇章十神学业系统 + 用神喜忌 + 格局用神力量，综合量化 0-100 分；
+// 核心：印星为学识根基、财星为成果载体、财印平衡为学业太极，食伤/官杀/比劫作修正，
+//       格局用神力量决定学历上限。
+export interface IEducationLevel {
+  level: string; // 学历档位
+  min: number;   // 分数下限（含）
+  max: number;   // 分数上限（含）
+  desc: string;  // 档位描述
+}
+
+export const EDUCATION_LEVELS: IEducationLevel[] = [
+  { level: '顶级学校', min: 90, max: 100, desc: '清北复交浙等顶尖学府层次，学识根基与成果转化俱佳，命局学历层次之巅' },
+  { level: '985', min: 80, max: 89, desc: '985 高校层次，印星得用、财印平衡，学识与转化均扎实，名校可期' },
+  { level: '211', min: 72, max: 79, desc: '211 高校层次，学业根基稳固、输出良好，重点大学可期' },
+  { level: '一本', min: 64, max: 71, desc: '一本院校层次，学业平顺，多可获本科上等学历' },
+  { level: '二本', min: 55, max: 63, desc: '二本院校层次，学业中平，可获本科学历' },
+  { level: '三本', min: 47, max: 54, desc: '三本/民办本科层次，学业基础尚可，努力方可得本科' },
+  { level: '高中', min: 38, max: 46, desc: '高中学历层次，学业中下，多数止步于高考' },
+  { level: '初中', min: 28, max: 37, desc: '初中学历层次，求学坎坷，多数止步于初中' },
+  { level: '小学', min: 18, max: 27, desc: '小学学历层次，求学艰难' },
+  { level: '辍学', min: 0, max: 17, desc: '较早辍学，难成学业' },
+];
+
+// 学历量化打分权重（0-100，从基础分 50 起加减，全部命中约在金字塔中段分布）
+export const EDUCATION_SCORING = {
+  base: 50,           // 基础分（中平）
+  yinUseful: 22,      // 印星为用神（学识根基得用）→ +22
+  yinPresent: 12,     // 印星透干（学识根基现）→ +12
+  yinTaboo: 14,       // 印星为忌（根基受制）→ -14
+  caiBalance: 16,     // 财印双现且印得用（财印平衡·成果转化）→ +16
+  yinStrongCaiWeak: 4,// 印旺财弱（缺成果载体）→ -4
+  caiKeYin: 14,       // 财旺破印（知识根基被克）→ -14
+  shiShangUseful: 8,  // 食伤得用（发挥输出佳）→ +8
+  shiShangExcess: 10, // 食伤过旺无制（贪玩废学）→ -10
+  guanShaUseful: 6,   // 官杀得用（自律约束佳）→ +6
+  guanShaExcess: 8,   // 官杀过旺无制（压力过载）→ -8
+  biJieUseful: 4,     // 比劫得用（良性竞争）→ +4
+  biJieExcess: 6,     // 比劫过旺（分心玩乐）→ -6
+  patternMax: 10,     // 格局用神力量占比 → +0~+10
+};

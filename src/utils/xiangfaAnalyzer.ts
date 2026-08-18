@@ -25,6 +25,8 @@ import {
   WEALTH_RULES,
   ROMANCE_RULES,
   EDUCATION_RULES,
+  EDUCATION_LEVELS,
+  EDUCATION_SCORING,
   PEACH_BRANCHES,
 } from '../data/xiangfaData';
 
@@ -208,6 +210,16 @@ export interface RomanceVerdict {
   result: string;
   reference: string[];
   disclaimer?: string;
+  // 新增：数据书核心规则 + 恋爱/结婚应期
+  coreRule: string;              // 数据书核心规则（天干为异性缘基础、地支为情缘实质）
+  loveTiming: string;            // 最利恋爱的年份/流年应期
+  marriageTiming: string;        // 最利结婚的年份/流年应期
+  peachBranches: string[];       // 命局桃花地支（子午卯酉）
+  oppositeElementName: string;   // 异性星（财/官）元素
+  marriagePalace: string;        // 夫妻宫（日支）
+  heBranch: string;              // 与日支六合的地支（无则为空）
+  chongBranch: string;           // 与日支相冲的地支（无则为空）
+  sanHeBranches: string[];       // 与日支三合/三会的其余地支（逗号分隔字符串）
 }
 
 export function analyzeRomanceVerdict(
@@ -231,13 +243,25 @@ export function analyzeRomanceVerdict(
   const palaceTriggered = branches.some((b) => b !== dayBranch && (
     DI_ZHI_LIU_HE[b + dayBranch] || DI_ZHI_LIU_HE[dayBranch + b] || LIU_CHONG_PAIRS[b + dayBranch] || LIU_CHONG_PAIRS[dayBranch + b]
   ));
+  // —— 情缘应期：与夫妻宫（日支）六合 / 相冲 / 三合·三会 的地支 ——
+  const heEntry = Object.entries(DI_ZHI_LIU_HE).find(([k]) => k.includes(dayBranch));
+  const heBranch = heEntry ? heEntry[0].replace(dayBranch, '') : '';
+  const chongEntry = Object.entries(LIU_CHONG_PAIRS).find(([k]) => k.includes(dayBranch));
+  const chongBranch = chongEntry ? chongEntry[0].replace(dayBranch, '') : '';
+  const sanHeBranches = [
+    ...SAN_HE_GROUPS.filter((g) => g.members.includes(dayBranch)).flatMap((g) => g.members.filter((m) => m !== dayBranch)),
+    ...SAN_HUI_GROUPS.filter((g) => g.members.includes(dayBranch)).flatMap((g) => g.members.filter((m) => m !== dayBranch)),
+  ];
+  const oppositeElementName = ELEMENT_CN[oppositeEl];
 
   const inputs = [
     { label: '性别', value: isMale ? '男命' : '女命' },
-    { label: '异性星', value: `${oppositeName}（${ELEMENT_CN[oppositeEl]}）` },
+    { label: '异性星', value: `${oppositeName}（${oppositeElementName}）` },
     { label: '异性星透干', value: spouseStarInStem ? '有' : '无' },
     { label: '异性星入夫妻宫', value: spouseInPalace ? '是（正缘）' : '否' },
     { label: '桃花(子午卯酉)', value: peach.length > 0 ? peach.join('·') : '无' },
+    { label: '夫妻宫(日支)', value: dayBranch },
+    { label: '六合/相冲夫妻宫', value: `${heBranch ? `六合${heBranch}` : '—'}${heBranch && chongBranch ? '、' : ''}${chongBranch ? `冲${chongBranch}` : '—'}` },
     { label: '辰戌相见', value: hasChenXu ? '有（人事波折）' : '无' },
   ];
 
@@ -267,6 +291,25 @@ export function analyzeRomanceVerdict(
   }
 
   const matched = spouseStarInStem || spouseInPalace || peach.length > 0 || hasChenXu;
+
+  // —— 恋爱 / 结婚应期（最容易恋爱与结婚的年份） ——
+  let loveTiming = '';
+  if (peach.length > 0) loveTiming += `逢${peach.join('、')}桃花之年异性缘最旺、最易动情；`;
+  if (oppositeElementName) loveTiming += `逢${oppositeElementName}干/支流年（${oppositeName}现）恋爱运开；`;
+  if (heBranch) loveTiming += `逢${heBranch}年（六合夫妻宫${dayBranch}）情感涌动；`;
+  if (sanHeBranches.length > 0) loveTiming += `逢${Array.from(new Set(sanHeBranches)).join('、')}三合/三会之年情缘聚拢；`;
+  if (!loveTiming) loveTiming = '恋爱应期需逢岁运桃花或异性星引动之年方显，无明显固定旺年。';
+
+  let marriageTiming = '';
+  if (heBranch) marriageTiming += `逢${heBranch}年（与日支${dayBranch}六合）最利婚定；`;
+  if (chongBranch) marriageTiming += `逢${chongBranch}年（冲动夫妻宫${dayBranch}）婚姻易成或变动；`;
+  if (sanHeBranches.length > 0) marriageTiming += `逢${Array.from(new Set(sanHeBranches)).join('、')}三合/三会之年亦利婚姻合和；`;
+  if (spouseInPalace) marriageTiming += ` ${oppositeName}已入夫妻宫，逢${oppositeElementName}流年引动即为婚姻应期；`;
+  if (hasChenXu) marriageTiming += ' 辰戌相见者，逢辰戌之年人事与婚恋波动最显；';
+  if (!marriageTiming) marriageTiming = '结婚应期需逢岁运合冲夫妻宫之年方显，无明显固定婚年。';
+
+  result += ` 应期提示——恋爱：${loveTiming}结婚：${marriageTiming}`;
+
   return {
     inputs,
     matched,
@@ -275,6 +318,15 @@ export function analyzeRomanceVerdict(
     result,
     reference: refs,
     disclaimer: matched ? undefined : NOT_MATCHED_DISCLAIMER,
+    coreRule: ROMANCE_RULES.core,
+    loveTiming,
+    marriageTiming,
+    peachBranches: peach,
+    oppositeElementName,
+    marriagePalace: dayBranch,
+    heBranch,
+    chongBranch,
+    sanHeBranches,
   };
 }
 
@@ -287,6 +339,89 @@ export interface EducationVerdict {
   result: string;
   reference: string[];
   disclaimer?: string;
+  // 新增：学历量化打分（10 档：辍学~顶级学校）
+  score: number;         // 学历分 0-100
+  level: string;         // 学历档位
+  levelDesc: string;     // 档位描述
+  scoreReasons: string[]; // 打分依据明细
+}
+
+// 学历量化打分：0-100 分，映射 10 档（辍学/小学/初中/高中/三本/二本/一本/211/985/顶级学校）
+// 依据《象法》数据书 EDUCATION_SCORING 权重：印星根基 + 财印平衡 + 食伤/官杀/比劫修正 + 格局用神力量
+export function scoreEducationLevel(
+  chart: BaZiChart,
+  yongJi: { usefulElements: string[]; tabooElements: string[] } | null,
+  elementPower: { wood: number; fire: number; earth: number; metal: number; water: number } | null,
+): { score: number; level: string; levelDesc: string; reasons: string[] } {
+  const useful = yongJi?.usefulElements ?? [];
+  const taboo = yongJi?.tabooElements ?? [];
+  const pillars = [chart.year, chart.month, chart.hour];
+  const ten = pillars.map((p) => p.shiShen || '');
+  const count = (kw: string) => ten.filter((s) => s.includes(kw)).length;
+  const elOf = (kw: string) => {
+    const els = new Set<string>();
+    pillars.forEach((p) => { if ((p.shiShen || '').includes(kw)) els.add(STEM_ELEMENTS[p.stem]); });
+    return els;
+  };
+  const yinStar = count('印');
+  const caiStar = count('财');
+  const shiShang = count('食') + count('伤');
+  const guanSha = count('官') + count('杀');
+  const biJie = count('比') + count('劫');
+  const yinEls = elOf('印');
+  const shiShangEls = new Set<string>([...elOf('食'), ...elOf('伤')]);
+  const guanShaEls = new Set<string>([...elOf('官'), ...elOf('杀')]);
+  const biJieEls = new Set<string>([...elOf('比'), ...elOf('劫')]);
+  const inUseful = (els: Set<string>) => Array.from(els).some((el) => useful.includes(el));
+  const inTaboo = (els: Set<string>) => Array.from(els).some((el) => taboo.includes(el));
+
+  let score = EDUCATION_SCORING.base; // 50
+  const reasons: string[] = [];
+
+  // 印星（学识根基）
+  if (yinStar > 0) {
+    if (inUseful(yinEls)) { score += EDUCATION_SCORING.yinUseful; reasons.push(`印星得用 +${EDUCATION_SCORING.yinUseful}`); }
+    else if (inTaboo(yinEls)) { score -= EDUCATION_SCORING.yinTaboo; reasons.push(`印星为忌 -${EDUCATION_SCORING.yinTaboo}`); }
+    else { score += EDUCATION_SCORING.yinPresent; reasons.push(`印星透干 +${EDUCATION_SCORING.yinPresent}`); }
+  }
+  // 财印平衡（成果转化）
+  if (yinStar > 0 && caiStar > 0) {
+    if (inUseful(yinEls)) { score += EDUCATION_SCORING.caiBalance; reasons.push(`财印平衡·印得用 +${EDUCATION_SCORING.caiBalance}`); }
+    else { score -= EDUCATION_SCORING.yinStrongCaiWeak; reasons.push(`印旺财弱 -${EDUCATION_SCORING.yinStrongCaiWeak}`); }
+  } else if (yinStar === 0 && caiStar > 0) {
+    score -= EDUCATION_SCORING.caiKeYin; reasons.push(`财旺破印 -${EDUCATION_SCORING.caiKeYin}`);
+  }
+  // 食伤（发挥输出）
+  if (shiShang > 0) {
+    if (inUseful(shiShangEls)) { score += EDUCATION_SCORING.shiShangUseful; reasons.push(`食伤得用 +${EDUCATION_SCORING.shiShangUseful}`); }
+    else if (shiShang >= 2) { score -= EDUCATION_SCORING.shiShangExcess; reasons.push(`食伤过旺无制 -${EDUCATION_SCORING.shiShangExcess}`); }
+  }
+  // 官杀（压力自律）
+  if (guanSha > 0) {
+    if (inUseful(guanShaEls)) { score += EDUCATION_SCORING.guanShaUseful; reasons.push(`官杀得用 +${EDUCATION_SCORING.guanShaUseful}`); }
+    else if (guanSha >= 2) { score -= EDUCATION_SCORING.guanShaExcess; reasons.push(`官杀过旺无制 -${EDUCATION_SCORING.guanShaExcess}`); }
+  }
+  // 比劫（竞争助力）
+  if (biJie > 0) {
+    if (inUseful(biJieEls)) { score += EDUCATION_SCORING.biJieUseful; reasons.push(`比劫得用 +${EDUCATION_SCORING.biJieUseful}`); }
+    else if (biJie >= 2) { score -= EDUCATION_SCORING.biJieExcess; reasons.push(`比劫过旺 -${EDUCATION_SCORING.biJieExcess}`); }
+  }
+  // 格局用神力量（决定学历上限）
+  if (elementPower) {
+    let yongPower = 0;
+    useful.forEach((el) => { yongPower += elementPower[el] ?? 0; });
+    const total = (elementPower.wood + elementPower.fire + elementPower.earth + elementPower.metal + elementPower.water) || 1;
+    const bonus = Math.round(Math.min(1, Math.max(0, yongPower / total)) * EDUCATION_SCORING.patternMax);
+    if (bonus > 0) { score += bonus; reasons.push(`用神力量占比加成 +${bonus}`); }
+  }
+
+  score = Math.max(0, Math.min(100, Math.round(score)));
+
+  let lv = EDUCATION_LEVELS[EDUCATION_LEVELS.length - 1];
+  for (const item of EDUCATION_LEVELS) {
+    if (score >= item.min && score <= item.max) { lv = item; break; }
+  }
+  return { score, level: lv.level, levelDesc: lv.desc, reasons };
 }
 
 export function analyzeEducationVerdict(
@@ -357,12 +492,21 @@ export function analyzeEducationVerdict(
   refs.push(subject.includes('理科') ? EDUCATION_RULES.liKe2 : EDUCATION_RULES.liKe);
 
   const matched = yinStar > 0 || caiStar > 0;
+
+  // —— 学历量化打分（10 档） ——
+  const scored = scoreEducationLevel(chart, yongJi, elementPower);
+  result += ` 学历评价：${scored.level}（${scored.score} 分）——${scored.levelDesc}。打分依据：${scored.reasons.length > 0 ? scored.reasons.join('；') : '各因子均不显著，取中平基础分'}。`;
+
   return {
     inputs,
     matched,
     result,
     reference: refs.length > 0 ? refs : [EDUCATION_RULES.balance],
     disclaimer: matched ? undefined : NOT_MATCHED_DISCLAIMER,
+    score: scored.score,
+    level: scored.level,
+    levelDesc: scored.levelDesc,
+    scoreReasons: scored.reasons,
   };
 }
 
