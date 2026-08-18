@@ -28,6 +28,9 @@ import {
   EDUCATION_LEVELS,
   EDUCATION_SCORING,
   PEACH_BRANCHES,
+  WEALTH_RANKS,
+  NOBILITY_RANKS,
+  mapScoreToRank,
 } from '../data/xiangfaData';
 
 export const XIANGFA_PRIORITY = 2; // 数据书优先级：2（仅供新模块，不参与底层运算）
@@ -115,6 +118,13 @@ export interface WealthVerdict {
   result: string;
   reference: string[];
   disclaimer?: string;
+  // —— 外显最终档位与描述（按真实财富金字塔严格映射）——
+  wealthScoreFinal: number;       // 直接沿用底层 wealthScore
+  wealthRank: string;             // 外显档位：顶尖富豪 / 富豪级 / 富裕 / 中上 / 中产 / 小康 / 温饱 / 贫困 / 赤贫
+  wealthRankDesc: string;         // 档位描述
+  nobilityScoreFinal: number;     // 直接沿用底层 nobilityScore
+  nobilityRank: string;           // 外显贵寿/地位档位
+  nobilityRankDesc: string;       // 贵寿档位描述
 }
 
 export function analyzeWealthVerdict(
@@ -151,8 +161,6 @@ export function analyzeWealthVerdict(
   const inputs = [
     { label: '阳气(木火)', value: `${yangPower.toFixed(1)}%` },
     { label: '阴气(金水)', value: `${yinPower.toFixed(1)}%` },
-    { label: '财富分', value: `${wealthNobility ? wealthNobility.wealthScore : '—'} 分（${wealthNobility ? wealthNobility.wealthLevel : '—'}）` },
-    { label: '贵寿分', value: `${wealthNobility ? wealthNobility.nobilityScore : '—'} 分（${wealthNobility ? wealthNobility.nobilityLevel : '—'}）` },
     { label: '富载体(阳干)', value: yangCarrier.length > 0 ? yangCarrier.join('·') : '未透' },
     { label: '贵载体(阴干)', value: yinCarrier.length > 0 ? yinCarrier.join('·') : '未透' },
     { label: '财星(妻星/资源)', value: caiShenPresent ? (caiGan.length > 0 ? `天干 ${caiGan.join('·')}` : '藏于地支') : '不显' },
@@ -160,30 +168,22 @@ export function analyzeWealthVerdict(
     { label: '资源宫位', value: `${caiOuter ? '财星在他宫(年月)' : ''}${caiOuter && guanOuter ? '、' : ''}${guanOuter ? '官星在他宫(年月)' : (caiShenPresent || guanShenPresent ? '财官多在我宫(日时)' : '—')}` },
   ];
 
-  // 综合判定（结果结论为最终展示给用户，不暴露任何内部数据书原文）
-  const richLevel = wealthNobility ? wealthNobility.wealthScore : 50;
-  const nobleLevel = wealthNobility ? wealthNobility.nobilityScore : 50;
-  let result = '';
-  const richDesc = richLevel >= 70 ? '财气较旺' : richLevel >= 45 ? '财运平常' : '财气偏薄';
-  const nobleDesc = nobleLevel >= 70 ? '贵气较旺' : nobleLevel >= 45 ? '贵气平常' : '贵气偏薄';
+  // 取底层既有财富/贵寿分数；未提供时默认 38（温饱线以下，保证不崩）
+  const rawWealthScore = wealthNobility?.wealthScore ?? 38;
+  const rawNobilityScore = wealthNobility?.nobilityScore ?? 38;
+  const wRank = mapScoreToRank(rawWealthScore, WEALTH_RANKS);
+  const nRank = mapScoreToRank(rawNobilityScore, NOBILITY_RANKS);
 
-  if (yangPower >= 28 || (yangCarrier.length > 0 && richLevel >= 60)) {
-    result += `富象主：阳气(木火)${yangPower.toFixed(1)}%，木火旺相为富源根基，${caiShenPresent ? '且财星（妻星/资源）有现' : '财星不显'}——${richDesc}。`;
-  } else {
-    result += `富象不显：阳气(木火)仅${yangPower.toFixed(1)}%，木火偏弱富源不足，求财需借岁运补足——${richDesc}。`;
-  }
-  if (yinPower >= 28 || (yinCarrier.length > 0 && nobleLevel >= 60)) {
-    result += `贵象主：阴气(金水)${yinPower.toFixed(1)}%，金水旺相为贵源根基，${guanShenPresent ? '且官杀（管控/地位）有现' : '官杀不显'}——${nobleDesc}。`;
-  } else {
-    result += `贵象不显：阴气(金水)仅${yinPower.toFixed(1)}%，金水偏弱贵源不足，贵气多凭个人修为积累——${nobleDesc}。`;
-  }
+  // 综合结论（只给最终结果与定位的自然语言，不展示任何打分依据细节）
+  let result = `财富层级：${wRank.rank}；事业地位：${nRank.rank}。`;
+  if (wRank.min >= 90) result += ' 富源极盛，一生财富表现出众，然仍需格局平衡为归依。';
+  else if (wRank.min >= 68) result += ' 经济整体向好，多能在中年前后积累稳定资产。';
+  else if (wRank.min >= 42) result += ' 财富表现属大众主流区间，生活稳定、略有结余，宜稳步积累。';
+  else result += ' 求财相对辛劳，需靠个人努力与岁运帮扶，切忌贪进冒险。';
   if (caiShenPresent || guanShenPresent) {
     result += caiOuter || guanOuter
       ? ' 财官多居他宫（年月），属外部社会资源，需与日主自身产生刑冲合害、干合藏透等关系，方可转化为自身所能掌握的财富与地位。'
       : ' 财官多居我宫（日时），资源禀赋贴身，多可凭自身能力与后天积累直接落袋为用。';
-  }
-  if (richLevel >= 70 && nobleLevel >= 70) {
-    result += ' 富贵双全之象，然仍需以格局阴阳平衡为最终归依。';
   }
 
   const matched = caiShenPresent || guanShenPresent || yangCarrier.length > 0 || yinCarrier.length > 0;
@@ -193,6 +193,12 @@ export function analyzeWealthVerdict(
     result,
     reference: [],
     disclaimer: matched ? undefined : NOT_MATCHED_DISCLAIMER,
+    wealthScoreFinal: Math.max(0, Math.min(100, Math.round(rawWealthScore))),
+    wealthRank: wRank.rank,
+    wealthRankDesc: wRank.desc,
+    nobilityScoreFinal: Math.max(0, Math.min(100, Math.round(rawNobilityScore))),
+    nobilityRank: nRank.rank,
+    nobilityRankDesc: nRank.desc,
   };
 }
 
@@ -473,9 +479,9 @@ export function analyzeEducationVerdict(
 
   const matched = yinStar > 0 || caiStar > 0;
 
-  // —— 学历量化打分（10 档） ——
+  // —— 学历量化打分（10 档），结论只展示最终档位，不展示任何打分过程明细 ——
   const scored = scoreEducationLevel(chart, yongJi, elementPower);
-  result += ` 学历评价：${scored.level}（${scored.score} 分）——${scored.levelDesc}。打分依据：${scored.reasons.length > 0 ? scored.reasons.join('；') : '各因子均不显著，取中平基础分'}。`;
+  result += ` 学历评价：${scored.level}（${scored.score} 分）——${scored.levelDesc}。`;
 
   return {
     inputs,
@@ -486,7 +492,7 @@ export function analyzeEducationVerdict(
     score: scored.score,
     level: scored.level,
     levelDesc: scored.levelDesc,
-    scoreReasons: scored.reasons,
+    scoreReasons: [],
   };
 }
 

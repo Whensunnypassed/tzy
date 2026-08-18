@@ -392,6 +392,71 @@ function VerdictPanel({
   );
 }
 
+// ============ 财富论断面板（只展示最终档位与自然语言结论，无中间过程） ============
+function WealthPanel({ verdict }: { verdict: WealthVerdict }) {
+  return (
+    <div className="space-y-3">
+      <div className="text-sm font-bold text-muted-foreground" style={{ fontFamily: "'Noto Serif SC', serif" }}>财富 · 富贵财官</div>
+      <div className="grid gap-2 md:grid-cols-2">
+        <div className="rounded-xl border p-4" style={{ border: '1px solid rgba(245,158,11,0.28)', background: 'rgba(245,158,11,0.07)' }}>
+          <div className="mb-1 flex items-center gap-1.5">
+            <span className="inline-flex items-center rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-black text-white">财富层级</span>
+            <span className="inline-flex items-center rounded-full bg-white/80 px-2.5 py-0.5 text-[12px] font-black" style={{ border: '1px solid rgba(245,158,11,0.28)' }}>
+              {verdict.wealthRank}<span className="ml-1" style={{ color: '#B45309' }}>· {verdict.wealthScoreFinal} 分</span>
+            </span>
+          </div>
+          <p className="text-xs leading-relaxed font-bold text-muted-foreground">{verdict.wealthRankDesc}</p>
+        </div>
+        <div className="rounded-xl border p-4" style={{ border: '1px solid rgba(14,165,233,0.25)', background: 'rgba(14,165,233,0.06)' }}>
+          <div className="mb-1 flex items-center gap-1.5">
+            <span className="inline-flex items-center rounded-full bg-sky-500 px-2 py-0.5 text-[10px] font-black text-white">事业地位</span>
+            <span className="inline-flex items-center rounded-full bg-white/80 px-2.5 py-0.5 text-[12px] font-black" style={{ border: '1px solid rgba(14,165,233,0.25)' }}>
+              {verdict.nobilityRank}<span className="ml-1" style={{ color: '#0369A1' }}>· {verdict.nobilityScoreFinal} 分</span>
+            </span>
+          </div>
+          <p className="text-xs leading-relaxed font-bold text-muted-foreground">{verdict.nobilityRankDesc}</p>
+        </div>
+      </div>
+      <div className="rounded-xl p-4" style={{ border: '1px solid rgba(245,158,11,0.28)', background: 'rgba(245,158,11,0.06)' }}>
+        <div className="mb-1.5 flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-black text-white" style={{ background: '#F59E0B' }}>查询论断</span>
+          {!verdict.matched && verdict.disclaimer && (
+            <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">{verdict.disclaimer}</span>
+          )}
+        </div>
+        <p className="text-sm leading-relaxed font-bold text-foreground">{verdict.result}</p>
+      </div>
+    </div>
+  );
+}
+
+// ============ 学历论断面板（只展示最终档位与自然语言结论，无中间过程） ============
+function EducationPanel({ verdict }: { verdict: EducationVerdict }) {
+  return (
+    <div className="space-y-3">
+      <div className="text-sm font-bold text-muted-foreground" style={{ fontFamily: "'Noto Serif SC', serif" }}>学历 · 十神学业考试（10 档·量化）</div>
+      <div className="rounded-xl border p-4" style={{ border: '1px solid rgba(16,185,129,0.25)', background: 'rgba(16,185,129,0.06)' }}>
+        <div className="mb-1.5 flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-black text-white">学历档位</span>
+          <span className="inline-flex items-center rounded-full bg-white/80 px-2.5 py-0.5 text-[13px] font-black" style={{ border: '1px solid rgba(16,185,129,0.25)' }}>
+            {verdict.level}<span className="ml-1" style={{ color: '#047857' }}>· {verdict.score} 分</span>
+          </span>
+        </div>
+        <p className="text-xs leading-relaxed font-bold text-muted-foreground">{verdict.levelDesc}</p>
+      </div>
+      <div className="rounded-xl p-4" style={{ border: '1px solid rgba(16,185,129,0.25)', background: 'rgba(16,185,129,0.05)' }}>
+        <div className="mb-1.5 flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-black text-white" style={{ background: '#10B981' }}>查询论断</span>
+          {!verdict.matched && verdict.disclaimer && (
+            <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">{verdict.disclaimer}</span>
+          )}
+        </div>
+        <p className="text-sm leading-relaxed font-bold text-foreground">{verdict.result}</p>
+      </div>
+    </div>
+  );
+}
+
 // ============ 感情论断面板（含 恋爱/结婚 应期提示） ============
 function RomanceVerdictPanel({ verdict }: { verdict: RomanceVerdict }) {
   return (
@@ -2474,28 +2539,13 @@ export default function BaZiAnalyzerPage() {
                         <XiangYiPanel verdict={xiangYi} />
                       </TabsContent>
                       <TabsContent value="wealth" className="mt-4">
-                        <VerdictPanel
-                          subtitle="财富 · 富贵财官"
-                          inputs={wealthVerdict.inputs}
-                          matched={wealthVerdict.matched}
-                          result={wealthVerdict.result}
-                          disclaimer={wealthVerdict.disclaimer}
-                          accent="amber"
-                        />
+                        <WealthPanel verdict={wealthVerdict} />
                       </TabsContent>
                       <TabsContent value="romance" className="mt-4">
                         <RomanceVerdictPanel verdict={romanceVerdict} />
                       </TabsContent>
                       <TabsContent value="education" className="mt-4">
-                        <VerdictPanel
-                          subtitle="学历 · 十神学业考试（量化打分 10 档）"
-                          inputs={educationVerdict.inputs}
-                          matched={educationVerdict.matched}
-                          result={educationVerdict.result}
-                          disclaimer={educationVerdict.disclaimer}
-                          accent="emerald"
-                          score={{ value: educationVerdict.score, label: educationVerdict.level }}
-                        />
+                        <EducationPanel verdict={educationVerdict} />
                       </TabsContent>
                     </Tabs>
                   ) : (

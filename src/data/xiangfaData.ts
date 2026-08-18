@@ -109,6 +109,48 @@ export const WEALTH_RULES = {
   outerGain: '他宫富贵获取：日主须与外部资源产生关联方可得用——①日干合冲年月财官印；②日干落地年月藏干、头顶富贵星；③食伤骑乘、落地年月富贵星；④日支刑冲合害年月地支作用富贵资源。',
 };
 
+// —— 财富档位外显映射（仅 UI 展示用，不改动底层 wealthScore/nobilityScore 的算法）
+// 映射严格依据当前中国财富/家庭资产分布（帕累托·金字塔）：
+// 顶尖富豪 0.01%、富豪 0.5%、富裕 4%、中上 11%、中产 25%、小康 25%、温饱 20%、贫困 13%、赤贫 1.5%
+export interface IWealthRank {
+  rank: string;   // 档位名（外显标签）
+  min: number;    // 对应 wealthScore 下限
+  max: number;    // 对应 wealthScore 上限
+  desc: string;   // 档位描述
+}
+
+export const WEALTH_RANKS: IWealthRank[] = [
+  { rank: '顶尖富豪', min: 97, max: 100, desc: '命局富源极盛，资产量级顶尖，属金字塔极尖（约前 0.1‰）' },
+  { rank: '富豪级',  min: 90, max: 96,  desc: '富源厚实，财富显著高于常人，属富裕之上（约前 0.5%）' },
+  { rank: '富裕',    min: 80, max: 89,  desc: '木火旺相、财星有力，家产丰实，属普遍意义的「富裕」' },
+  { rank: '中上',    min: 68, max: 79,  desc: '经济状况良好，高于多数人，有储蓄与资产' },
+  { rank: '中产',    min: 55, max: 67,  desc: '经济收入中等，收支稳定，多属社会中坚' },
+  { rank: '小康',    min: 42, max: 54,  desc: '衣食无忧略有结余，属社会大众常见水平' },
+  { rank: '温饱',    min: 28, max: 41,  desc: '经济基础偏弱，基本生活可保障但难有结余' },
+  { rank: '贫困',    min: 12, max: 27,  desc: '求财较难，多需辛劳维持，岁运帮扶方可改善' },
+  { rank: '赤贫',    min: 0,  max: 11,  desc: '富源不足且难得助，需赖岁运或亲友扶持' },
+];
+
+// —— 贵寿/地位档位外显映射（对应 nobilityScore，参考社会地位/事业层级金字塔）
+export const NOBILITY_RANKS: IWealthRank[] = [
+  { rank: '顶尖地位', min: 97, max: 100, desc: '贵源极盛，事业地位显赫，影响力与层级均属顶尖' },
+  { rank: '显贵',    min: 90, max: 96,  desc: '地位显赫，事业层级高，或在专业领域具有权威性' },
+  { rank: '地位优厚', min: 80, max: 89,  desc: '事业与地位较为优厚，有职务或专业声望' },
+  { rank: '中上',    min: 68, max: 79,  desc: '有稳定事业与一定社会认同，多属单位骨干或小负责人' },
+  { rank: '事业中平', min: 55, max: 67,  desc: '事业进展平稳，地位一般但可保稳定' },
+  { rank: '事业普通', min: 42, max: 54,  desc: '岗位与社会地位较为普通，需岁运引动方有提升' },
+  { rank: '事业偏弱', min: 28, max: 41,  desc: '事业起伏较多，地位难稳，需更耐心积累' },
+  { rank: '事业艰难', min: 12, max: 27,  desc: '事业难得贵人扶持，发展较为坎坷' },
+  { rank: '事业极弱', min: 0,  max: 11,  desc: '贵源不足、地位难立，宜沉潜并待岁运扶抑' },
+];
+
+// 辅助：把一个 0-100 分映射到 WEALTH_RANKS / NOBILITY_RANKS 的档位
+export function mapScoreToRank(score: number, ranks: IWealthRank[]): IWealthRank {
+  const s = Math.max(0, Math.min(100, Math.round(score)));
+  for (const r of ranks) if (s >= r.min && s <= r.max) return r;
+  return ranks[ranks.length - 1];
+}
+
 // ---------- 三、异性缘与婚姻情缘（第四篇章 + 第六篇章·辰戌） ----------
 export const ROMANCE_RULES = {
   core: '核心规则：天干仅为异性缘基础，地支为情缘实质，唯有干支联动、食伤与官星交融，方为实质性情爱、肉身情缘。',
@@ -138,6 +180,9 @@ export const EDUCATION_RULES = {
 // 依据：第二篇章十神学业系统 + 用神喜忌 + 格局用神力量，综合量化 0-100 分；
 // 核心：印星为学识根基、财星为成果载体、财印平衡为学业太极，食伤/官杀/比劫作修正，
 //       格局用神力量决定学历上限。
+// —— 档位映射（严格金字塔）——
+// 档位区间按累计排位近似中国当前学历结构（由低到高：辍学→小学→初中→高中→三本→二本→一本→211→985→清北），
+// 高分区极稀（清北约 0.1%、985 约 1%、211 约 3%），大部分命局集中在 30-70 分区间（初中到二本）。
 export interface IEducationLevel {
   level: string; // 学历档位
   min: number;   // 分数下限（含）
@@ -146,32 +191,33 @@ export interface IEducationLevel {
 }
 
 export const EDUCATION_LEVELS: IEducationLevel[] = [
-  { level: '顶级学校', min: 90, max: 100, desc: '清北复交浙等顶尖学府层次，学识根基与成果转化俱佳，命局学历层次之巅' },
-  { level: '985', min: 80, max: 89, desc: '985 高校层次，印星得用、财印平衡，学识与转化均扎实，名校可期' },
-  { level: '211', min: 72, max: 79, desc: '211 高校层次，学业根基稳固、输出良好，重点大学可期' },
-  { level: '一本', min: 64, max: 71, desc: '一本院校层次，学业平顺，多可获本科上等学历' },
-  { level: '二本', min: 55, max: 63, desc: '二本院校层次，学业中平，可获本科学历' },
-  { level: '三本', min: 47, max: 54, desc: '三本/民办本科层次，学业基础尚可，努力方可得本科' },
-  { level: '高中', min: 38, max: 46, desc: '高中学历层次，学业中下，多数止步于高考' },
-  { level: '初中', min: 28, max: 37, desc: '初中学历层次，求学坎坷，多数止步于初中' },
-  { level: '小学', min: 18, max: 27, desc: '小学学历层次，求学艰难' },
-  { level: '辍学', min: 0, max: 17, desc: '较早辍学，难成学业' },
+  { level: '清北·顶级',  min: 96, max: 100, desc: '清北复交浙科南等顶尖学府层次，学识根基、成果转化、格局用神三者俱足，命局学历层次之巅' },
+  { level: '985',        min: 88, max: 95,  desc: '985 高校层次，印星得用、财印平衡，学识与转化均扎实，名校可期' },
+  { level: '211',        min: 80, max: 87,  desc: '211 高校层次，学业根基稳固、输出良好，重点大学可期' },
+  { level: '一本',       min: 70, max: 79,  desc: '一本院校层次，学业平顺，多可获本科上等学历' },
+  { level: '二本',       min: 60, max: 69,  desc: '二本院校层次，学业中平，可获本科学历' },
+  { level: '三本',       min: 50, max: 59,  desc: '三本/民办本科层次，学业基础尚可，努力方可得本科' },
+  { level: '高中',       min: 38, max: 49,  desc: '高中学历层次，学业中下，多数止步于高考' },
+  { level: '初中',       min: 24, max: 37,  desc: '初中学历层次，求学坎坷，多数止步于初中' },
+  { level: '小学',       min: 10, max: 23,  desc: '小学学历层次，求学艰难' },
+  { level: '辍学',       min: 0,  max: 9,   desc: '较早辍学，难成学业' },
 ];
 
-// 学历量化打分权重（0-100，从基础分 50 起加减，全部命中约在金字塔中段分布）
+// 学历量化打分权重（0-100，整体呈金字塔分布：中段 40-70 最密集，高分极稀有）
+// 总权重设计：基础 42，正向合计 ≈+58（满格约 100），负向合计 ≈-42（满格约 0）
 export const EDUCATION_SCORING = {
-  base: 50,           // 基础分（中平）
-  yinUseful: 22,      // 印星为用神（学识根基得用）→ +22
-  yinPresent: 12,     // 印星透干（学识根基现）→ +12
-  yinTaboo: 14,       // 印星为忌（根基受制）→ -14
-  caiBalance: 16,     // 财印双现且印得用（财印平衡·成果转化）→ +16
-  yinStrongCaiWeak: 4,// 印旺财弱（缺成果载体）→ -4
-  caiKeYin: 14,       // 财旺破印（知识根基被克）→ -14
-  shiShangUseful: 8,  // 食伤得用（发挥输出佳）→ +8
-  shiShangExcess: 10, // 食伤过旺无制（贪玩废学）→ -10
-  guanShaUseful: 6,   // 官杀得用（自律约束佳）→ +6
-  guanShaExcess: 8,   // 官杀过旺无制（压力过载）→ -8
-  biJieUseful: 4,     // 比劫得用（良性竞争）→ +4
-  biJieExcess: 6,     // 比劫过旺（分心玩乐）→ -6
-  patternMax: 10,     // 格局用神力量占比 → +0~+10
+  base: 42,              // 基础分（中偏低·让命局多数落在中段、高分极稀）
+  yinUseful: 20,         // 印星为用神（学识根基得用）→ +20
+  yinPresent: 10,        // 印星透干（学识根基现）→ +10
+  yinTaboo: 18,          // 印星为忌（根基受制）→ -18
+  caiBalance: 18,        // 财印双现且印得用（财印平衡·成果转化）→ +18
+  yinStrongCaiWeak: 4,   // 印旺财弱（缺成果载体）→ -4
+  caiKeYin: 18,          // 财旺破印（知识根基被克）→ -18
+  shiShangUseful: 7,     // 食伤得用（发挥输出佳）→ +7
+  shiShangExcess: 12,    // 食伤过旺无制（贪玩废学）→ -12
+  guanShaUseful: 5,      // 官杀得用（自律约束佳）→ +5
+  guanShaExcess: 10,     // 官杀过旺无制（压力过载）→ -10
+  biJieUseful: 3,        // 比劫得用（良性竞争）→ +3
+  biJieExcess: 8,        // 比劫过旺（分心玩乐）→ -8
+  patternMax: 8,         // 格局用神力量占比 → +0~+8
 };
