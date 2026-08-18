@@ -11,7 +11,7 @@
 **仓库**：`Whensunnypassed/tzy`（GitHub，main 分支）
 **当前版本**：**v2.0.0 · 正式版（重大更新）**（`package.json` 与 `BaZiAnalyzerPage.tsx` 中 `APP_VERSION` 两处同步维护）
 **线上地址**：https://whensunnypassed.github.io/tzy/ （由 gh-pages 分支驱动部署）
-**工作区状态**：存在 v2.0.0 未提交改动（待用户确认同步后统一 commit + push + 部署）。
+**工作区状态**：干净，main 与线上均已同步到最新 v2.0.0；已打 `v2.0.0` 标签（本地 + GitHub）作为版本备份。
 
 ---
 
