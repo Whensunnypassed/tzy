@@ -1,4 +1,4 @@
-import React, { Fragment, useState, useMemo, useEffect } from 'react';
+import React, { Fragment, useState, useMemo, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -501,7 +501,7 @@ function computeTaiJiDbReferences(
 }
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.2.1';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -642,11 +642,14 @@ export default function BaZiAnalyzerPage() {
   }, [chart, yongJi, monthQi, elementPower, currentYear]);
 
   // 第一次算出分析结果后，默认把「当前步大运」展开
+  // 用 ref 标记"已初始化"：仅首次自动展开当前大运；之后展开/收缩完全交给用户（修复当前大运无法收缩的 bug）
+  const dyInitializedRef = useRef(false);
   useEffect(() => {
-    if (daYunAnalysis && expandedDY === null) {
+    if (daYunAnalysis && !dyInitializedRef.current) {
+      dyInitializedRef.current = true;
       setExpandedDY(daYunAnalysis.currentDaYunIndex);
     }
-  }, [daYunAnalysis, expandedDY]);
+  }, [daYunAnalysis]);
 
   // 模块 2：盘内存在太极判定（暂时停用：模块已从 UI 隐藏，底层 analyzeTaiJiInChart / computeTaiJiDbReferences 保留，可随时恢复）
 
