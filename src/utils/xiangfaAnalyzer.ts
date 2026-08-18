@@ -307,10 +307,16 @@ export function analyzeRomanceVerdict(
 
   result += ` 应期提示——恋爱：${loveTiming}结婚：${marriageTiming}`;
 
+  // ============================================================
+  // 情缘徽标严格互斥（按数据库《象法》感情篇优先级）：结婚(喜) ＞ 恋爱(♥)
+  // → 感情页两张应期卡片（loveTiming/marriageTiming）各自独立保留，仅徽标二选一显示
+  // ============================================================
+  const loveFinal = marriage ? false : love;
+
   return {
     inputs,
     matched,
-    love,
+    love: loveFinal,
     marriage,
     result,
     reference: [],
@@ -557,8 +563,14 @@ export function evaluateRomanceForGZ(
     if (oppositeMet || PEACH_BRANCHES.includes(branch)) marriage = true;
   }
 
-  const reason = reasons.length > 0 ? reasons.join('；') : '情缘平静，无明显引动';
-  return { love, marriage, reason };
+  // ============================================================
+  // 情缘等级严格互斥（按数据库《象法》感情篇优先级）：结婚(喜) ＞ 恋爱(♥)
+  // → 同一干支/流年只显示最高一档徽标，绝不并显爱心与喜
+  // ============================================================
+  if (marriage) love = false;
+  const tierDesc = marriage ? '婚姻应期' : love ? '恋爱缘显' : '情缘平静';
+  const reasonFinal = reasons.length > 0 ? `${tierDesc}：${reasons.join('；')}` : '情缘平静，无明显引动';
+  return { love, marriage, reason: reasonFinal };
 }
 
 // ============================================================

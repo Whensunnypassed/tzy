@@ -472,12 +472,12 @@ function RomanceVerdictPanel({ verdict }: { verdict: RomanceVerdict }) {
       <div className="rounded-xl p-4" style={{ border: '1px solid rgba(244,63,94,0.25)', background: 'rgba(244,63,94,0.06)' }}>
         <div className="mb-1.5 flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-black text-white">查询论断</span>
-          {verdict.love && (
-            <span className="inline-flex size-5 items-center justify-center rounded-full bg-pink-500 text-[11px] font-black leading-none text-white">♥</span>
-          )}
-          {verdict.marriage && (
+          {/* 严格互斥：结婚(喜) ＞ 恋爱(♥)，查询论断区只显示最高档徽标 */}
+          {verdict.marriage ? (
             <span className="inline-flex size-5 items-center justify-center rounded-full bg-rose-600 text-[11px] font-black leading-none text-white">喜</span>
-          )}
+          ) : verdict.love ? (
+            <span className="inline-flex size-5 items-center justify-center rounded-full bg-pink-500 text-[11px] font-black leading-none text-white">♥</span>
+          ) : null}
           {!verdict.matched && verdict.disclaimer && (
             <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">{verdict.disclaimer}</span>
           )}
@@ -960,27 +960,28 @@ export default function BaZiAnalyzerPage() {
   // 大运流年·情缘小logo：♥ 恋爱可能 / 喜 结婚可能（依据《象法》数据书感情篇）
   // 伦理约束：16 岁前不显示任何恋爱/婚徽标；16-18 岁仅显示恋爱；18 岁起才显示「婚」。
   // 大运行徽标按「起运年龄」判定，流年卡片按当年实际年龄判定。
+  // 严格互斥规则：结婚(喜) ＞ 恋爱(♥)，同一干支只显示最高档徽标，绝不并显爱心与喜（引擎层已保证，此处再加渲染兜底）。
   const romanceBadge = (gz: string, age?: number) => {
     const flag = romanceMap[gz];
     const canLove = typeof age === 'number' ? age >= 16 : true;
     const canMarry = typeof age === 'number' ? age >= 18 : true;
-    const love = !!flag?.love && canLove;
     const marriage = !!flag?.marriage && canMarry;
+    const love = marriage ? false : (!!flag?.love && canLove); // 兜底：有喜则无♥
     if (!love && !marriage) {
       return <span className="text-[11px] font-bold text-muted-foreground/60">—</span>;
     }
     return (
       <span className="inline-flex items-center gap-1" title={flag?.reason}>
-        {marriage && (
+        {marriage ? (
           <span className="inline-flex size-5 items-center justify-center rounded-full bg-rose-600 text-[11px] font-black leading-none text-white shadow-sm ring-1 ring-rose-300">
             喜
           </span>
-        )}
-        {love && (
+        ) : null}
+        {!marriage && love ? (
           <span className="inline-flex size-5 items-center justify-center rounded-full bg-pink-500 text-[11px] font-black leading-none text-white shadow-sm ring-1 ring-pink-300">
             ♥
           </span>
-        )}
+        ) : null}
       </span>
     );
   };
