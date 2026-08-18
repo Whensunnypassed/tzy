@@ -817,7 +817,7 @@ function computeTaiJiDbReferences(
 }
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.1.0';
+const APP_VERSION = '2.2.0';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
