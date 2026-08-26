@@ -778,7 +778,7 @@ function computeTaiJiDbReferences(
 }
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.4.2';
+const APP_VERSION = '2.4.3';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -2618,11 +2618,20 @@ export default function BaZiAnalyzerPage() {
                       </div>
                     </div>
 
-                    {/* 4. 格局综合分 overallScore（0-100，金字塔分布：S+ 仅约0.1%） */}
+                    {/* 4. 格局综合分（0-100）：原局先天 + 一生大运均分梯度 加权合成 */}
                     {(() => {
-                      const overall = wealthNobility?.overallScore ?? 0;
-                      // 字母等级与 0-100 分严格对齐（金字塔分布：高分极稀有）
-                      // S+ ≥96（约0.1%） / S ≥90 / A+ ≥82 / A ≥72 / B+ ≥60 / B- ≥48 / C ≥36 / C- ≥24 / D <24
+                      // 原局先天分（scoreMingPan.displayScore，压缩分 ±7 尺度）
+                      const mingRaw = mingPanScore?.displayScore ?? 0;
+                      // 一生大运均分梯度（各步大运 displayScore 的均值，压缩分）
+                      const daysArr = daYunAnalysis?.daYunWithFortune ?? [];
+                      const dyAvg = daysArr.length > 0
+                        ? daysArr.reduce((s, d) => s + (Number(d.displayScore) || 0), 0) / daysArr.length
+                        : 0;
+                      // 综合压缩分：原局先天 60% + 一生大运均分 40%（先天为根基、大运为走势平均）
+                      const combined = 0.6 * mingRaw + 0.4 * dyAvg;
+                      // 压缩分（约 ±10）→ 0-100：中枢 50，每 +1 压缩分 ≈ +5 分
+                      const overall = Math.round(Math.max(0, Math.min(100, 50 + combined * 5)));
+                      // 字母等级 0-100 对齐（金字塔：高分极稀有）
                       const letterLv =
                         overall >= 96 ? 'S+' : overall >= 90 ? 'S' : overall >= 82 ? 'A+' :
                         overall >= 72 ? 'A' : overall >= 60 ? 'B+' : overall >= 48 ? 'B-' :
@@ -2645,7 +2654,7 @@ export default function BaZiAnalyzerPage() {
                         'B+':'#0284C7','B-':'#475569','C':'#EA580C','C-':'#DC2626','D':'#18181B',
                       };
                       const letterCol = letterColorMap[letterLv] ?? '#059669';
-                      const detail = mingPanScore?.detail ?? [];
+                      const fmt = (n: number) => (n >= 0 ? '+' : '') + Math.round(n * 10) / 10;
                       return (
                         <div
                           className="col-span-2 rounded-xl p-4 transition-transform hover:-translate-y-0.5 md:col-span-1"
@@ -2692,19 +2701,17 @@ export default function BaZiAnalyzerPage() {
                               style={{ width: `${Math.max(0, Math.min(100, overall))}%`, backgroundColor: letterCol }}
                             />
                           </div>
-                          {detail.length > 0 ? (
-                            <div className="mt-2 space-y-0.5">
-                              {detail.map((d, i) => (
-                                <div key={i} className="text-[10px] font-bold leading-snug" style={{ color: '#0C0A09', opacity: 0.72 }}>
-                                  · {d}
-                                </div>
-                              ))}
+                          <div className="mt-2 space-y-0.5">
+                            <div className="text-[10px] font-bold leading-snug" style={{ color: '#0C0A09', opacity: 0.72 }}>
+                              · 原局先天 {fmt(mingRaw)}（{mingPanScore?.letterLevel ?? '—'}）
                             </div>
-                          ) : (
-                            <div className="mt-2 text-[10px] font-bold text-muted-foreground/80">
-                              命盘基准分 {mingPanScore ? (mingPanScore.displayScore >= 0 ? '+' : '') + mingPanScore.displayScore : '—'}
+                            <div className="text-[10px] font-bold leading-snug" style={{ color: '#0C0A09', opacity: 0.72 }}>
+                              · 一生大运均分 {fmt(dyAvg)}（{daysArr.length} 步）
                             </div>
-                          )}
+                            <div className="text-[10px] font-bold leading-snug" style={{ color: letterCol, opacity: 0.9 }}>
+                              · 综合 = 原局60% + 大运40%
+                            </div>
+                          </div>
                         </div>
                       );
                     })()}
