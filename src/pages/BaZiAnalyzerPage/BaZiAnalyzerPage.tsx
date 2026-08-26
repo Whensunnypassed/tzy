@@ -1,4 +1,4 @@
-﻿import React, { Fragment, useState, useMemo, useEffect, useRef } from 'react';
+import React, { Fragment, useState, useMemo, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,7 +21,20 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
 
-import { calculateBaZi, type BaZiChart, STEM_ELEMENTS, STEM_YINYANG } from '@/utils/baziCalculator';
+import {
+  calculateBaZi,
+  type BaZiChart,
+  type Pillar,
+  STEMS,
+  BRANCHES,
+  MONTH_BRANCHES,
+  STEM_ELEMENTS,
+  BRANCH_ELEMENTS,
+  STEM_YINYANG,
+  BRANCH_YINYANG,
+  HIDDEN_STEMS,
+  getShiShen,
+} from '@/utils/baziCalculator';
 import {
   analyzeMonthQi,
   analyzeYongJi,
@@ -765,7 +778,7 @@ function computeTaiJiDbReferences(
 }
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.4.1';
+const APP_VERSION = '2.4.2';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -775,6 +788,17 @@ export default function BaZiAnalyzerPage() {
   const [minute, setMinute] = useState('0');
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [fullBirthInput, setFullBirthInput] = useState('');
+  // —— 手动四柱模式（自选四柱排盘）：mode 切换 + 四柱干支 + 手动出生年份 ——
+  const [inputMode, setInputMode] = useState<'date' | 'manual'>('date');
+  const [mYearStem, setMYearStem] = useState('甲');
+  const [mYearBranch, setMYearBranch] = useState('子');
+  const [mMonthStem, setMMonthStem] = useState('丙');
+  const [mMonthBranch, setMMonthBranch] = useState('寅');
+  const [mDayStem, setMDayStem] = useState('甲');
+  const [mDayBranch, setMDayBranch] = useState('子');
+  const [mHourStem, setMHourStem] = useState('甲');
+  const [mHourBranch, setMHourBranch] = useState('子');
+  const [mBirthYear, setMBirthYear] = useState('2000');
   const [chart, setChart] = useState<BaZiChart | null>(null);
   const [analyzed, setAnalyzed] = useState(false);
   const [solarTermTheme, setSolarTermTheme] = useState<SolarTermTheme>(() => getDefaultSolarTermTheme());
@@ -798,6 +822,10 @@ export default function BaZiAnalyzerPage() {
   }, [solarTermTheme]);
 
   const handleAnalyze = () => {
+    if (inputMode === 'manual') {
+      handleManualAnalyze();
+      return;
+    }
     const y = parseInt(year, 10);
     const m = parseInt(month, 10);
     const d = parseInt(day, 10);
@@ -831,6 +859,84 @@ export default function BaZiAnalyzerPage() {
     setSolarTermTheme(getSolarTermThemeByBirthDate(y, m, d));
     setAnalyzed(true);
     toast.success('排盘完成，正在生成分析报告...');
+  };
+
+  const handleManualAnalyze = () => {
+    const by = parseInt(mBirthYear, 10);
+    if (isNaN(by) || by < 1800 || by > 2100) {
+      toast.error('请填写有效的参照出生年份（1800-2100）');
+      return;
+    }
+    // 由自选四柱构造完整 BaZiChart
+    const makePillar = (stem: string, branch: string, isDay = false): Pillar => ({
+      stem,
+      branch,
+      stemElement: STEM_ELEMENTS[stem],
+      branchElement: BRANCH_ELEMENTS[branch],
+      stemYinYang: STEM_YINYANG[stem],
+      branchYinYang: BRANCH_YINYANG[branch],
+      hiddenStems: HIDDEN_STEMS[branch],
+      shiShen: isDay ? '日主' : getShiShen(mDayStem, stem),
+    });
+    const yearP = makePillar(mYearStem, mYearBranch);
+    const monthP = makePillar(mMonthStem, mMonthBranch);
+    const dayP = makePillar(mDayStem, mDayBranch, true);
+    const hourP = makePillar(mHourStem, mHourBranch);
+
+    // 月支索引（与 MONTH_BRANCHES 一致：0=寅）
+    const monthBranchIndex = MONTH_BRANCHES.indexOf(mMonthBranch);
+    if (monthBranchIndex < 0) {
+      toast.error('月支非法');
+      return;
+    }
+
+    // 构建 60 甲子序列
+    const jiaZi60: string[] = [];
+    for (let i = 0; i < 60; i++) jiaZi60.push(STEMS[i % 10] + BRANCHES[i % 12]);
+
+    // 大运：年干阴阳 + 性别定顺逆，从月柱起推 8 步
+    const shunPai = (STEM_YINYANG[mYearStem] === 'yang' && gender === 'male') || (STEM_YINYANG[mYearStem] === 'yin' && gender === 'female');
+    const monthIdx = jiaZi60.indexOf(`${mMonthStem}${mMonthBranch}`);
+    // 起运年龄：自选四柱无精确节气，按一岁起运近似（保证大运年份可用）
+    const startAge = 1;
+    const daYun: Array<{ index: number; stem: string; branch: string; startAge: number; startYear: number; endYear: number; daysToJie: number }> = [];
+    for (let i = 0; i < 8; i++) {
+      const idx = shunPai
+        ? (monthIdx + 1 + i) % 60
+        : (((monthIdx - 1 - i) % 60) + 60) % 60;
+      const gz = jiaZi60[idx];
+      const dyStartAge = startAge + i * 10;
+      daYun.push({
+        index: i,
+        stem: gz[0],
+        branch: gz[1],
+        startAge: dyStartAge,
+        startYear: by + dyStartAge,
+        endYear: by + dyStartAge + 9,
+        daysToJie: 0,
+      });
+    }
+
+    const manualChart: BaZiChart = {
+      year: yearP,
+      month: monthP,
+      day: dayP,
+      hour: hourP,
+      monthBranchIndex,
+      gender,
+      birthInfo: {
+        solarDate: `${by}年（手动四柱）`,
+        solarTime: '—',
+        birthPlace: '北京',
+        trueSolarTime: '—',
+        trueSolarOffset: 0,
+      },
+      daYun,
+    };
+    setChart(manualChart);
+    setSolarTermTheme(getSolarTermThemeByBirthDate(by, 1, 1));
+    setAnalyzed(true);
+    toast.success('手动四柱排盘完成，正在生成分析报告...');
   };
 
   const handleReset = () => {
@@ -1357,6 +1463,144 @@ export default function BaZiAnalyzerPage() {
 
               return (
                 <div className="space-y-7">
+                  {/* 排盘模式切换：按日期 / 手动四柱 */}
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-1 rounded-xl p-1" style={{ background: accentSoft, border: `1px solid ${accentLine}` }}>
+                      {(['date', 'manual'] as const).map((md) => (
+                        <button
+                          key={md}
+                          type="button"
+                          onClick={() => setInputMode(md)}
+                          className="rounded-lg px-4 py-2 text-[13px] font-black tracking-widest transition-all"
+                          style={{
+                            fontFamily: "'Noto Serif SC', serif",
+                            background: inputMode === md ? accent : 'transparent',
+                            color: inputMode === md ? '#ffffff' : 'var(--foreground)',
+                            boxShadow: inputMode === md ? `0 6px 14px -6px ${accent}BB` : 'none',
+                          }}
+                        >
+                          {md === 'date' ? '按日期排盘' : '手动四柱'}
+                        </button>
+                      ))}
+                    </div>
+                    {inputMode === 'manual' && (
+                      <div className="text-[11px] font-bold tracking-widest text-muted-foreground/75" style={{ fontFamily: "'Noto Serif SC', serif" }}>
+                        已选四柱 · {mYearStem}{mYearBranch} {mMonthStem}{mMonthBranch} {mDayStem}{mDayBranch} {mHourStem}{mHourBranch}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 手动四柱模式：自选四柱 + 参照出生年份 */}
+                  {inputMode === 'manual' && (
+                    <div className="rounded-2xl p-5" style={{ background: accentSoft, border: `1px solid ${accentLine}` }}>
+                      <FieldStepBadge n={0} label="手动四柱 · 自选" />
+                      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                        {([
+                          { t: '年柱', s: mYearStem, b: mYearBranch, sm: setMYearStem, bm: setMYearBranch },
+                          { t: '月柱', s: mMonthStem, b: mMonthBranch, sm: setMMonthStem, bm: setMMonthBranch },
+                          { t: '日柱', s: mDayStem, b: mDayBranch, sm: setMDayStem, bm: setMDayBranch },
+                          { t: '时柱', s: mHourStem, b: mHourBranch, sm: setMHourStem, bm: setMHourBranch },
+                        ]).map((p) => (
+                          <div key={p.t} className="rounded-xl p-3" style={{ border: `1px solid ${accentLine}`, background: '#ffffff' }}>
+                            <Label className="!text-[12px] !font-bold tracking-widest" style={{ fontFamily: "'Noto Serif SC', serif" }}>{p.t}</Label>
+                            <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                              <Select value={p.s} onValueChange={(v) => (p.sm as (x: string) => void)(v)}>
+                                <SelectTrigger className="!h-11 !text-sm !font-black" style={{ background: '#fff', border: `1.5px solid ${accentLine}`, fontFamily: "'Noto Serif SC', serif" }}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {STEMS.map((st) => (
+                                    <SelectItem key={st} value={st} className="!text-sm !font-bold !text-black">{st}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Select value={p.b} onValueChange={(v) => (p.bm as (x: string) => void)(v)}>
+                                <SelectTrigger className="!h-11 !text-sm !font-black" style={{ background: '#fff', border: `1.5px solid ${accentLine}`, fontFamily: "'Noto Serif SC', serif" }}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {BRANCHES.map((br) => (
+                                    <SelectItem key={br} value={br} className="!text-sm !font-bold !text-black">{br}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div
+                              className="mt-2 rounded-md py-1 text-center text-[15px] font-black tracking-[0.2em]"
+                              style={{ background: accentSoft, color: accent, fontFamily: "'Noto Serif SC', serif" }}
+                            >
+                              {p.s}{p.b}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-4 grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label className="!text-[12px] !font-bold tracking-widest" style={{ fontFamily: "'Noto Serif SC', serif" }}>
+                            参照出生年份 <span className="font-normal text-muted-foreground/80">（仅用于定大运流年的年龄/年份，干支仍以自选四柱为准）</span>
+                          </Label>
+                          <Input
+                            type="number"
+                            value={mBirthYear}
+                            onChange={(e) => setMBirthYear(e.target.value)}
+                            placeholder="例：1990"
+                            className="!h-12 !px-4 !text-lg font-black tracking-wider focus-visible:ring-0"
+                            style={{ fontFamily: "'Noto Serif SC', serif", background: '#ffffff', border: `1.5px solid ${accentLine}`, color: 'var(--foreground)' }}
+                          />
+                        </div>
+                        <div className="flex items-end gap-3">
+                          {/* 乾/坤再造 大按钮 */}
+                          <button
+                            type="button"
+                            onClick={() => setGender('male')}
+                            className="h-12 flex-1 rounded-xl text-[15px] font-black tracking-widest transition-all"
+                            style={{
+                              fontFamily: "'Noto Serif SC', serif",
+                              background: gender === 'male' ? `linear-gradient(135deg, ${accent} 0%, ${accent}E6 100%)` : '#ffffff',
+                              color: gender === 'male' ? '#ffffff' : 'var(--foreground)',
+                              border: `2px solid ${gender === 'male' ? accent : accentLine}`,
+                            }}
+                          >乾造 · 男</button>
+                          <button
+                            type="button"
+                            onClick={() => setGender('female')}
+                            className="h-12 flex-1 rounded-xl text-[15px] font-black tracking-widest transition-all"
+                            style={{
+                              fontFamily: "'Noto Serif SC', serif",
+                              background: gender === 'female' ? 'linear-gradient(135deg, #BE185D 0%, #9D174D 100%)' : '#ffffff',
+                              color: gender === 'female' ? '#ffffff' : 'var(--foreground)',
+                              border: `2px solid ${gender === 'female' ? '#BE185D' : accentLine}`,
+                            }}
+                          >坤造 · 女</button>
+                        </div>
+                      </div>
+                      <div className="mt-3 text-[10px] font-bold leading-relaxed tracking-wider text-muted-foreground/70" style={{ fontFamily: "'Noto Serif SC', serif" }}>
+                        · 大运起运年龄按一岁近似；参考年份应落在所填年柱六十甲子循环上的一个代表年份。手动四柱需自洽（年/月/日/时干支一般应符合同一甲子循环）。
+                      </div>
+                      <div className="mt-4 flex justify-end">
+                        <Button
+                          size="lg"
+                          onClick={handleManualAnalyze}
+                          className="min-w-[220px] !text-base font-black tracking-[0.22em] transition-all active:translate-y-[1px] active:scale-[0.99] hover:-translate-y-[2px]"
+                          style={{
+                            background: `linear-gradient(135deg, ${accent} 0%, ${accent}E0 100%)`,
+                            color: '#ffffff',
+                            height: '58px',
+                            paddingLeft: '34px',
+                            paddingRight: '34px',
+                            borderRadius: '14px',
+                            fontFamily: "'Noto Serif SC', serif",
+                            boxShadow: `0 20px 40px -14px ${accent}99, inset 0 0 0 2px rgba(255,255,255,0.22), inset 0 -10px 20px -10px rgba(0,0,0,0.18)`,
+                            border: `1.5px solid ${accent}`,
+                          }}
+                        >
+                          手动四柱排盘
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {inputMode === 'date' && (<Fragment>
                   {/* 00 完整生辰快速输入（一条栏：粘贴 199910012000 → 自动拆分 年月日时分）*/}
                   <div className="rounded-2xl p-5" style={{ background: accentSoft, border: `1px solid ${accentLine}` }}>
                     <FieldStepBadge n={0} label="完整生辰 · 一键输入" />
@@ -1662,6 +1906,7 @@ export default function BaZiAnalyzerPage() {
                       </Button>
                     </div>
                   </div>
+                  </Fragment>)}
                 </div>
               );
             })()}
