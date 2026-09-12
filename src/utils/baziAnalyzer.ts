@@ -1607,7 +1607,7 @@ export function analyzeSevenCategories(
 ): {
   yinYang: string;
   fiveElements: string;
-  ganzhe: string;
+  ganzhi: string;
   gongwei: string;
   shiShen: string;
   interaction: string;
@@ -1645,9 +1645,9 @@ export function analyzeSevenCategories(
   // 干支内容
   const pillars = [chart.year, chart.month, chart.day, chart.hour];
   const pillarNames = ['年柱', '月柱', '日柱', '时柱'];
-  let ganzhe = '';
+  let ganzhi = '';
   pillars.forEach((p, i) => {
-    ganzhe += `${pillarNames[i]}${p.stem}${p.branch}：天干${elementName(p.stemElement)}${p.stemYinYang === 'yang' ? '阳' : '阴'}，地支${elementName(p.branchElement)}${p.branchYinYang === 'yang' ? '阳' : '阴'}，藏干${p.hiddenStems.join('、')}；`;
+    ganzhi += `${pillarNames[i]}${p.stem}${p.branch}：天干${elementName(p.stemElement)}${p.stemYinYang === 'yang' ? '阳' : '阴'}，地支${elementName(p.branchElement)}${p.branchYinYang === 'yang' ? '阳' : '阴'}，藏干${p.hiddenStems.join('、')}；`;
   });
 
   // 宫位内容
@@ -1762,7 +1762,7 @@ export function analyzeSevenCategories(
   return {
     yinYang,
     fiveElements,
-    ganzhe,
+    ganzhi,
     gongwei,
     shiShen,
     interaction,

@@ -804,6 +804,134 @@ export default function BaZiAnalyzerPage() {
   const [solarTermTheme, setSolarTermTheme] = useState<SolarTermTheme>(() => getDefaultSolarTermTheme());
   const [expandedDY, setExpandedDY] = useState<number | null>(null);
 
+  // —— 排盘历史记录（localStorage，最近 10 次） ——
+  interface HistoryRecord {
+    id: string;
+    timestamp: number;
+    mode: 'date' | 'manual';
+    birthInfo: {
+      year?: string;
+      month?: string;
+      day?: string;
+      hour?: string;
+      minute?: string;
+      gender?: 'male' | 'female';
+      birthPlace?: string;
+      manualPillars?: { yearStem: string; yearBranch: string; monthStem: string; monthBranch: string; dayStem: string; dayBranch: string; hourStem: string; hourBranch: string; birthYear: string };
+    };
+    summary: string;
+  }
+  const [history, setHistory] = useState<HistoryRecord[]>([]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('__app_tianzhiyi_history');
+      if (raw) setHistory(JSON.parse(raw));
+    } catch { /* ignore parse errors */ }
+  }, []);
+
+  const saveToHistory = (record: Omit<HistoryRecord, 'id' | 'timestamp'>) => {
+    const entry: HistoryRecord = { ...record, id: Date.now().toString(), timestamp: Date.now() };
+    setHistory(prev => {
+      const next = [entry, ...prev].slice(0, 10);
+      try { localStorage.setItem('__app_tianzhiyi_history', JSON.stringify(next)); } catch { /* ignore quota errors */ }
+      return next;
+    });
+  };
+
+  const applyHistory = (rec: HistoryRecord) => {
+    if (rec.mode === 'date' && rec.birthInfo.year) {
+      setInputMode('date');
+      setYear(rec.birthInfo.year);
+      setMonth(rec.birthInfo.month || '1');
+      setDay(rec.birthInfo.day || '1');
+      setHour(rec.birthInfo.hour || '0');
+      setMinute(rec.birthInfo.minute || '0');
+      setGender(rec.birthInfo.gender || 'male');
+    } else if (rec.mode === 'manual' && rec.birthInfo.manualPillars) {
+      const p = rec.birthInfo.manualPillars;
+      setInputMode('manual');
+      setMYearStem(p.yearStem); setMYearBranch(p.yearBranch);
+      setMMonthStem(p.monthStem); setMMonthBranch(p.monthBranch);
+      setMDayStem(p.dayStem); setMDayBranch(p.dayBranch);
+      setMHourStem(p.hourStem); setMHourBranch(p.hourBranch);
+      setMBirthYear(p.birthYear);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const clearHistory = () => {
+    setHistory([]);
+    try { localStorage.removeItem('__app_tianzhiyi_history'); } catch { /* ignore */ }
+  };
+
+  // —— 复制/导出报告摘要 ——
+  const generateReportText = (): string => {
+    if (!chart || !monthQi || !yongJi || !elementPower || !yinYangPct) return '';
+    const lines: string[] = [];
+    lines.push('═══════════════════════════════════════');
+    lines.push('  天之易八字自动分析 · 报告摘要');
+    lines.push('═══════════════════════════════════════');
+    lines.push('');
+    lines.push(`命主：${chart.dayMaster}${chart.dayBranch}（${chart.gender === 'male' ? '男' : '女'}）`);
+    lines.push(`真太阳时：${chart.trueSolarTime}`);
+    lines.push(`四柱：${chart.year.stem}${chart.year.branch} ${chart.month.stem}${chart.month.branch} ${chart.day.stem}${chart.day.branch} ${chart.hour.stem}${chart.hour.branch}`);
+    lines.push('');
+    lines.push('【月气分析】');
+    lines.push(monthQi.description);
+    lines.push('');
+    lines.push('【用神忌神】');
+    lines.push(`用神：${yongJi.usefulGods.join('、') || '—'}`);
+    lines.push(`忌神：${yongJi.tabooGods.join('、') || '—'}`);
+    lines.push('');
+    lines.push('【五行力量】');
+    lines.push(`木 ${elementPower.wood}%  火 ${elementPower.fire}%  土 ${elementPower.earth}%  金 ${elementPower.metal}%  水 ${elementPower.water}%`);
+    lines.push('');
+    lines.push('【阴阳平衡】');
+    lines.push(`阳气 ${yinYangPct.yang}%  阴气 ${yinYangPct.yin}%`);
+    lines.push('');
+    if (pattern) {
+      lines.push('【命局模式】');
+      lines.push(pattern.description);
+      lines.push('');
+    }
+    if (wealthNobility) {
+      lines.push('【富贵贫贱】');
+      lines.push(wealthNobility.overallLevel);
+      lines.push('');
+    }
+    lines.push('───────────────────────────────────────');
+    lines.push(`生成时间：${new Date().toLocaleString('zh-CN')}`);
+    lines.push('数据均在本地计算 · 不上传云端');
+    return lines.join('\n');
+  };
+
+  const handleCopyReport = async () => {
+    const text = generateReportText();
+    if (!text) { toast.error('报告尚未生成'); return; }
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success('报告摘要已复制到剪贴板');
+    } catch {
+      toast.error('复制失败，请手动选择文本');
+    }
+  };
+
+  const handleExportReport = () => {
+    const text = generateReportText();
+    if (!text) { toast.error('报告尚未生成'); return; }
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `八字分析报告_${chart!.dayMaster}${chart!.dayBranch}_${Date.now()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success('报告已导出为文本文件');
+  };
+
   const currentYear = new Date().getFullYear();
 
   // 根据节气主题生成的 CSS 变量，动态注入给页面全部子元素使用
@@ -858,6 +986,11 @@ export default function BaZiAnalyzerPage() {
     // 根据命主出生日月日切换节气配色与诗句主题
     setSolarTermTheme(getSolarTermThemeByBirthDate(y, m, d));
     setAnalyzed(true);
+    saveToHistory({
+      mode: 'date',
+      birthInfo: { year, month, day, hour, minute, gender, birthPlace: '北京' },
+      summary: `${result.year.stem}${result.year.branch} ${result.month.stem}${result.month.branch} ${result.day.stem}${result.day.branch} ${result.hour.stem}${result.hour.branch}（${gender === 'male' ? '男' : '女'}）`,
+    });
     toast.success('排盘完成，正在生成分析报告...');
   };
 
@@ -936,6 +1069,19 @@ export default function BaZiAnalyzerPage() {
     setChart(manualChart);
     setSolarTermTheme(getSolarTermThemeByBirthDate(by, 1, 1));
     setAnalyzed(true);
+    saveToHistory({
+      mode: 'manual',
+      birthInfo: {
+        manualPillars: {
+          yearStem: mYearStem, yearBranch: mYearBranch,
+          monthStem: mMonthStem, monthBranch: mMonthBranch,
+          dayStem: mDayStem, dayBranch: mDayBranch,
+          hourStem: mHourStem, hourBranch: mHourBranch,
+          birthYear: mBirthYear,
+        },
+      },
+      summary: `${mYearStem}${mYearBranch} ${mMonthStem}${mMonthBranch} ${mDayStem}${mDayBranch} ${mHourStem}${mHourBranch}（手动四柱）`,
+    });
     toast.success('手动四柱排盘完成，正在生成分析报告...');
   };
 
@@ -1912,6 +2058,42 @@ export default function BaZiAnalyzerPage() {
             })()}
           </CardContent>
         </Card>
+
+        {/* 排盘历史记录（未排盘时显示） */}
+        {!analyzedBoolean && history.length > 0 && (
+          <Card className="mt-4">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-base" style={{ fontFamily: "'Noto Serif SC', serif" }}>
+                排盘历史
+              </CardTitle>
+              <Button variant="ghost" size="sm" onClick={clearHistory} className="text-xs text-muted-foreground hover:text-destructive">
+                清除
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {history.map(rec => (
+                  <button
+                    key={rec.id}
+                    onClick={() => applyHistory(rec)}
+                    className="rounded-lg border px-3 py-2 text-sm transition-all hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2"
+                    style={{
+                      borderColor: 'var(--border)',
+                      background: 'var(--card)',
+                      color: 'var(--foreground)',
+                      fontFamily: "'Noto Serif SC', serif",
+                    }}
+                  >
+                    <span className="font-bold">{rec.summary}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {new Date(rec.timestamp).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* 分析结果区：左主内容 + 右侧 TOC（大屏显示） */}
         {analyzedBoolean && (
@@ -3085,9 +3267,15 @@ export default function BaZiAnalyzerPage() {
 
 
             {/* 底部操作区 */}
-            <div className="flex justify-center py-4">
+            <div className="flex flex-wrap justify-center gap-3 py-4">
               <Button variant="outline" size="lg" onClick={handleReset} className="font-bold">
                 重新排盘
+              </Button>
+              <Button variant="outline" size="lg" onClick={handleCopyReport} className="font-bold" style={{ color: 'var(--accent-foreground)', borderColor: 'var(--accent)' }}>
+                复制摘要
+              </Button>
+              <Button variant="outline" size="lg" onClick={handleExportReport} className="font-bold" style={{ color: 'var(--accent-foreground)', borderColor: 'var(--accent)' }}>
+                导出报告
               </Button>
             </div>
           </div>

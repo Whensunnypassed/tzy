@@ -196,14 +196,9 @@ const getHourPillar = (dayStem: string, hour: number, minute: number): { stem: s
 };
 
 // 十神计算（相对于日主天干）
-const SHI_SHEN_MAP: Record<string, Record<string, string>> = {
-  // 同我 = 比劫（比肩、劫财）；我生 = 食伤（食神、伤官）；我克 = 财（正财、偏财）
-  // 克我 = 官杀（正官、七杀）；生我 = 印（正印、偏印）
-  // 天干阴阳相同 = 偏（七杀、偏印、比肩、偏财、食神），不同 = 正（正官、正印、劫财、正财、伤官）
-  // 这里以五行为键，值为十神关系描述
-};
-
-// 简化版十神计算
+// 同我 = 比劫（比肩、劫财）；我生 = 食伤（食神、伤官）；我克 = 财（正财、偏财）
+// 克我 = 官杀（正官、七杀）；生我 = 印（正印、偏印）
+// 天干阴阳相同 = 偏（七杀、偏印、比肩、偏财、食神），不同 = 正（正官、正印、劫财、正财、伤官）
 const getShiShen = (dayStem: string, otherStem: string): string => {
   const dayElement = STEM_ELEMENTS[dayStem];
   const dayYY = STEM_YINYANG[dayStem];
