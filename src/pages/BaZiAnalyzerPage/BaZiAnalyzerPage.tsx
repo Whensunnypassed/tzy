@@ -1,4 +1,4 @@
-import React, { Fragment, useState, useMemo, useEffect, useRef } from 'react';
+﻿import React, { Fragment, useState, useMemo, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -1524,7 +1524,7 @@ export default function BaZiAnalyzerPage() {
                 };
               };
 
-              const accent = palette.primary; // 随今日节气变色（延续现有节气主题，不破坏统一性）
+              const accent = TERMINAL_PALETTE.primary; // 随今日节气变色（延续现有节气主题，不破坏统一性）
               const accentSoft = `${accent}1A`;
               const accentLine = `${accent}55`;
 
@@ -2276,14 +2276,14 @@ export default function BaZiAnalyzerPage() {
                   {pattern.nianYueTaiJi && (
                     <div
                       className="rounded-lg p-4"
-                      style={{ backgroundColor: `${palette.primary}0A`, border: `1px solid ${palette.primary}22` }}
+                      style={{ backgroundColor: `${TERMINAL_PALETTE.primary}0A`, border: `1px solid ${TERMINAL_PALETTE.primary}22` }}
                     >
-                      <div className="text-sm font-bold" style={{ color: `${palette.primary}` }}><span className="mark-highlight">年月太极分析</span></div>
+                      <div className="text-sm font-bold" style={{ color: `${TERMINAL_PALETTE.primary}` }}><span className="mark-highlight">年月太极分析</span></div>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <span className="rounded-md px-2.5 py-1 text-[13px] font-black text-foreground" style={{ fontFamily: "'Noto Serif SC', serif", backgroundColor: `${palette.primary}14`, border: `1px solid ${palette.primary}30` }}>
+                        <span className="rounded-md px-2.5 py-1 text-[13px] font-black text-foreground" style={{ fontFamily: "'Noto Serif SC', serif", backgroundColor: `${TERMINAL_PALETTE.primary}14`, border: `1px solid ${TERMINAL_PALETTE.primary}30` }}>
                           {pattern.nianYueTaiJi.yearGZ}年 · {pattern.nianYueTaiJi.monthGZ}月
                         </span>
-                        <span className="rounded-md px-2.5 py-1 text-[13px] font-black" style={{ fontFamily: "'Noto Serif SC', serif", color: '#FFFFFF', backgroundColor: `${palette.primary}` }}>
+                        <span className="rounded-md px-2.5 py-1 text-[13px] font-black" style={{ fontFamily: "'Noto Serif SC', serif", color: '#FFFFFF', backgroundColor: `${TERMINAL_PALETTE.primary}` }}>
                           {pattern.nianYueTaiJi.taijiName}
                         </span>
                         <span className="rounded-sm px-2.5 py-1 text-[13px] font-black" style={{
@@ -2319,9 +2319,9 @@ export default function BaZiAnalyzerPage() {
                   )}
                   <div
                     className="rounded-lg p-4"
-                    style={{ backgroundColor: `${palette.secondary}0C`, border: `1px solid ${palette.secondary}28` }}
+                    style={{ backgroundColor: `${TERMINAL_PALETTE.secondary}0C`, border: `1px solid ${TERMINAL_PALETTE.secondary}28` }}
                   >
-                    <div className="text-sm font-bold" style={{ color: `${palette.secondary}` }}><span className="mark-highlight">命局模式类型</span></div>
+                    <div className="text-sm font-bold" style={{ color: `${TERMINAL_PALETTE.secondary}` }}><span className="mark-highlight">命局模式类型</span></div>
                     <div className="mt-2 text-lg font-black text-foreground">{pattern.patternType}</div>
                     <p className="mt-2 text-sm leading-relaxed font-bold text-muted-foreground">{pattern.description}</p>
                   </div>
@@ -2330,7 +2330,7 @@ export default function BaZiAnalyzerPage() {
                     <div className="space-y-1.5">
                       {pattern.mainShengKe.map((rel, i) => (
                         <div key={i} className="flex items-center gap-2 rounded-md border border-border/60 bg-card px-3 py-1.5 text-sm font-bold">
-                          <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: `${palette.secondary}` }} />
+                          <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: `${TERMINAL_PALETTE.secondary}` }} />
                           {rel}
                         </div>
                       ))}
@@ -2959,7 +2959,7 @@ export default function BaZiAnalyzerPage() {
                     <div
                       className="flex size-16 shrink-0 items-center justify-center rounded-xl text-2xl font-black"
                       style={{
-                        backgroundColor: `${palette.primary}14`,
+                        backgroundColor: `${TERMINAL_PALETTE.primary}14`,
                         color: 'var(--foreground)',
                         fontFamily: "'Noto Serif SC', serif",
                       }}
@@ -2992,7 +2992,7 @@ export default function BaZiAnalyzerPage() {
                   </div>
                   <div
                     className="rounded-lg p-4"
-                    style={{ backgroundColor: `${palette.primary}0D` }}
+                    style={{ backgroundColor: `${TERMINAL_PALETTE.primary}0D` }}
                   >
                     <div
                       className="text-sm font-black"
