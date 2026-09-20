@@ -1,10 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700;900&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Noto+Serif+SC:wght@400;500;600;700;900&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "./tailwind-theme.css";
 @import "./typography.css";
 
-/* 毛体字（用于节气诗句等书法风格展示） */
+/* 毛体字（仅用于节气诗句等少量书法点缀） */
 @font-face {
   font-family: 'Maoti';
   src: url('/fonts/maoti.ttf') format('truetype');
@@ -13,14 +13,120 @@
   font-display: swap;
 }
 
-/* 重要文字高亮标记 - 墨黑加粗 + 下划线强调（中性克制，无金色） */
+/* ===== 命盘终端：全局基底 ===== */
+html {
+  color-scheme: dark;
+  background-color: var(--background);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-feature-settings: "tnum" 1, "zero" 1;
+}
+
+/* 瑞士工程网格：极淡的定位网格 + 顶部信号辉光，固定不滚动 */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, hsl(216 30% 60% / 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(216 30% 60% / 0.045) 1px, transparent 1px);
+  background-size: 72px 72px;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 42% at 50% -8%, hsl(172 76% 47% / 0.07), transparent 70%);
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+/* 文本选中：信号青 */
+::selection {
+  background: hsl(172 76% 47% / 0.28);
+  color: hsl(180 60% 96%);
+}
+
+/* 终端滚动条 */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(220 12% 24%);
+  border: 2px solid var(--background);
+  border-radius: 0;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(172 40% 38%);
+}
+
+/* 重要文字高亮：信号青下划线（终端读数感） */
 .mark-highlight {
   background: transparent;
   padding: 0 1px;
   border-radius: 0;
   border: none;
-  border-bottom: 2px solid #0C0A09;
-  color: #0C0A09;
-  font-weight: 900;
+  border-bottom: 1px solid hsl(172 76% 55%);
+  color: hsl(168 75% 72%);
+  font-weight: 700;
   white-space: nowrap;
+}
+
+/* 瑞士风通用：标签字体（全大写拉丁文 + 宽字距） */
+.label-mono {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+/* 十字定位标记（Sci-Fi 仪表感） */
+.crosshair::before,
+.crosshair::after {
+  content: "";
+  position: absolute;
+  background: hsl(172 76% 55% / 0.55);
+  pointer-events: none;
+}
+.crosshair::before {
+  width: 9px;
+  height: 1px;
+  top: -1px;
+  left: -1px;
+  box-shadow: 0 0 6px hsl(172 76% 55% / 0.6);
+}
+.crosshair::after {
+  width: 1px;
+  height: 9px;
+  top: -1px;
+  left: -1px;
+  box-shadow: 0 0 6px hsl(172 76% 55% / 0.6);
+}
+
+/* 减少动效偏好支持 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

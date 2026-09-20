@@ -1,88 +1,86 @@
 :root {
-  --button-outline: rgba(0,0,0, .10);
-  --badge-outline: rgba(0,0,0, .05);
+  --button-outline: rgba(255,255,255, .16);
+  --badge-outline: rgba(255,255,255, .12);
 
   /* Automatic computation of border around primary / danger buttons */
-  --opaque-button-border-intensity: -8; /* In terms of percentages */
+  --opaque-button-border-intensity: 8; /* In terms of percentages */
 
   /* Backgrounds applied on top of other backgrounds when hovered/active */
-  --elevate-1: rgba(0,0,0, .03);
-  --elevate-2: rgba(0,0,0, .08);
+  --elevate-1: rgba(255,255,255, .05);
+  --elevate-2: rgba(255,255,255, .10);
 
-  --background: hsl(40 35% 97%);
-  --foreground: hsl(24 15% 15%);
-  --card: hsl(0 0% 100%);
-  --card-foreground: hsl(24 15% 15%);
-  --popover: hsl(0 0% 100%);
-  --popover-foreground: hsl(24 15% 15%);
-  --primary: hsl(3 72% 48%);
-  --primary-foreground: hsl(0 0% 100%);
-  --secondary: hsl(145 35% 92%);
-  --secondary-foreground: hsl(145 45% 28%);
-  --muted: hsl(40 20% 92%);
-  --muted-foreground: hsl(24 8% 45%);
-  --accent: hsl(145 35% 92%);
-  --accent-foreground: hsl(145 45% 28%);
-  --info: hsl(221 83% 53%);
-  --info-foreground: hsl(230 100% 98%);
-  --destructive: hsl(0 84% 60%);
+  /* ===== 命盘终端 MINGPAN TERMINAL · 深空终端色板 ===== */
+  --background: hsl(222 26% 5%);
+  --foreground: hsl(216 24% 88%);
+  --card: hsl(220 18% 8%);
+  --card-foreground: hsl(216 24% 88%);
+  --card-border: hsl(220 14% 19%);
+  --popover: hsl(220 20% 7%);
+  --popover-foreground: hsl(216 24% 88%);
+  /* 信号青：CTA、激活态、关键读数 */
+  --primary: hsl(172 76% 47%);
+  --primary-foreground: hsl(185 80% 5%);
+  /* 磷光绿青：用神/吉 */
+  --secondary: hsl(168 38% 13%);
+  --secondary-foreground: hsl(168 70% 62%);
+  --muted: hsl(220 13% 13%);
+  --muted-foreground: hsl(218 9% 56%);
+  --accent: hsl(168 38% 13%);
+  --accent-foreground: hsl(168 70% 62%);
+  --info: hsl(214 82% 62%);
+  --info-foreground: hsl(214 100% 97%);
+  --destructive: hsl(352 74% 56%);
   --destructive-foreground: hsl(0 0% 100%);
-  --success: hsl(130 54% 42%);
-  --success-foreground: hsl(115 77% 97%);
-  --warning: hsl(26 90% 49%);
-  --warning-foreground: hsl(33 100% 96%);
-  --border: hsl(24 12% 86%);
-  --input: hsl(24 12% 86%);
-  --ring: hsl(3 72% 48%);
-  --chart-1: hsl(3 72% 48%);
-  --chart-2: hsl(33 72% 48%);
-  --chart-3: hsl(63 72% 48%);
-  --chart-4: hsl(93 72% 48%);
-  --chart-5: hsl(123 72% 48%);
-  --sidebar: hsl(220 14% 96%);
-  --sidebar-foreground: hsl(220 14% 14%);
-  --sidebar-primary: hsl(221 83% 53%);
-  --sidebar-primary-foreground: hsl(220 14% 98%);
-  --sidebar-accent: hsl(222 100% 94%);
-  --sidebar-accent-foreground: hsl(221 83% 53%);
-  --sidebar-border: hsl(220 14% 89%);
-  --sidebar-ring: hsl(221 83% 53%);
+  --success: hsl(152 62% 48%);
+  --success-foreground: hsl(160 80% 6%);
+  --warning: hsl(33 92% 56%);
+  --warning-foreground: hsl(36 100% 8%);
+  --border: hsl(220 13% 20%);
+  --input: hsl(220 13% 22%);
+  --ring: hsl(172 76% 47%);
+  --chart-1: hsl(172 76% 47%);
+  --chart-2: hsl(214 82% 62%);
+  --chart-3: hsl(33 92% 56%);
+  --chart-4: hsl(352 74% 56%);
+  --chart-5: hsl(280 60% 66%);
+  --sidebar: hsl(220 20% 7%);
+  --sidebar-foreground: hsl(216 24% 86%);
+  --sidebar-primary: hsl(172 76% 47%);
+  --sidebar-primary-foreground: hsl(185 80% 5%);
+  --sidebar-accent: hsl(220 14% 14%);
+  --sidebar-accent-foreground: hsl(172 70% 60%);
+  --sidebar-border: hsl(220 13% 18%);
+  --sidebar-ring: hsl(172 76% 47%);
 
   /* Computed borders using hsl relative color syntax */
-  --primary-border: hsl(from hsl(221 83% 53%) h s calc(l + var(--opaque-button-border-intensity)));
-  --secondary-border: hsl(from hsl(220 14% 96%) h s calc(l + var(--opaque-button-border-intensity)));
-  --destructive-border: hsl(from hsl(2 84% 62%) h s calc(l + var(--opaque-button-border-intensity)));
-  --accent-border: hsl(from hsl(220 14% 96%) h s calc(l + var(--opaque-button-border-intensity)));
-  --muted-border: hsl(from hsl(220 14% 96%) h s calc(l + var(--opaque-button-border-intensity)));
+  --primary-border: hsl(from hsl(172 76% 47%) h s calc(l + var(--opaque-button-border-intensity)));
+  --secondary-border: hsl(from hsl(168 38% 13%) h s calc(l + var(--opaque-button-border-intensity)));
+  --destructive-border: hsl(from hsl(352 74% 56%) h s calc(l + var(--opaque-button-border-intensity)));
+  --accent-border: hsl(from hsl(168 38% 13%) h s calc(l + var(--opaque-button-border-intensity)));
+  --muted-border: hsl(from hsl(220 13% 13%) h s calc(l + var(--opaque-button-border-intensity)));
   --font-sans:
-    'LarkHackSafariFont', 'LarkEmojiFont', 'LarkChineseQuote', '-apple-system',
-    'BlinkMacSystemFont', 'Helvetica Neue', 'Tahoma', 'PingFang SC',
-    'Microsoft Yahei', 'Arial', 'Hiragino Sans GB', 'sans-serif',
-    'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    'Space Grotesk', 'Noto Sans SC', -apple-system, BlinkMacSystemFont,
+    'PingFang SC', 'Microsoft Yahei', 'Segoe UI', sans-serif;
   --font-serif:
-    'Geist', 'Geist Fallback', ui-serif, Georgia, Cambria, 'Times New Roman',
-    Times, serif;
-  --font-mono: Source Code Pro, monospace;
-  --radius: 0.5rem;
+    'Noto Serif SC', ui-serif, Georgia, Cambria, 'Times New Roman', serif;
+  --font-mono: 'JetBrains Mono', 'IBM Plex Mono', 'Noto Sans SC', ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* 瑞士国际主义：尖角，仅保留 2px 微圆 */
+  --radius: 0.125rem;
+  /* 终端美学：以发丝线代替投影 */
   --shadow-x: 0px;
-  --shadow-y: 2px;
-  --shadow-blur: 12px;
+  --shadow-y: 0px;
+  --shadow-blur: 0px;
   --shadow-spread: 0px;
-  --shadow-opacity: 0.02;
+  --shadow-opacity: 0;
   --shadow-color: #000000;
-  --shadow-2xs: 0px 2px 12px 0px hsl(0 0% 0% / 0.01);
-  --shadow-xs: 0px 2px 12px 0px hsl(0 0% 0% / 0.01);
-  --shadow-sm:
-    0px 2px 12px 0px hsl(0 0% 0% / 0.02), 0px 1px 2px -1px hsl(0 0% 0% / 0.02);
-  --shadow:
-    0px 2px 12px 0px hsl(0 0% 0% / 0.02), 0px 1px 2px -1px hsl(0 0% 0% / 0.02);
-  --shadow-md:
-    0px 2px 12px 0px hsl(0 0% 0% / 0.02), 0px 2px 4px -1px hsl(0 0% 0% / 0.02);
-  --shadow-lg:
-    0px 2px 12px 0px hsl(0 0% 0% / 0.02), 0px 4px 6px -1px hsl(0 0% 0% / 0.02);
-  --shadow-xl:
-    0px 2px 12px 0px hsl(0 0% 0% / 0.02), 0px 8px 10px -1px hsl(0 0% 0% / 0.02);
-  --shadow-2xl: 0px 2px 12px 0px hsl(0 0% 0% / 0.05);
+  --shadow-2xs: 0 0 0 0 transparent;
+  --shadow-xs: 0 0 0 0 transparent;
+  --shadow-sm: 0 0 0 0 transparent;
+  --shadow: 0 0 0 0 transparent;
+  --shadow-md: 0 0 0 0 transparent;
+  --shadow-lg: 0 0 0 0 transparent;
+  --shadow-xl: 0 0 0 0 transparent;
+  --shadow-2xl: 0 0 0 0 transparent;
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 }
@@ -92,6 +90,7 @@
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-card-border: var(--card-border);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
@@ -127,13 +126,13 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --font-sans: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;;
+  --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
   --font-serif: var(--font-serif);
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
   --radius-xl: calc(var(--radius) + 4px);
 
   --shadow-2xs: var(--shadow-2xs);
@@ -157,14 +156,6 @@
  * <element className="toggle-elevate data-[state=on]:toggle-elevated" />
  * // Or manually controlling the toggle state
  * <element className="toggle-elevate toggle-elevated" />
- *
- * Elevation systems have to handle many states.
- * - not-hovered, vs. hovered vs. active  (three mutually exclusive states)
- * - toggled or not
- * - focused or not (this is not handled with these utilities)
- *
- * Even without handling focused or not, this is six possible combinations that
- * need to be distinguished from eachother visually.
  */
 @layer utilities {
   /* Hide ugly search cancel button in Chrome until we can style it properly */

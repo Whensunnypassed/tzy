@@ -78,6 +78,22 @@ const ELEMENT_NAMES: Record<string, string> = {
 // 五行正色（符合 WCAG AA，木青/火朱/土黄/金白/水玄）
 const ELEMENT_COLORS: Record<string, string> = ELEMENT_PALETTE_FORMAL;
 
+// ============ 命盘终端 MINGPAN TERMINAL：统一深色色板 ============
+// 界面配色不再随节气变化；节气仅保留名称与诗句作为元数据
+const TERMINAL_PALETTE = {
+  bg1: '#0A0C10',
+  bg2: '#0D1016',
+  card: '#10141B',
+  primary: '#1FD4BC', // 信号青
+  secondary: '#4E93EE', // 冷靛蓝
+  accent: '#F2A93B', // 警示琥珀
+  muted: '#1D2025',
+  prose: '#E0E5EC',
+} as const;
+
+// 终端光谱：用于发丝线/读数点缀（克制使用）
+const TERMINAL_SPECTRUM = ['#1FD4BC', '#4E93EE', '#8B7CF6', '#F2A93B', '#E85D6C', '#2A313C'];
+
 // ============ 辅助组件：SVG 环形百分比饼图 ============
 function DonutPieChart({
   size = 220,
@@ -186,24 +202,25 @@ function DaYunCurveChart({
 
   // 分档刻度：夯线 +5、人上 +2、NPC 0、拉 -2
   const levels = [
-    { y: +5, label: '夯',   color: '#B45309', dashed: false, band: true },
-    { y: +2, label: '人上', color: '#6D28D9', dashed: true },
-    { y:  0, label: '0',    color: '#64748B', dashed: true },
-    { y: -2, label: '拉',   color: '#DC2626', dashed: true },
+    { y: +5, label: '夯',   color: '#FBBF24', dashed: false, band: true },
+    { y: +2, label: '人上', color: '#A78BFA', dashed: true },
+    { y:  0, label: '0',    color: '#94A3B8', dashed: true },
+    { y: -2, label: '拉',   color: '#F87171', dashed: true },
   ];
-  // 点颜色（按 level）
+  // 点颜色（按 level，兼容新九档与旧五档）
   const dotColor = (lvl: string) => {
-    if (lvl === '夯') return '#B45309';
-    if (lvl === '人上人') return '#6D28D9';
-    if (lvl === 'npc') return '#334155';
-    if (lvl === '拉') return '#DC2626';
-    return '#991B1B'; // 拉完了
+    const map: Record<string, string> = {
+      'S+': '#FB7185', 'S': '#FBBF24', 'A+': '#34D399', 'A': '#4ADE80',
+      'B+': '#38BDF8', 'B-': '#94A3B8', 'C': '#FB923C', 'C-': '#F87171', 'D': '#71717A',
+      '夯': '#FBBF24', '人上人': '#A78BFA', 'npc': '#94A3B8', '拉': '#FB923C', '拉完了': '#F87171',
+    };
+    return map[lvl] ?? '#38BDF8';
   };
   const areaFillFor = (y: number) => {
-    if (y > 5) return 'rgba(245,158,11,0.16)';
-    if (y > 2) return 'rgba(139,92,246,0.14)';
-    if (y >= -2) return 'rgba(148,163,184,0.10)';
-    return 'rgba(239,68,68,0.14)';
+    if (y > 5) return 'rgba(251,191,36,0.14)';
+    if (y > 2) return 'rgba(167,139,250,0.12)';
+    if (y >= -2) return 'rgba(148,163,184,0.08)';
+    return 'rgba(248,113,113,0.12)';
   };
 
   const pts = items.map((it, i) => ({
@@ -272,10 +289,11 @@ function DaYunCurveChart({
         <polyline
           points={polylinePts}
           fill="none"
-          stroke="#0EA5E9"
+          stroke="#22D3EE"
           strokeWidth="2.4"
           strokeLinecap="round"
           strokeLinejoin="round"
+          style={{ filter: 'drop-shadow(0 0 4px rgba(34,211,238,0.45))' }}
         />
 
         {/* 点 + 年份标签 + 干支 + 分数 */}
@@ -284,7 +302,7 @@ function DaYunCurveChart({
           const c = dotColor(p.it.level);
           return (
             <g key={i}>
-              <circle cx={p.x} cy={p.y} r="5" fill="#ffffff" stroke={c} strokeWidth="2" />
+              <circle cx={p.x} cy={p.y} r="5" fill="hsl(222 26% 8%)" stroke={c} strokeWidth="2" />
               <circle cx={p.x} cy={p.y} r="2.2" fill={c} />
               {/* 年份 */}
               <text
@@ -293,7 +311,7 @@ function DaYunCurveChart({
                 textAnchor="middle"
                 fontSize="11"
                 fontWeight="800"
-                fill="#0F172A"
+                fill="#94A3B8"
               >
                 {p.it.year}
               </text>
@@ -361,41 +379,41 @@ function VerdictPanel({
   score?: { value: number; label: string }; // 可选：量化分数徽标（如学历档位）
 }) {
   const accentMeta: Record<string, { border: string; bg: string; text: string; tag: string }> = {
-    sky: { border: 'rgba(14,165,233,0.25)', bg: 'rgba(14,165,233,0.06)', text: '#0369A1', tag: '#0EA5E9' },
-    emerald: { border: 'rgba(16,185,129,0.25)', bg: 'rgba(16,185,129,0.06)', text: '#047857', tag: '#10B981' },
-    rose: { border: 'rgba(244,63,94,0.25)', bg: 'rgba(244,63,94,0.06)', text: '#BE123C', tag: '#F43F5E' },
-    amber: { border: 'rgba(245,158,11,0.28)', bg: 'rgba(245,158,11,0.07)', text: '#B45309', tag: '#F59E0B' },
+    sky: { border: 'rgba(56,189,248,0.32)', bg: 'rgba(56,189,248,0.07)', text: '#7DD3FC', tag: '#38BDF8' },
+    emerald: { border: 'rgba(52,211,153,0.32)', bg: 'rgba(52,211,153,0.07)', text: '#6EE7B7', tag: '#34D399' },
+    rose: { border: 'rgba(251,113,133,0.32)', bg: 'rgba(251,113,133,0.07)', text: '#FDA4AF', tag: '#FB7185' },
+    amber: { border: 'rgba(251,191,36,0.32)', bg: 'rgba(251,191,36,0.07)', text: '#FDE68A', tag: '#FBBF24' },
   };
   const am = accentMeta[accent];
   return (
     <div className="space-y-3">
-      <div className="text-sm font-bold text-muted-foreground" style={{ fontFamily: "'Noto Serif SC', serif" }}>{subtitle}</div>
+      <div className="text-sm font-bold text-muted-foreground">{subtitle}</div>
       {/* 导入的既有模块数据 */}
       <div className="flex flex-wrap gap-2">
         {inputs.map((it) => (
-          <span key={it.label} className="rounded-lg border bg-white/70 px-2 py-1 text-[11px] font-bold" style={{ borderColor: am.border, color: 'var(--foreground)' }}>
+          <span key={it.label} className="rounded-sm border bg-card/70 px-2 py-1 text-[11px] font-bold" style={{ borderColor: am.border, color: 'var(--foreground)' }}>
             <span className="text-muted-foreground">{it.label}：</span>{it.value}
           </span>
         ))}
       </div>
       {/* 查询论断 */}
-      <div className="rounded-xl p-4" style={{ border: `1px solid ${am.border}`, background: am.bg }}>
+      <div className="rounded-sm p-4" style={{ border: `1px solid ${am.border}`, background: am.bg }}>
         <div className="mb-1.5 flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-black text-white" style={{ background: am.tag }}>
+          <span className="label-mono inline-flex items-center rounded-sm px-2 py-0.5 text-[10px] font-black" style={{ background: am.tag, color: 'hsl(222 26% 6%)' }}>
             查询论断
           </span>
           {score && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2.5 py-0.5 text-[11px] font-black" style={{ border: `1px solid ${am.border}`, color: 'var(--foreground)' }}>
+            <span className="label-mono inline-flex items-center gap-1 rounded-sm px-2.5 py-0.5 text-[11px] font-black" style={{ border: `1px solid ${am.border}`, color: 'var(--foreground)' }}>
               {score.label}<span style={{ color: am.text }}> · {score.value} 分</span>
             </span>
           )}
           {!matched && disclaimer && (
-            <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+            <span className="label-mono inline-flex items-center rounded-sm bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
               {disclaimer}
             </span>
           )}
         </div>
-        <p className="text-sm leading-relaxed font-bold text-foreground">{result}</p>
+        <p className="text-sm leading-relaxed text-foreground">{result}</p>
       </div>
     </div>
   );
@@ -416,7 +434,7 @@ function WealthPanel({
       {items.map((it, i) => (
         <li key={it.year} className="flex items-center justify-between text-[12px] font-bold">
           <span className="inline-flex items-center">
-            <span className="mr-2 inline-flex size-4 items-center justify-center rounded-full text-[9px] font-black text-white" style={{ background: accent }}>{i + 1}</span>
+            <span className="mr-2 inline-flex size-4 items-center justify-center rounded-full text-[9px] font-black" style={{ background: accent, color: 'hsl(222 26% 6%)' }}>{i + 1}</span>
             <span>{it.year}年</span>
             <span className="ml-1 text-muted-foreground">·{it.ganzhi}</span>
             <span className="ml-1 text-muted-foreground">·{it.age}岁</span>
@@ -429,41 +447,41 @@ function WealthPanel({
 
   return (
     <div className="space-y-3">
-      <div className="text-sm font-bold text-muted-foreground" style={{ fontFamily: "'Noto Serif SC', serif" }}>财富 · 富贵财官</div>
+      <div className="text-sm font-bold text-muted-foreground">财富 · 富贵财官</div>
       <div className="grid gap-2 md:grid-cols-2">
-        <div className="rounded-xl border p-4" style={{ border: '1px solid rgba(245,158,11,0.28)', background: 'rgba(245,158,11,0.07)' }}>
+        <div className="rounded-sm border p-4" style={{ border: '1px solid rgba(251,191,36,0.32)', background: 'rgba(251,191,36,0.07)' }}>
           <div className="mb-1 flex items-center gap-1.5">
-            <span className="inline-flex items-center rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-black text-white">财富层级</span>
-            <span className="inline-flex items-center rounded-full bg-white/80 px-2.5 py-0.5 text-[12px] font-black" style={{ border: '1px solid rgba(245,158,11,0.28)' }}>
-              {verdict.wealthRank}<span className="ml-1" style={{ color: '#B45309' }}>· {verdict.wealthScoreFinal} 分</span>
+            <span className="label-mono inline-flex items-center rounded-sm px-2 py-0.5 text-[10px] font-black" style={{ background: '#FBBF24', color: 'hsl(222 26% 6%)' }}>财富层级</span>
+            <span className="label-mono inline-flex items-center rounded-sm px-2.5 py-0.5 text-[12px] font-black" style={{ border: '1px solid rgba(251,191,36,0.32)', color: '#FDE68A' }}>
+              {verdict.wealthRank}<span className="ml-1" style={{ color: '#FBBF24' }}>· {verdict.wealthScoreFinal} 分</span>
             </span>
           </div>
-          <p className="text-xs leading-relaxed font-bold text-muted-foreground">{verdict.wealthRankDesc}</p>
+          <p className="text-xs leading-relaxed text-muted-foreground">{verdict.wealthRankDesc}</p>
         </div>
-        <div className="rounded-xl border p-4" style={{ border: '1px solid rgba(14,165,233,0.25)', background: 'rgba(14,165,233,0.06)' }}>
+        <div className="rounded-sm border p-4" style={{ border: '1px solid rgba(56,189,248,0.3)', background: 'rgba(56,189,248,0.06)' }}>
           <div className="mb-1 flex items-center gap-1.5">
-            <span className="inline-flex items-center rounded-full bg-sky-500 px-2 py-0.5 text-[10px] font-black text-white">事业地位</span>
-            <span className="inline-flex items-center rounded-full bg-white/80 px-2.5 py-0.5 text-[12px] font-black" style={{ border: '1px solid rgba(14,165,233,0.25)' }}>
-              {verdict.nobilityRank}<span className="ml-1" style={{ color: '#0369A1' }}>· {verdict.nobilityScoreFinal} 分</span>
+            <span className="label-mono inline-flex items-center rounded-sm px-2 py-0.5 text-[10px] font-black" style={{ background: '#38BDF8', color: 'hsl(222 26% 6%)' }}>事业地位</span>
+            <span className="label-mono inline-flex items-center rounded-sm px-2.5 py-0.5 text-[12px] font-black" style={{ border: '1px solid rgba(56,189,248,0.3)', color: '#7DD3FC' }}>
+              {verdict.nobilityRank}<span className="ml-1" style={{ color: '#38BDF8' }}>· {verdict.nobilityScoreFinal} 分</span>
             </span>
           </div>
-          <p className="text-xs leading-relaxed font-bold text-muted-foreground">{verdict.nobilityRankDesc}</p>
+          <p className="text-xs leading-relaxed text-muted-foreground">{verdict.nobilityRankDesc}</p>
         </div>
       </div>
-      <div className="rounded-xl p-4" style={{ border: '1px solid rgba(245,158,11,0.28)', background: 'rgba(245,158,11,0.06)' }}>
-        <div className="mb-2 text-[13px] font-black" style={{ color: '#B45309' }}>最利求财年份（按可能性从高到低）</div>
+      <div className="rounded-sm p-4" style={{ border: '1px solid rgba(251,191,36,0.32)', background: 'rgba(251,191,36,0.06)' }}>
+        <div className="label-mono mb-2 text-[11px] font-black" style={{ color: '#FBBF24' }}>最利求财年份（按可能性从高到低）</div>
         {bestWealthYears.length === 0 ? (
-          <p className="text-xs leading-relaxed font-bold text-muted-foreground">暂无足够流年数据可排序。</p>
+          <p className="text-xs leading-relaxed text-muted-foreground">暂无足够流年数据可排序。</p>
         ) : (
-          renderYearList(bestWealthYears, '#F59E0B', '#B45309')
+          renderYearList(bestWealthYears, '#FBBF24', '#FBBF24')
         )}
       </div>
-      <div className="rounded-xl p-4" style={{ border: '1px solid rgba(14,165,233,0.25)', background: 'rgba(14,165,233,0.06)' }}>
-        <div className="mb-2 text-[13px] font-black" style={{ color: '#0369A1' }}>最利事业地位年份（按可能性从高到低）</div>
+      <div className="rounded-sm p-4" style={{ border: '1px solid rgba(56,189,248,0.3)', background: 'rgba(56,189,248,0.06)' }}>
+        <div className="label-mono mb-2 text-[11px] font-black" style={{ color: '#38BDF8' }}>最利事业地位年份（按可能性从高到低）</div>
         {bestNobilityYears.length === 0 ? (
-          <p className="text-xs leading-relaxed font-bold text-muted-foreground">暂无足够流年数据可排序。</p>
+          <p className="text-xs leading-relaxed text-muted-foreground">暂无足够流年数据可排序。</p>
         ) : (
-          renderYearList(bestNobilityYears, '#0EA5E9', '#0369A1')
+          renderYearList(bestNobilityYears, '#38BDF8', '#38BDF8')
         )}
       </div>
     </div>
@@ -486,10 +504,10 @@ function RomanceVerdictPanel({
   ) => (
     <ol className="mt-2 space-y-1.5">
       {items.map((it, i) => (
-        <li key={it.year} className="flex flex-col rounded-lg border border-white/60 bg-white/60 p-2">
-          <div className="flex items-center justify-between text-[12px] font-black">
+        <li key={it.year} className="flex flex-col rounded-sm border border-border bg-card/60 p-2">
+          <div className="flex items-center justify-between text-[12px] font-bold">
             <span className="inline-flex items-center">
-              <span className="mr-2 inline-flex size-4 items-center justify-center rounded-full text-[9px] font-black text-white" style={{ background: accentBg }}>{i + 1}</span>
+              <span className="mr-2 inline-flex size-4 items-center justify-center rounded-full text-[9px] font-black" style={{ background: accentBg, color: 'hsl(222 26% 6%)' }}>{i + 1}</span>
               <span>{it.year}年</span>
               <span className="ml-1 text-muted-foreground">·{it.ganzhi}</span>
               <span className="ml-1 text-muted-foreground">·{it.age}岁</span>
@@ -510,29 +528,29 @@ function RomanceVerdictPanel({
 
   return (
     <div className="space-y-3">
-      <div className="text-sm font-bold text-muted-foreground" style={{ fontFamily: "'Noto Serif SC', serif" }}>感情 · 异性缘与婚姻情缘</div>
+      <div className="text-sm font-bold text-muted-foreground">感情 · 异性缘与婚姻情缘</div>
 
-      <div className="rounded-xl border border-pink-200 bg-pink-50/50 p-4">
+      <div className="rounded-sm border p-4" style={{ borderColor: 'rgba(244,114,182,.35)', background: 'rgba(244,114,182,.07)' }}>
         <div className="mb-2 flex items-center gap-1.5">
-          <span className="inline-flex size-4 items-center justify-center rounded-full bg-pink-500 text-[9px] font-black leading-none text-white">♥</span>
-          <span className="text-xs font-black text-pink-700">恋爱可能时间如下（按可能性从高到低排列）</span>
+          <span className="inline-flex size-4 items-center justify-center rounded-full text-[9px] font-black leading-none" style={{ background: '#EC4899', color: 'hsl(222 26% 6%)' }}>♥</span>
+          <span className="label-mono text-[11px] font-black" style={{ color: '#F472B6' }}>恋爱可能时间如下（按可能性从高到低排列）</span>
         </div>
         {bestLoveYears.length === 0 ? (
-          <p className="text-xs leading-relaxed font-bold text-muted-foreground">暂无足够流年数据；恋爱应期需逢岁运桃花或异性星引动之年方显。</p>
+          <p className="text-xs leading-relaxed text-muted-foreground">暂无足够流年数据；恋爱应期需逢岁运桃花或异性星引动之年方显。</p>
         ) : (
-          renderTimingList(bestLoveYears, '#BE185D', '#EC4899')
+          renderTimingList(bestLoveYears, '#F472B6', '#EC4899')
         )}
       </div>
 
-      <div className="rounded-xl border border-rose-200 bg-rose-50/50 p-4">
+      <div className="rounded-sm border p-4" style={{ borderColor: 'rgba(248,113,113,.35)', background: 'rgba(248,113,113,.07)' }}>
         <div className="mb-2 flex items-center gap-1.5">
-          <span className="inline-flex size-4 items-center justify-center rounded-full bg-rose-600 text-[9px] font-black leading-none text-white">喜</span>
-          <span className="text-xs font-black text-rose-700">结婚时间如下（按可能性从高到低排列）</span>
+          <span className="inline-flex size-4 items-center justify-center rounded-full text-[9px] font-black leading-none" style={{ background: '#F87171', color: 'hsl(222 26% 6%)' }}>喜</span>
+          <span className="label-mono text-[11px] font-black" style={{ color: '#FCA5A5' }}>结婚时间如下（按可能性从高到低排列）</span>
         </div>
         {bestMarriageYears.length === 0 ? (
-          <p className="text-xs leading-relaxed font-bold text-muted-foreground">暂无足够流年数据；结婚应期需逢岁运合冲夫妻宫之年方显。</p>
+          <p className="text-xs leading-relaxed text-muted-foreground">暂无足够流年数据；结婚应期需逢岁运合冲夫妻宫之年方显。</p>
         ) : (
-          renderTimingList(bestMarriageYears, '#9F1239', '#E11D48')
+          renderTimingList(bestMarriageYears, '#F87171', '#F87171')
         )}
       </div>
     </div>
@@ -543,51 +561,51 @@ function RomanceVerdictPanel({
 function XiangYiPanel({ verdict }: { verdict: XiangYiVerdict }) {
   return (
     <div className="space-y-4">
-      <div className="text-sm font-bold text-muted-foreground" style={{ fontFamily: "'Noto Serif SC', serif" }}>
+      <div className="text-sm font-bold text-muted-foreground">
         象意 · 五行本源象法（以日主{verdict.dayMaster.stem}{verdict.dayMaster.elementName}为中心）
       </div>
-      <div className="rounded-xl p-4" style={{ border: '1px solid rgba(14,165,233,0.25)', background: 'rgba(14,165,233,0.06)' }}>
+      <div className="rounded-sm p-4" style={{ border: '1px solid rgba(56,189,248,0.3)', background: 'rgba(56,189,248,0.06)' }}>
         <div className="mb-1.5 flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center rounded-full bg-sky-500 px-2 py-0.5 text-[10px] font-black text-white">日主象意</span>
-          <span className="text-xs font-black" style={{ color: '#0369A1' }}>{verdict.dayMaster.stem} · {verdict.dayMaster.elementName} · {verdict.dayMaster.fourSymbol}</span>
+          <span className="label-mono inline-flex items-center rounded-sm px-2 py-0.5 text-[10px] font-black" style={{ background: '#38BDF8', color: 'hsl(222 26% 6%)' }}>日主象意</span>
+          <span className="label-mono text-xs font-black" style={{ color: '#7DD3FC' }}>{verdict.dayMaster.stem} · {verdict.dayMaster.elementName} · {verdict.dayMaster.fourSymbol}</span>
         </div>
         <p className="text-sm leading-relaxed font-bold text-foreground">{verdict.dayMaster.stemTraits}</p>
-        <p className="mt-2 text-sm leading-relaxed font-bold text-muted-foreground">{verdict.dayMaster.nature}</p>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{verdict.dayMaster.nature}</p>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <div className="rounded-lg bg-white/60 p-2.5">
-            <div className="text-xs font-black text-sky-700">核心类象</div>
+          <div className="rounded-sm border border-border bg-card/70 p-2.5">
+            <div className="label-mono text-[10px] font-black" style={{ color: '#38BDF8' }}>核心类象</div>
             <ul className="mt-1 space-y-1">
               {verdict.dayMaster.imagery.map((img, i) => (
-                <li key={i} className="text-xs leading-relaxed font-bold text-muted-foreground">· {img}</li>
+                <li key={i} className="text-xs leading-relaxed text-muted-foreground">· {img}</li>
               ))}
             </ul>
           </div>
           <div className="space-y-2">
-            <div className="rounded-lg bg-white/60 p-2.5">
-              <div className="text-xs font-black text-sky-700">人体 · 才艺</div>
-              <p className="mt-1 text-xs leading-relaxed font-bold text-muted-foreground">{verdict.dayMaster.body}</p>
-              <p className="mt-1 text-xs leading-relaxed font-bold text-muted-foreground">{verdict.dayMaster.talent}</p>
+            <div className="rounded-sm border border-border bg-card/70 p-2.5">
+              <div className="label-mono text-[10px] font-black" style={{ color: '#38BDF8' }}>人体 · 才艺</div>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{verdict.dayMaster.body}</p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{verdict.dayMaster.talent}</p>
             </div>
-            <div className="rounded-lg bg-white/60 p-2.5">
-              <div className="text-xs font-black text-sky-700">吉凶异化</div>
-              <p className="mt-1 text-xs leading-relaxed font-bold text-muted-foreground">{verdict.dayMaster.jiXiong}</p>
+            <div className="rounded-sm border border-border bg-card/70 p-2.5">
+              <div className="label-mono text-[10px] font-black" style={{ color: '#38BDF8' }}>吉凶异化</div>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{verdict.dayMaster.jiXiong}</p>
             </div>
           </div>
         </div>
-        <div className="mt-3 rounded-lg bg-white/60 p-2.5">
-          <div className="text-xs font-black text-sky-700">月令流转</div>
-          <p className="mt-1 text-xs leading-relaxed font-bold text-muted-foreground">{verdict.dayMaster.monthFlow}</p>
+        <div className="mt-3 rounded-sm border border-border bg-card/70 p-2.5">
+          <div className="label-mono text-[10px] font-black" style={{ color: '#38BDF8' }}>月令流转</div>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{verdict.dayMaster.monthFlow}</p>
         </div>
       </div>
-      <details className="group rounded-xl border border-border/60 bg-card/50 p-3">
-        <summary className="cursor-pointer text-xs font-black text-muted-foreground transition-colors group-open:text-foreground">
+      <details className="group rounded-sm border border-border bg-card/50 p-3">
+        <summary className="label-mono cursor-pointer text-[11px] font-black text-muted-foreground transition-colors group-open:text-foreground">
           四柱干支象意一览
         </summary>
         <div className="mt-2 grid gap-2 sm:grid-cols-2 md:grid-cols-4">
           {verdict.pillars.map((p, i) => (
-            <div key={i} className="rounded-lg border border-border/60 bg-white/60 p-2.5">
+            <div key={i} className="rounded-sm border border-border bg-card/70 p-2.5">
               <div className="text-xs font-black">{p.position}柱 {p.gz}（{p.elementName}）</div>
-              <p className="mt-1 text-[11px] leading-relaxed font-bold text-muted-foreground">{p.stemTraits}</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{p.stemTraits}</p>
             </div>
           ))}
         </div>
@@ -667,25 +685,25 @@ function MonthRiZhuChangShengCard({
   const state = parseChangSheng(raw, stem);
   return (
     <div
-      className="rounded-xl p-4 text-center"
+      className="rounded-sm p-4 text-center"
       style={{
-        backgroundColor: `${solarTermTheme.palette.primary}12`,
-        border: `1px solid ${solarTermTheme.palette.primary}26`,
+        backgroundColor: `${TERMINAL_PALETTE.primary}12`,
+        border: `1px solid ${TERMINAL_PALETTE.primary}26`,
       }}
     >
-      <div className="mb-2 text-[11px] font-black tracking-[0.25em] text-muted-foreground">月对日主 · 十二长生状态</div>
+      <div className="mb-2 label-mono text-muted-foreground">月对日主 · 十二长生状态</div>
       {state ? (
         <div
-          className="text-[26px] font-black leading-tight md:text-[32px]"
-          style={{ fontFamily: "'Noto Serif SC', serif", color: 'var(--foreground)' }}
+          className="text-[26px] font-bold leading-tight md:text-[32px]"
+          style={{ color: 'var(--foreground)' }}
         >
           <span className="mark-highlight">{stem}日主</span>
           <span
-            className="ml-2 inline-block rounded-lg px-3 py-1"
+            className="ml-2 inline-block rounded-sm px-3 py-1"
             style={{
-              backgroundColor: `${solarTermTheme.palette.primary}1A`,
-              color: solarTermTheme.palette.primary,
-              border: `1px solid ${solarTermTheme.palette.primary}30`,
+              backgroundColor: `${TERMINAL_PALETTE.primary}1A`,
+              color: TERMINAL_PALETTE.primary,
+              border: `1px solid ${TERMINAL_PALETTE.primary}30`,
             }}
           >
             （{state}）
@@ -802,6 +820,9 @@ export default function BaZiAnalyzerPage() {
   const [chart, setChart] = useState<BaZiChart | null>(null);
   const [analyzed, setAnalyzed] = useState(false);
   const [solarTermTheme, setSolarTermTheme] = useState<SolarTermTheme>(() => getDefaultSolarTermTheme());
+  // 界面统一使用终端色板；solarTermTheme 仅提供节气名称/诗句等元数据
+  const palette = TERMINAL_PALETTE;
+  const termColors = TERMINAL_SPECTRUM;
   const [expandedDY, setExpandedDY] = useState<number | null>(null);
 
   // —— 排盘历史记录（localStorage，最近 10 次） ——
@@ -873,16 +894,16 @@ export default function BaZiAnalyzerPage() {
     lines.push('  天之易八字自动分析 · 报告摘要');
     lines.push('═══════════════════════════════════════');
     lines.push('');
-    lines.push(`命主：${chart.dayMaster}${chart.dayBranch}（${chart.gender === 'male' ? '男' : '女'}）`);
-    lines.push(`真太阳时：${chart.trueSolarTime}`);
+    lines.push(`命主：${chart.day.stem}${chart.day.branch}（${chart.gender === 'male' ? '男' : '女'}）`);
+    lines.push(`真太阳时：${chart.birthInfo.trueSolarTime}`);
     lines.push(`四柱：${chart.year.stem}${chart.year.branch} ${chart.month.stem}${chart.month.branch} ${chart.day.stem}${chart.day.branch} ${chart.hour.stem}${chart.hour.branch}`);
     lines.push('');
     lines.push('【月气分析】');
     lines.push(monthQi.description);
     lines.push('');
     lines.push('【用神忌神】');
-    lines.push(`用神：${yongJi.usefulGods.join('、') || '—'}`);
-    lines.push(`忌神：${yongJi.tabooGods.join('、') || '—'}`);
+    lines.push(`用神：${yongJi.usefulElements.map(e => ELEMENT_NAMES[e] ?? e).join('、') || '—'}`);
+    lines.push(`忌神：${yongJi.tabooElements.map(e => ELEMENT_NAMES[e] ?? e).join('、') || '—'}`);
     lines.push('');
     lines.push('【五行力量】');
     lines.push(`木 ${elementPower.wood}%  火 ${elementPower.fire}%  土 ${elementPower.earth}%  金 ${elementPower.metal}%  水 ${elementPower.water}%`);
@@ -924,7 +945,7 @@ export default function BaZiAnalyzerPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `八字分析报告_${chart!.dayMaster}${chart!.dayBranch}_${Date.now()}.txt`;
+    a.download = `八字分析报告_${chart!.day.stem}${chart!.day.branch}_${Date.now()}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -936,7 +957,7 @@ export default function BaZiAnalyzerPage() {
 
   // 根据节气主题生成的 CSS 变量，动态注入给页面全部子元素使用
   const themeVarsStyle: React.CSSProperties = useMemo(() => {
-    const p = solarTermTheme.palette;
+    const p = palette;
     return {
       '--st-bg1': p.bg1,
       '--st-bg2': p.bg2,
@@ -1281,9 +1302,10 @@ export default function BaZiAnalyzerPage() {
   const analyzedBoolean = analyzed && chart && monthQi && yongJi && elementPower && yinYangPct && coldHotPct && pattern && wealthNobility && daYunAnalysis && specialTips;
 
   const renderMarkBadge = (mark: 'useful' | 'taboo' | 'neutral') => {
-    if (mark === 'useful') return <Badge className="bg-emerald-500 hover:bg-emerald-600">用神</Badge>;
-    if (mark === 'taboo') return <Badge variant="destructive">忌神</Badge>;
-    return <Badge variant="secondary">中性</Badge>;
+    const base = "rounded-sm px-1.5 py-0 text-[9.5px] font-bold tracking-[0.15em]";
+    if (mark === 'useful') return <Badge className={base} style={{ background: 'hsl(168 40% 16%)', color: 'hsl(168 70% 62%)', border: '1px solid hsl(168 55% 32%)' }}>用</Badge>;
+    if (mark === 'taboo') return <Badge className={base} style={{ background: 'hsl(352 45% 16%)', color: 'hsl(352 80% 70%)', border: '1px solid hsl(352 55% 34%)' }}>忌</Badge>;
+    return <Badge className={base} style={{ background: 'var(--muted)', color: 'var(--muted-foreground)', border: '1px solid var(--border)' }}>中</Badge>;
   };
 
   // ===== MVP 分数明细组件 =====
@@ -1330,18 +1352,18 @@ export default function BaZiAnalyzerPage() {
         className={`flex flex-wrap items-center gap-1 ${dense ? 'mt-1' : 'mt-2'}`}
         aria-label="综合分明细"
       >
-        {pill('加分', plusC, '#047857')}
-        {pill('扣分', minusC, '#DC2626')}
-        {Math.abs(otherC) >= 0.05 && pill('其他', otherC, '#6D28D9')}
-        {Math.abs(mingPanBase) >= 0.05 && pill('命盘', mingPanBase, '#0EA5E9')}
-        {Math.abs(trendC) >= 0.05 && pill('趋势', trendC, '#B45309')}
+        {pill('加分', plusC, '#34D399')}
+        {pill('扣分', minusC, '#F87171')}
+        {Math.abs(otherC) >= 0.05 && pill('其他', otherC, '#A78BFA')}
+        {Math.abs(mingPanBase) >= 0.05 && pill('命盘', mingPanBase, '#38BDF8')}
+        {Math.abs(trendC) >= 0.05 && pill('趋势', trendC, '#FBBF24')}
         <span className="mx-0.5 text-[11px] font-black text-muted-foreground">=</span>
         <span
           className={`inline-flex items-center rounded-md border px-1.5 py-0.5 font-black tabular-nums ${dense ? 'text-[10px]' : 'text-[11px]'}`}
           style={{
-            borderColor: displayScore >= 0 ? 'rgba(4,120,87,0.35)' : 'rgba(220,38,38,0.35)',
-            background: displayScore >= 0 ? 'rgba(16,185,129,0.10)' : 'rgba(239,68,68,0.10)',
-            color: displayScore >= 0 ? '#047857' : '#DC2626',
+            borderColor: displayScore >= 0 ? 'rgba(52,211,153,0.4)' : 'rgba(248,113,113,0.4)',
+            background: displayScore >= 0 ? 'rgba(52,211,153,0.12)' : 'rgba(248,113,113,0.12)',
+            color: displayScore >= 0 ? '#34D399' : '#F87171',
           }}
         >
           <span className="mr-0.5 opacity-70">综合</span>
@@ -1359,160 +1381,111 @@ export default function BaZiAnalyzerPage() {
       className="min-h-screen"
       style={{
         ...themeVarsStyle,
-        background: `linear-gradient(160deg, var(--st-bg1) 0%, #ffffff 35%, var(--st-bg2) 100%)`,
+        background: 'var(--background)',
       }}
     >
-      {/* 节气主题 Hero：苹果官网风格排版 + 古风色彩系统 */}
-      <section
-        className="relative w-full overflow-hidden"
-        style={{
-          background: `linear-gradient(180deg, ${solarTermTheme.colors[0]}B3 0%, ${solarTermTheme.colors[1] ?? solarTermTheme.colors[0]}80 50%, #FFFFFFE6 100%)`,
-        }}
-      >
-        {/* 顶部装饰：节气色板彩色横条 */}
-        <div className="flex h-[3px] w-full">
-          {solarTermTheme.colors.map((c, i) => (
-            <div
-              key={`stripe-${i}`}
-              className="flex-1 transition-all duration-500"
-              style={{ backgroundColor: c }}
-            />
-          ))}
+      {/* ===== 命盘终端 Hero：瑞士网格 + 深空元数据栏 ===== */}
+      <section className="relative w-full border-b border-border">
+        {/* 终端状态条：系统标识 / 节气元数据 / 版本号 */}
+        <div className="border-b border-border">
+          <div className="mx-auto grid w-full max-w-7xl grid-cols-3 items-center gap-2 px-4 py-2.5 md:px-6">
+            <div className="flex items-center gap-2">
+              <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-primary" style={{ boxShadow: '0 0 8px #1FD4BC' }} />
+              <span className="label-mono text-muted-foreground">MINGPAN TERMINAL</span>
+            </div>
+            <div className="justify-self-center">
+              <span className="label-mono text-foreground/70">
+                {solarTermTheme.name} · 出生节气
+              </span>
+            </div>
+            <div className="justify-self-end">
+              <span className="label-mono text-muted-foreground">v{APP_VERSION}</span>
+            </div>
+          </div>
         </div>
 
-        {/* 苹果官网式超大留白与居中排版 */}
-        <div className="relative mx-auto flex max-w-6xl flex-col items-center justify-center px-6 pb-24 pt-20 text-center md:pb-40 md:pt-32">
-          {/* 节气小标签：小号精细字，拉开与主标题距离 */}
-          <div
-            className="mb-10 inline-flex items-center justify-center gap-2 rounded-full px-5 py-1.5 text-[11px] font-medium tracking-[0.24em]"
-            style={{
-              backgroundColor: `#FFFFFF99`,
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-              color: 'var(--foreground)',
-              border: `1px solid ${solarTermTheme.palette.primary}22`,
-            }}
-          >
-            <span style={{ fontFamily: "'Noto Serif SC', serif", fontWeight: 600 }}>
-              {solarTermTheme.name} · 命主出生节气
-            </span>
+        {/* 主网格：左侧标题系统 / 右侧诗句元数据面板 */}
+        <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-10 px-4 pb-16 pt-14 md:grid-cols-12 md:gap-8 md:px-6 md:pb-24 md:pt-20">
+          <div className="md:col-span-7">
+            {/* 编号 overline */}
+            <p className="label-mono mb-6 text-primary">
+              BAZI ANALYSIS SYSTEM
+            </p>
+            {/* 主标题：粗黑体，左对齐 */}
+            <h1
+              className="text-[56px] font-black leading-[0.95] tracking-tight text-foreground md:text-[96px] lg:text-[112px]"
+            >
+              沛然堂
+            </h1>
+            {/* 副标题行：发丝线 + 中文系统名 */}
+            <div className="mt-6 flex items-center gap-4">
+              <span className="h-px w-12 bg-primary" />
+              <span className="text-base font-bold tracking-[0.3em] text-foreground/90 md:text-lg">
+                八字命理智能分析系统
+              </span>
+            </div>
+            <p className="mt-8 max-w-xl text-sm leading-relaxed text-muted-foreground md:text-base">
+              以太极阴阳为体 · 以月气动应为用 · 以平衡为得失
+            </p>
           </div>
 
-          {/* 主标题：沛然堂 · 毛体（Maoti）超大尺寸 */}
-          <h1
-            className="text-[64px] font-black leading-[1.05] tracking-wide md:text-[100px] lg:text-[140px]"
-            style={{
-              fontFamily: "'Maoti', 'Noto Serif SC', serif",
-              color: 'var(--foreground)',
-              letterSpacing: '0.04em',
-            }}
-          >
-            沛然堂
-          </h1>
-
-          {/* 副标题：苹果官网式精细副标题，较大间距 */}
-          <p
-            className="mt-8 max-w-2xl text-[19px] font-normal leading-relaxed tracking-wide md:text-[22px] lg:text-[24px]"
-            style={{
-              fontFamily: "'Noto Serif SC', serif",
-              color: 'var(--foreground)',
-              opacity: 0.72,
-              letterSpacing: '0.02em',
-            }}
-          >
-            以太极阴阳为体 · 以月气动应为用 · 以平衡为得失
-          </p>
-
-          {/* 节气诗句：毛体字（Maoti），显著放大成为视觉焦点 */}
-          <p
-            className="mt-16 max-w-4xl text-[40px] font-normal leading-[1.35] md:text-[56px] lg:text-[72px]"
-            style={{
-              fontFamily: "'Maoti', 'Noto Serif SC', serif",
-              color: 'var(--foreground)',
-              letterSpacing: '0.06em',
-              lineHeight: 1.3,
-            }}
-          >
-            「{solarTermTheme.poem}」
-          </p>
-
-          {/* 出处：小字精细显示 */}
-          <p
-            className="mt-6 text-[14px] font-normal md:text-[15px]"
-            style={{
-              fontFamily: "'Noto Serif SC', serif",
-              color: 'var(--foreground)',
-              opacity: 0.52,
-              letterSpacing: '0.1em',
-            }}
-          >
-            —— {solarTermTheme.source}
-          </p>
+          {/* 节气诗句：降级为毛体点缀，置于带发丝线的元数据面板 */}
+          <div className="relative md:col-span-5 md:pt-2">
+            <div className="relative crosshair border border-border bg-card/60 p-6 md:p-8">
+              <p className="label-mono mb-5 text-muted-foreground">
+                SOLAR TERM / {solarTermTheme.name}
+              </p>
+              <p
+                className="text-[26px] leading-[1.5] text-foreground/85 md:text-[30px]"
+                style={{
+                  fontFamily: "'Maoti', 'Noto Serif SC', serif",
+                  letterSpacing: '0.05em',
+                }}
+              >
+                「{solarTermTheme.poem}」
+              </p>
+              <p className="mt-5 label-mono text-muted-foreground" style={{ textTransform: 'none', letterSpacing: '0.08em', fontSize: 11.5 }}>
+                —— {solarTermTheme.source}
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
       <main
-        className="mx-auto w-full max-w-7xl space-y-10 px-4 md:space-y-16 md:px-6"
-        style={{
-          marginTop: '-24px',
-          // 极轻的云纹/肌理：用两层同心 radial gradient 叠加，透明度控制在 4% 以内
-          backgroundImage: `radial-gradient(circle at 15% 20%, ${solarTermTheme.palette.primary}07 0, transparent 50%), radial-gradient(circle at 85% 80%, ${solarTermTheme.palette.secondary}05 0, transparent 50%)`,
-        }}
+        className="mx-auto w-full max-w-7xl space-y-10 px-4 py-12 md:space-y-14 md:px-6 md:py-16"
       >
-        {/* 输入表单区：苹果官网风格标题 + 副标题 */}
+        {/* 输入表单区：终端控制台风格 */}
         <Card
-          className="overflow-hidden border-border/50 shadow-[0_4px_24px_-12px_rgba(0,0,0,0.08)]"
-          style={{
-            background: `linear-gradient(180deg, #FFFFFF 0%, ${solarTermTheme.palette.card}33 100%)`,
-          }}
+          className="relative crosshair overflow-hidden rounded-sm border-border bg-card"
         >
-          {/* 顶部节气色装饰条（呼应 Hero 的色板横条） */}
-          <div className="flex h-[2px] w-full">
-            {solarTermTheme.colors.slice(0, 6).map((c, i) => (
-              <div key={`form-bar-${i}`} className="flex-1" style={{ backgroundColor: c }} />
-            ))}
+          {/* 区块标题栏：瑞士编号系统 */}
+          <div className="flex items-center justify-between border-b border-border px-5 py-3 md:px-8">
+            <div className="flex items-center gap-3">
+              <span className="label-mono text-primary">01 / INPUT</span>
+              <span className="h-3 w-px bg-border" />
+              <span className="text-sm font-bold tracking-[0.15em] text-foreground">出生信息录入</span>
+            </div>
+            <span className="label-mono hidden text-muted-foreground md:inline">
+              {solarTermTheme.name} · 本地计算 · 不上传
+            </span>
           </div>
 
-          <CardHeader className="pt-10 pb-4">
-            <div className="flex flex-col items-center justify-center text-center">
-              <div>
-                {/* 苹果官网式：超大表单标题 */}
-                <CardTitle
-                  className="flex justify-center text-center text-[32px] font-black leading-tight md:text-[44px]"
-                  style={{
-                    fontFamily: "'Noto Serif SC', serif",
-                    color: 'var(--foreground)',
-                    letterSpacing: '-0.01em',
-                  }}
-                >
-                  输入出生信息
-                </CardTitle>
-                {/* 精细副标题：低对比度，较大字号 */}
-                <CardDescription
-                  className="mt-4 max-w-xl text-[17px] font-normal leading-relaxed md:text-[18px]"
-                  style={{
-                    fontFamily: "'Noto Serif SC', serif",
-                    opacity: 0.68,
-                    letterSpacing: '0.01em',
-                  }}
-                >
-                  请输入公历出生年月日时 · 系统将按真太阳时自动校正并排盘
-                </CardDescription>
-              </div>
-              <div
-                className="mt-6 hidden rounded-full px-4 py-1.5 text-[11px] font-medium tracking-[0.18em] md:block"
-                style={{
-                  backgroundColor: `${solarTermTheme.palette.primary}0C`,
-                  color: 'var(--foreground)',
-                  fontFamily: "'Noto Serif SC', serif",
-                  opacity: 0.85,
-                }}
+          <CardHeader className="pt-8 pb-4 md:px-8">
+            <div>
+              <CardTitle
+                className="text-2xl font-black leading-tight tracking-tight text-foreground md:text-[28px]"
               >
-                {solarTermTheme.name} · 今日节气
-              </div>
+                输入出生信息
+              </CardTitle>
+              <CardDescription
+                className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground"
+              >
+                请输入公历出生年月日时 · 系统将按真太阳时自动校正并排盘
+              </CardDescription>
             </div>
           </CardHeader>
-          <CardContent className="pt-2">
+          <CardContent className="pt-2 md:px-8">
             {/* 新中式典雅输入：四步编号字段卡片 + 快选按钮（方便客户使用）*/}
             {(() => {
               // —— 常用快选常量（无需额外文件，直接内联，保持代码结构简单）——
@@ -1551,29 +1524,28 @@ export default function BaZiAnalyzerPage() {
                 };
               };
 
-              const accent = solarTermTheme.palette.primary; // 随今日节气变色（延续现有节气主题，不破坏统一性）
+              const accent = palette.primary; // 随今日节气变色（延续现有节气主题，不破坏统一性）
               const accentSoft = `${accent}1A`;
               const accentLine = `${accent}55`;
 
               const FieldStepBadge = ({ n, label }: { n: number; label: string }) => (
                 <div className="mb-3 flex items-center gap-3">
                   <div
-                    className="inline-flex size-7 items-center justify-center rounded-full text-[11px] font-black text-white shadow-sm"
+                    className="inline-flex size-6 items-center justify-center border text-[10.5px] font-bold"
                     style={{
-                      background: `linear-gradient(135deg, ${accent} 0%, ${accent}DD 100%)`,
-                      boxShadow: `0 6px 16px -8px ${accent}AA`,
-                      fontFamily: "'Noto Serif SC', serif",
+                      borderColor: 'var(--primary)',
+                      color: 'var(--primary)',
+                      fontFamily: 'var(--font-mono)',
                     }}
                   >
                     {String(n).padStart(2, '0')}
                   </div>
                   <div
-                    className="text-[13px] font-black tracking-[0.18em]"
-                    style={{ color: 'var(--foreground)', fontFamily: "'Noto Serif SC', serif" }}
+                    className="text-[13px] font-bold tracking-[0.18em] text-foreground"
                   >
                     {label}
                   </div>
-                  <div className="ml-2 flex-1 border-t border-dashed" style={{ borderColor: accentLine, opacity: 0.5 }} />
+                  <div className="ml-2 flex-1 border-t" style={{ borderColor: 'var(--border)' }} />
                 </div>
               );
 
@@ -1592,15 +1564,12 @@ export default function BaZiAnalyzerPage() {
                   type="button"
                   onClick={onClick}
                   title={title}
-                  className="group inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-[12px] font-bold transition-all active:scale-[0.96] hover:-translate-y-0.5"
+                  className="inline-flex items-center justify-center rounded-sm px-3 py-1.5 text-[12px] font-medium transition-colors"
                   style={{
-                    fontFamily: "'Noto Serif SC', serif",
-                    background: active ? `${accent}` : 'rgba(255,255,255,0.85)',
-                    color: active ? '#ffffff' : 'var(--foreground)',
-                    border: `1px solid ${active ? accent : accentLine}`,
-                    boxShadow: active
-                      ? `0 8px 20px -8px ${accent}BB, inset 0 0 0 1px rgba(255,255,255,0.25)`
-                      : '0 2px 4px -2px rgba(15,23,42,0.06)',
+                    fontFamily: 'var(--font-mono)',
+                    background: active ? 'var(--primary)' : 'transparent',
+                    color: active ? '#04100E' : 'var(--foreground)',
+                    border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
                   }}
                 >
                   {children}
@@ -1611,18 +1580,18 @@ export default function BaZiAnalyzerPage() {
                 <div className="space-y-7">
                   {/* 排盘模式切换：按日期 / 手动四柱 */}
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-center gap-1 rounded-xl p-1" style={{ background: accentSoft, border: `1px solid ${accentLine}` }}>
+                    <div className="flex items-center gap-0 rounded-sm p-0" style={{ background: 'transparent', border: '1px solid var(--border)' }}>
                       {(['date', 'manual'] as const).map((md) => (
                         <button
                           key={md}
                           type="button"
                           onClick={() => setInputMode(md)}
-                          className="rounded-lg px-4 py-2 text-[13px] font-black tracking-widest transition-all"
+                          className="px-4 py-2 text-[12.5px] font-bold tracking-widest transition-colors"
                           style={{
-                            fontFamily: "'Noto Serif SC', serif",
-                            background: inputMode === md ? accent : 'transparent',
-                            color: inputMode === md ? '#ffffff' : 'var(--foreground)',
-                            boxShadow: inputMode === md ? `0 6px 14px -6px ${accent}BB` : 'none',
+                            fontFamily: 'var(--font-mono)',
+                            background: inputMode === md ? 'var(--primary)' : 'transparent',
+                            color: inputMode === md ? '#04100E' : 'var(--muted-foreground)',
+                            borderRight: md === 'date' ? '1px solid var(--border)' : 'none',
                           }}
                         >
                           {md === 'date' ? '按日期排盘' : '手动四柱'}
@@ -1630,7 +1599,7 @@ export default function BaZiAnalyzerPage() {
                       ))}
                     </div>
                     {inputMode === 'manual' && (
-                      <div className="text-[11px] font-bold tracking-widest text-muted-foreground/75" style={{ fontFamily: "'Noto Serif SC', serif" }}>
+                      <div className="text-[11px] font-medium tracking-widest text-muted-foreground" style={{ fontFamily: 'var(--font-mono)' }}>
                         已选四柱 · {mYearStem}{mYearBranch} {mMonthStem}{mMonthBranch} {mDayStem}{mDayBranch} {mHourStem}{mHourBranch}
                       </div>
                     )}
@@ -1638,7 +1607,7 @@ export default function BaZiAnalyzerPage() {
 
                   {/* 手动四柱模式：自选四柱 + 参照出生年份 */}
                   {inputMode === 'manual' && (
-                    <div className="rounded-2xl p-5" style={{ background: accentSoft, border: `1px solid ${accentLine}` }}>
+                    <div className="rounded-sm p-5" style={{ background: accentSoft, border: `1px solid ${accentLine}` }}>
                       <FieldStepBadge n={0} label="手动四柱 · 自选" />
                       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                         {([
@@ -1647,33 +1616,33 @@ export default function BaZiAnalyzerPage() {
                           { t: '日柱', s: mDayStem, b: mDayBranch, sm: setMDayStem, bm: setMDayBranch },
                           { t: '时柱', s: mHourStem, b: mHourBranch, sm: setMHourStem, bm: setMHourBranch },
                         ]).map((p) => (
-                          <div key={p.t} className="rounded-xl p-3" style={{ border: `1px solid ${accentLine}`, background: '#ffffff' }}>
-                            <Label className="!text-[12px] !font-bold tracking-widest" style={{ fontFamily: "'Noto Serif SC', serif" }}>{p.t}</Label>
+                          <div key={p.t} className="rounded-sm p-3" style={{ border: `1px solid ${accentLine}`, background: 'var(--input)' }}>
+                            <Label className="!text-[12px] !font-bold tracking-widest" style={{ fontFamily: 'var(--font-mono)' }}>{p.t}</Label>
                             <div className="mt-1.5 grid grid-cols-2 gap-1.5">
                               <Select value={p.s} onValueChange={(v) => (p.sm as (x: string) => void)(v)}>
-                                <SelectTrigger className="!h-11 !text-sm !font-black" style={{ background: '#fff', border: `1.5px solid ${accentLine}`, fontFamily: "'Noto Serif SC', serif" }}>
+                                <SelectTrigger className="!h-11 !text-sm !font-black" style={{ background: 'var(--input)', border: `1px solid var(--border)`, fontFamily: 'var(--font-mono)' }}>
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {STEMS.map((st) => (
-                                    <SelectItem key={st} value={st} className="!text-sm !font-bold !text-black">{st}</SelectItem>
+                                    <SelectItem key={st} value={st} className="!text-sm !font-bold !text-foreground">{st}</SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>
                               <Select value={p.b} onValueChange={(v) => (p.bm as (x: string) => void)(v)}>
-                                <SelectTrigger className="!h-11 !text-sm !font-black" style={{ background: '#fff', border: `1.5px solid ${accentLine}`, fontFamily: "'Noto Serif SC', serif" }}>
+                                <SelectTrigger className="!h-11 !text-sm !font-black" style={{ background: 'var(--input)', border: `1px solid var(--border)`, fontFamily: 'var(--font-mono)' }}>
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {BRANCHES.map((br) => (
-                                    <SelectItem key={br} value={br} className="!text-sm !font-bold !text-black">{br}</SelectItem>
+                                    <SelectItem key={br} value={br} className="!text-sm !font-bold !text-foreground">{br}</SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>
                             </div>
                             <div
                               className="mt-2 rounded-md py-1 text-center text-[15px] font-black tracking-[0.2em]"
-                              style={{ background: accentSoft, color: accent, fontFamily: "'Noto Serif SC', serif" }}
+                              style={{ background: accentSoft, color: accent, fontFamily: 'var(--font-mono)' }}
                             >
                               {p.s}{p.b}
                             </div>
@@ -1682,7 +1651,7 @@ export default function BaZiAnalyzerPage() {
                       </div>
                       <div className="mt-4 grid gap-4 md:grid-cols-2">
                         <div className="space-y-2">
-                          <Label className="!text-[12px] !font-bold tracking-widest" style={{ fontFamily: "'Noto Serif SC', serif" }}>
+                          <Label className="!text-[12px] !font-bold tracking-widest" style={{ fontFamily: 'var(--font-mono)' }}>
                             参照出生年份 <span className="font-normal text-muted-foreground/80">（仅用于定大运流年的年龄/年份，干支仍以自选四柱为准）</span>
                           </Label>
                           <Input
@@ -1691,7 +1660,7 @@ export default function BaZiAnalyzerPage() {
                             onChange={(e) => setMBirthYear(e.target.value)}
                             placeholder="例：1990"
                             className="!h-12 !px-4 !text-lg font-black tracking-wider focus-visible:ring-0"
-                            style={{ fontFamily: "'Noto Serif SC', serif", background: '#ffffff', border: `1.5px solid ${accentLine}`, color: 'var(--foreground)' }}
+                            style={{ fontFamily: 'var(--font-mono)', background: 'var(--input)', border: `1px solid var(--border)`, color: 'var(--foreground)' }}
                           />
                         </div>
                         <div className="flex items-end gap-3">
@@ -1699,48 +1668,48 @@ export default function BaZiAnalyzerPage() {
                           <button
                             type="button"
                             onClick={() => setGender('male')}
-                            className="h-12 flex-1 rounded-xl text-[15px] font-black tracking-widest transition-all"
+                            className="h-12 flex-1 rounded-sm text-[14px] font-bold tracking-[0.2em] transition-colors"
                             style={{
-                              fontFamily: "'Noto Serif SC', serif",
-                              background: gender === 'male' ? `linear-gradient(135deg, ${accent} 0%, ${accent}E6 100%)` : '#ffffff',
-                              color: gender === 'male' ? '#ffffff' : 'var(--foreground)',
-                              border: `2px solid ${gender === 'male' ? accent : accentLine}`,
+                              fontFamily: 'var(--font-mono)',
+                              background: gender === 'male' ? `${accent}` : 'transparent',
+                              color: gender === 'male' ? '#04100E' : 'var(--foreground)',
+                              border: `1px solid ${gender === 'male' ? accent : 'var(--border)'}`,
                             }}
                           >乾造 · 男</button>
                           <button
                             type="button"
                             onClick={() => setGender('female')}
-                            className="h-12 flex-1 rounded-xl text-[15px] font-black tracking-widest transition-all"
+                            className="h-12 flex-1 rounded-sm text-[14px] font-bold tracking-[0.2em] transition-colors"
                             style={{
-                              fontFamily: "'Noto Serif SC', serif",
-                              background: gender === 'female' ? 'linear-gradient(135deg, #BE185D 0%, #9D174D 100%)' : '#ffffff',
+                              fontFamily: 'var(--font-mono)',
+                              background: gender === 'female' ? `#D93A4E` : 'transparent',
                               color: gender === 'female' ? '#ffffff' : 'var(--foreground)',
-                              border: `2px solid ${gender === 'female' ? '#BE185D' : accentLine}`,
+                              border: `1px solid ${gender === 'female' ? '#D93A4E' : 'var(--border)'}`,
                             }}
                           >坤造 · 女</button>
                         </div>
                       </div>
-                      <div className="mt-3 text-[10px] font-bold leading-relaxed tracking-wider text-muted-foreground/70" style={{ fontFamily: "'Noto Serif SC', serif" }}>
+                      <div className="mt-3 text-[10px] font-bold leading-relaxed tracking-wider text-muted-foreground/70" style={{ fontFamily: 'var(--font-mono)' }}>
                         · 大运起运年龄按一岁近似；参考年份应落在所填年柱六十甲子循环上的一个代表年份。手动四柱需自洽（年/月/日/时干支一般应符合同一甲子循环）。
                       </div>
                       <div className="mt-4 flex justify-end">
                         <Button
                           size="lg"
                           onClick={handleManualAnalyze}
-                          className="min-w-[220px] !text-base font-black tracking-[0.22em] transition-all active:translate-y-[1px] active:scale-[0.99] hover:-translate-y-[2px]"
+                          className="min-w-[240px] !text-sm font-bold tracking-[0.25em] transition-colors hover:brightness-110"
                           style={{
-                            background: `linear-gradient(135deg, ${accent} 0%, ${accent}E0 100%)`,
-                            color: '#ffffff',
-                            height: '58px',
+                            background: `${accent}`,
+                            color: '#04100E',
+                            height: '54px',
                             paddingLeft: '34px',
                             paddingRight: '34px',
-                            borderRadius: '14px',
-                            fontFamily: "'Noto Serif SC', serif",
-                            boxShadow: `0 20px 40px -14px ${accent}99, inset 0 0 0 2px rgba(255,255,255,0.22), inset 0 -10px 20px -10px rgba(0,0,0,0.18)`,
-                            border: `1.5px solid ${accent}`,
+                            borderRadius: '2px',
+                            fontFamily: 'var(--font-mono)',
+                            boxShadow: 'none',
+                            border: `1px solid ${accent}`,
                           }}
                         >
-                          手动四柱排盘
+                          ▶ 手动四柱排盘
                         </Button>
                       </div>
                     </div>
@@ -1748,12 +1717,12 @@ export default function BaZiAnalyzerPage() {
 
                   {inputMode === 'date' && (<Fragment>
                   {/* 00 完整生辰快速输入（一条栏：粘贴 199910012000 → 自动拆分 年月日时分）*/}
-                  <div className="rounded-2xl p-5" style={{ background: accentSoft, border: `1px solid ${accentLine}` }}>
+                  <div className="rounded-sm p-5" style={{ background: accentSoft, border: `1px solid ${accentLine}` }}>
                     <FieldStepBadge n={0} label="完整生辰 · 一键输入" />
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                       <div className="flex-1 space-y-2">
-                        <Label className="!text-[12px] !font-bold tracking-widest" style={{ fontFamily: "'Noto Serif SC', serif" }}>
-                          阳历生辰串 <span className="font-normal text-muted-foreground/80">（支持 199910012000 / 1999-10-01 20:00 / 19991001 等格式，自动去分隔符）</span>
+                        <Label className="block !text-[12px] !font-bold leading-relaxed tracking-widest" style={{ fontFamily: 'var(--font-mono)' }}>
+                          <span className="whitespace-nowrap">阳历生辰串</span> <span className="font-normal text-muted-foreground/80">（支持 199910012000 / 1999-10-01 20:00 / 19991001 等格式，自动去分隔符）</span>
                         </Label>
                         <Input
                           type="text"
@@ -1772,17 +1741,17 @@ export default function BaZiAnalyzerPage() {
                           placeholder="例：199910012000（1999年10月1日20时00分）"
                           className="!h-12 !px-4 !text-base font-black tracking-widest tabular-nums focus-visible:ring-0"
                           style={{
-                            fontFamily: "'Noto Serif SC', serif",
-                            background: '#ffffff',
-                            border: `1.5px solid ${accentLine}`,
+                            fontFamily: 'var(--font-mono)',
+                            background: 'var(--input)',
+                            border: `1px solid var(--border)`,
                             color: 'var(--foreground)',
-                            boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
+                            boxShadow: 'none',
                             letterSpacing: '0.06em',
                           }}
                         />
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-bold leading-relaxed tracking-wider text-muted-foreground/75" style={{ fontFamily: "'Noto Serif SC', serif" }}>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-bold leading-relaxed tracking-wider text-muted-foreground/75" style={{ fontFamily: 'var(--font-mono)' }}>
                           <span>格式：</span>
-                          <span className="rounded-md bg-white/80 px-2 py-0.5 tabular-nums" style={{ border: `1px dashed ${accentLine}` }}>YYYYMMDDHHmm</span>
+                          <span className="rounded-md bg-muted px-2 py-0.5 tabular-nums" style={{ border: `1px dashed ${accentLine}` }}>YYYYMMDDHHmm</span>
                           <span className="text-muted-foreground/50">→ 8位仅年月日时自动补 00 分，10位补 0 分</span>
                         </div>
                       </div>
@@ -1795,16 +1764,17 @@ export default function BaZiAnalyzerPage() {
                           setYear(r.y); setMonth(r.mo); setDay(r.d); setHour(r.h); setMinute(r.mi);
                           toast.success(`已解析：${r.y}年${Number(r.mo)}月${Number(r.d)}日 ${String(r.h).padStart(2,'0')}:${String(r.mi).padStart(2,'0')}`);
                         }}
-                        className="font-bold transition-all active:scale-[0.98] hover:-translate-y-0.5 hover:shadow-lg"
+                        className="font-bold transition-colors hover:brightness-110"
                         style={{
                           height: '48px',
                           paddingLeft: '24px',
                           paddingRight: '24px',
-                          fontFamily: "'Noto Serif SC', serif",
-                          background: `linear-gradient(135deg, ${accent} 0%, ${accent}E6 100%)`,
-                          color: '#ffffff',
-                          border: `1.5px solid ${accent}`,
-                          boxShadow: `0 12px 26px -12px ${accent}BB`,
+                          fontFamily: 'var(--font-mono)',
+                          background: `${accent}`,
+                          color: '#04100E',
+                          border: `1px solid ${accent}`,
+                          borderRadius: '2px',
+                          boxShadow: 'none',
                         }}
                       >
                         解析并填入
@@ -1815,7 +1785,7 @@ export default function BaZiAnalyzerPage() {
                   {/* 第 1-2 行：① 年 / ② 月日 */}
                   <div className="grid gap-5 lg:grid-cols-5">
                     {/* ① 出生年份（占 2 列）*/}
-                    <div className="rounded-2xl p-5 lg:col-span-2" style={{ background: accentSoft, border: `1px solid ${accentLine}` }}>
+                    <div className="rounded-sm p-5 lg:col-span-2" style={{ background: accentSoft, border: `1px solid ${accentLine}` }}>
                       <FieldStepBadge n={1} label="出生年份" />
                       <div className="space-y-2">
                         <Input
@@ -1825,16 +1795,16 @@ export default function BaZiAnalyzerPage() {
                           placeholder="例：1990"
                           className="!h-12 !px-4 !text-lg font-black tracking-wider focus-visible:ring-0"
                           style={{
-                            fontFamily: "'Noto Serif SC', serif",
-                            background: '#ffffff',
-                            border: `1.5px solid ${accentLine}`,
+                            fontFamily: 'var(--font-mono)',
+                            background: 'var(--input)',
+                            border: `1px solid var(--border)`,
                             color: 'var(--foreground)',
-                            boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
+                            boxShadow: 'none',
                           }}
                         />
                       </div>
                       <div className="mt-3">
-                        <div className="mb-1.5 text-[10px] font-bold tracking-widest text-muted-foreground/80" style={{ fontFamily: "'Noto Serif SC', serif" }}>
+                        <div className="mb-1.5 text-[10px] font-bold tracking-widest text-muted-foreground/80" style={{ fontFamily: 'var(--font-mono)' }}>
                           · 常用年份一键填入 ·
                         </div>
                         <div className="flex flex-wrap gap-1.5">
@@ -1853,13 +1823,13 @@ export default function BaZiAnalyzerPage() {
                     </div>
 
                     {/* ② 出生月日（占 3 列）*/}
-                    <div className="rounded-2xl p-5 lg:col-span-3" style={{ background: accentSoft, border: `1px solid ${accentLine}` }}>
+                    <div className="rounded-sm p-5 lg:col-span-3" style={{ background: accentSoft, border: `1px solid ${accentLine}` }}>
                       <FieldStepBadge n={2} label="出生月日" />
                       <div className="grid gap-4 md:grid-cols-2">
                         <div className="space-y-2">
-                          <Label className="!text-[12px] !font-bold tracking-widest" style={{ fontFamily: "'Noto Serif SC', serif" }}>月份</Label>
+                          <Label className="!text-[12px] !font-bold tracking-widest" style={{ fontFamily: 'var(--font-mono)' }}>月份</Label>
                           <Select value={month} onValueChange={setMonth}>
-                            <SelectTrigger className="!h-12 !text-base !font-black" style={{ background: '#fff', border: `1.5px solid ${accentLine}`, color: 'var(--foreground)' }}>
+                            <SelectTrigger className="!h-12 !text-base !font-black" style={{ background: 'var(--input)', border: `1px solid var(--border)`, color: 'var(--foreground)' }}>
                               <SelectValue placeholder="请选择月份" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1872,9 +1842,9 @@ export default function BaZiAnalyzerPage() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label className="!text-[12px] !font-bold tracking-widest" style={{ fontFamily: "'Noto Serif SC', serif" }}>日期</Label>
+                          <Label className="!text-[12px] !font-bold tracking-widest" style={{ fontFamily: 'var(--font-mono)' }}>日期</Label>
                           <Select value={day} onValueChange={setDay}>
-                            <SelectTrigger className="!h-12 !text-base !font-black" style={{ background: '#fff', border: `1.5px solid ${accentLine}`, color: 'var(--foreground)' }}>
+                            <SelectTrigger className="!h-12 !text-base !font-black" style={{ background: 'var(--input)', border: `1px solid var(--border)`, color: 'var(--foreground)' }}>
                               <SelectValue placeholder="请选择日期" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1888,7 +1858,7 @@ export default function BaZiAnalyzerPage() {
                         </div>
                       </div>
                       <div className="mt-3">
-                        <div className="mb-1.5 text-[10px] font-bold tracking-widest text-muted-foreground/80" style={{ fontFamily: "'Noto Serif SC', serif" }}>
+                        <div className="mb-1.5 text-[10px] font-bold tracking-widest text-muted-foreground/80" style={{ fontFamily: 'var(--font-mono)' }}>
                           · 农历月快选 ·
                         </div>
                         <div className="flex flex-wrap gap-1.5">
@@ -1910,56 +1880,50 @@ export default function BaZiAnalyzerPage() {
                   {/* 第 3-4 行：③ 性别 / ④ 时分 */}
                   <div className="grid gap-5 lg:grid-cols-5">
                     {/* ③ 命主性别（占 2 列，左右大按钮，不再下拉）*/}
-                    <div className="rounded-2xl p-5 lg:col-span-2" style={{ background: accentSoft, border: `1px solid ${accentLine}` }}>
+                    <div className="rounded-sm p-5 lg:col-span-2" style={{ background: accentSoft, border: `1px solid ${accentLine}` }}>
                       <FieldStepBadge n={3} label="命主性别" />
                       <div className="mt-1 grid grid-cols-2 gap-3">
                         <button
                           type="button"
                           onClick={() => setGender('male')}
-                          className="group inline-flex h-16 flex-col items-center justify-center rounded-xl transition-all active:scale-[0.98] hover:-translate-y-0.5"
+                          className="inline-flex h-16 flex-col items-center justify-center rounded-sm transition-colors"
                           style={{
-                            fontFamily: "'Noto Serif SC', serif",
-                            background: gender === 'male' ? `linear-gradient(135deg, ${accent} 0%, ${accent}E6 100%)` : '#ffffff',
-                            color: gender === 'male' ? '#ffffff' : 'var(--foreground)',
-                            border: `2px solid ${gender === 'male' ? accent : accentLine}`,
-                            boxShadow:
-                              gender === 'male'
-                                ? `0 14px 30px -14px ${accent}DD, inset 0 0 0 1px rgba(255,255,255,0.35)`
-                                : '0 2px 6px -3px rgba(15,23,42,0.08)',
+                            fontFamily: 'var(--font-mono)',
+                            background: gender === 'male' ? `${accent}` : 'transparent',
+                            color: gender === 'male' ? '#04100E' : 'var(--foreground)',
+                            border: `1px solid ${gender === 'male' ? accent : 'var(--border)'}`,
+                            boxShadow: 'none',
                           }}
                         >
-                          <div className="text-[18px] font-black leading-none">乾造</div>
-                          <div className="mt-1 text-[11px] font-bold opacity-90 tracking-widest">男命 · Yang</div>
+                          <div className="text-[18px] font-bold leading-none">乾造</div>
+                          <div className="mt-1 text-[11px] font-medium tracking-[0.2em] opacity-80">男命 · YANG</div>
                         </button>
                         <button
                           type="button"
                           onClick={() => setGender('female')}
-                          className="group inline-flex h-16 flex-col items-center justify-center rounded-xl transition-all active:scale-[0.98] hover:-translate-y-0.5"
+                          className="inline-flex h-16 flex-col items-center justify-center rounded-sm transition-colors"
                           style={{
-                            fontFamily: "'Noto Serif SC', serif",
-                            background: gender === 'female' ? `linear-gradient(135deg, #BE185D 0%, #9D174D 100%)` : '#ffffff',
+                            fontFamily: 'var(--font-mono)',
+                            background: gender === 'female' ? `#D93A4E` : 'transparent',
                             color: gender === 'female' ? '#ffffff' : 'var(--foreground)',
-                            border: `2px solid ${gender === 'female' ? '#BE185D' : accentLine}`,
-                            boxShadow:
-                              gender === 'female'
-                                ? `0 14px 30px -14px rgba(190, 24, 93, 0.75), inset 0 0 0 1px rgba(255,255,255,0.35)`
-                                : '0 2px 6px -3px rgba(15,23,42,0.08)',
+                            border: `1px solid ${gender === 'female' ? '#D93A4E' : 'var(--border)'}`,
+                            boxShadow: 'none',
                           }}
                         >
-                          <div className="text-[18px] font-black leading-none">坤造</div>
-                          <div className="mt-1 text-[11px] font-bold opacity-90 tracking-widest">女命 · Yin</div>
+                          <div className="text-[18px] font-bold leading-none">坤造</div>
+                          <div className="mt-1 text-[11px] font-medium tracking-[0.2em] opacity-80">女命 · YIN</div>
                         </button>
                       </div>
                     </div>
 
                     {/* ④ 出生时分（占 3 列，仅按 0-23 小时 / 0-59 分钟下拉选择）*/}
-                    <div className="rounded-2xl p-5 lg:col-span-3" style={{ background: accentSoft, border: `1px solid ${accentLine}` }}>
+                    <div className="rounded-sm p-5 lg:col-span-3" style={{ background: accentSoft, border: `1px solid ${accentLine}` }}>
                       <FieldStepBadge n={4} label="出生时分" />
                       <div className="grid gap-4 md:grid-cols-2">
                         <div className="space-y-2">
-                          <Label className="!text-[12px] !font-bold tracking-widest" style={{ fontFamily: "'Noto Serif SC', serif" }}>出生小时</Label>
+                          <Label className="!text-[12px] !font-bold tracking-widest" style={{ fontFamily: 'var(--font-mono)' }}>出生小时</Label>
                           <Select value={hour} onValueChange={setHour}>
-                            <SelectTrigger className="!h-12 !text-base !font-black" style={{ background: '#fff', border: `1.5px solid ${accentLine}`, color: 'var(--foreground)' }}>
+                            <SelectTrigger className="!h-12 !text-base !font-black" style={{ background: 'var(--input)', border: `1px solid var(--border)`, color: 'var(--foreground)' }}>
                               <SelectValue placeholder="时" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1972,9 +1936,9 @@ export default function BaZiAnalyzerPage() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label className="!text-[12px] !font-bold tracking-widest" style={{ fontFamily: "'Noto Serif SC', serif" }}>出生分钟</Label>
+                          <Label className="!text-[12px] !font-bold tracking-widest" style={{ fontFamily: 'var(--font-mono)' }}>出生分钟</Label>
                           <Select value={minute} onValueChange={setMinute}>
-                            <SelectTrigger className="!h-12 !text-base !font-black" style={{ background: '#fff', border: `1.5px solid ${accentLine}`, color: 'var(--foreground)' }}>
+                            <SelectTrigger className="!h-12 !text-base !font-black" style={{ background: 'var(--input)', border: `1px solid var(--border)`, color: 'var(--foreground)' }}>
                               <SelectValue placeholder="分" />
                             </SelectTrigger>
                             <SelectContent>
@@ -2003,12 +1967,12 @@ export default function BaZiAnalyzerPage() {
                         className="font-bold transition-all active:scale-[0.98] hover:-translate-y-0.5 hover:shadow-lg"
                         style={{
                           borderColor: accentLine,
-                          background: '#ffffff',
+                          background: 'var(--input)',
                           color: 'var(--foreground)',
                           height: '48px',
                           paddingLeft: '20px',
                           paddingRight: '20px',
-                          fontFamily: "'Noto Serif SC', serif",
+                          fontFamily: 'var(--font-mono)',
                         }}
                       >
                         载入示例
@@ -2019,14 +1983,14 @@ export default function BaZiAnalyzerPage() {
                           size="lg"
                           onClick={handleReset}
                           className="font-bold transition-all active:scale-[0.98] hover:-translate-y-0.5 hover:shadow-lg"
-                          style={{ height: '48px', color: 'var(--foreground)', borderColor: accentLine, background: '#ffffff', fontFamily: "'Noto Serif SC', serif" }}
+                          style={{ height: '48px', color: 'var(--foreground)', borderColor: accentLine, background: 'var(--input)', fontFamily: 'var(--font-mono)' }}
                         >
                           重新排盘
                         </Button>
                       )}
                       <div
                         className="hidden text-[10px] font-bold leading-relaxed tracking-widest text-muted-foreground/70 sm:block"
-                        style={{ fontFamily: "'Noto Serif SC', serif" }}
+                        style={{ fontFamily: 'var(--font-mono)' }}
                       >
                         数据均在本地计算 · 不上传云端
                       </div>
@@ -2035,20 +1999,20 @@ export default function BaZiAnalyzerPage() {
                       <Button
                         size="lg"
                         onClick={handleAnalyze}
-                        className="min-w-[220px] !text-base font-black tracking-[0.22em] transition-all active:translate-y-[1px] active:scale-[0.99] hover:-translate-y-[2px]"
+                        className="min-w-[240px] !text-sm font-bold tracking-[0.25em] transition-colors hover:brightness-110"
                         style={{
-                          background: `linear-gradient(135deg, ${accent} 0%, ${accent}E0 100%)`,
-                          color: '#ffffff',
-                          height: '58px',
+                          background: `${accent}`,
+                          color: '#04100E',
+                          height: '54px',
                           paddingLeft: '34px',
                           paddingRight: '34px',
-                          borderRadius: '14px',
-                          fontFamily: "'Noto Serif SC', serif",
-                          boxShadow: `0 20px 40px -14px ${accent}99, inset 0 0 0 2px rgba(255,255,255,0.22), inset 0 -10px 20px -10px rgba(0,0,0,0.18)`,
-                          border: `1.5px solid ${accent}`,
+                          borderRadius: '2px',
+                          fontFamily: 'var(--font-mono)',
+                          boxShadow: 'none',
+                          border: `1px solid ${accent}`,
                         }}
                       >
-                        一键排盘分析
+                        ▶ 一键排盘分析
                       </Button>
                     </div>
                   </div>
@@ -2061,27 +2025,31 @@ export default function BaZiAnalyzerPage() {
 
         {/* 排盘历史记录（未排盘时显示） */}
         {!analyzedBoolean && history.length > 0 && (
-          <Card className="mt-4">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base" style={{ fontFamily: "'Noto Serif SC', serif" }}>
-                排盘历史
-              </CardTitle>
-              <Button variant="ghost" size="sm" onClick={clearHistory} className="text-xs text-muted-foreground hover:text-destructive">
-                清除
+          <Card className="relative crosshair mt-4 rounded-sm border-border bg-card">
+            <CardHeader className="flex flex-row items-center justify-between border-b border-border px-5 py-3 md:px-8">
+              <div className="flex items-center gap-3">
+                <span className="label-mono text-primary">HISTORY</span>
+                <span className="h-3 w-px bg-border" />
+                <CardTitle className="text-sm font-bold tracking-[0.15em] text-foreground">
+                  排盘历史
+                </CardTitle>
+              </div>
+              <Button variant="ghost" size="sm" onClick={clearHistory} className="label-mono text-muted-foreground hover:text-destructive">
+                清除 CLEAR
               </Button>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-5 md:px-8">
               <div className="flex flex-wrap gap-2">
                 {history.map(rec => (
                   <button
                     key={rec.id}
                     onClick={() => applyHistory(rec)}
-                    className="rounded-lg border px-3 py-2 text-sm transition-all hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2"
+                    className="rounded-sm border px-3 py-2 text-sm transition-colors hover:border-primary hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-offset-2"
                     style={{
                       borderColor: 'var(--border)',
                       background: 'var(--card)',
                       color: 'var(--foreground)',
-                      fontFamily: "'Noto Serif SC', serif",
+                      fontFamily: 'var(--font-mono)',
                     }}
                   >
                     <span className="font-bold">{rec.summary}</span>
@@ -2100,25 +2068,16 @@ export default function BaZiAnalyzerPage() {
           <div className="grid gap-8 lg:grid-cols-[1fr_260px]">
             {/* 左：主内容列 */}
             <div className="space-y-8 min-w-0 md:space-y-12">
-              {/* 分析结果总标题：苹果官网风格 */}
-              <div className="text-center">
+              {/* 分析结果总标题：瑞士网格左对齐 */}
+              <div className="border-t-2 border-foreground pt-4">
+                <p className="label-mono mb-3 text-primary">ANALYSIS REPORT</p>
                 <h2
-                  className="text-[36px] font-black leading-tight md:text-[48px]"
-                  style={{
-                    fontFamily: "'Noto Serif SC', serif",
-                    color: 'var(--foreground)',
-                    letterSpacing: '-0.01em',
-                  }}
+                  className="text-[32px] font-black leading-none tracking-tight text-foreground md:text-[44px]"
                 >
                   命局分析报告
                 </h2>
                 <p
-                  className="mt-3 text-[16px] font-normal md:text-[18px]"
-                  style={{
-                    fontFamily: "'Noto Serif SC', serif",
-                    opacity: 0.62,
-                    letterSpacing: '0.01em',
-                  }}
+                  className="mt-3 text-sm text-muted-foreground md:text-base"
                 >
                   基于天之易八字命理体系 · 完整结构化解读
                 </p>
@@ -2128,44 +2087,37 @@ export default function BaZiAnalyzerPage() {
               {/* 一、四柱排盘总览 */}
               <Card
                 id="section-pillars"
-                className="scroll-mt-6"
+                className="relative crosshair scroll-mt-6 rounded-sm border-border bg-card"
               >
-                <CardHeader className="pt-8 pb-5 text-center">
-                  <CardTitle
-                    className="flex justify-center text-center text-[28px] font-black leading-tight md:text-[34px]"
-                    style={{
-                      fontFamily: "'Noto Serif SC', serif",
-                      color: 'var(--foreground)',
-                      letterSpacing: '-0.01em',
-                    }}
-                  >
-                    四柱排盘总览
-                  </CardTitle>
-                  <CardDescription
-                    className="mt-3 text-[15px] font-normal md:text-[16px]"
-                    style={{
-                      fontFamily: "'Noto Serif SC', serif",
-                      opacity: 0.65,
-                      letterSpacing: '0.01em',
-                    }}
-                  >
-                    {chart.birthInfo.solarDate} {chart.birthInfo.solarTime}（{chart.gender === 'male' ? '男命' : '女命'}）·
-                    真太阳时 {chart.birthInfo.trueSolarTime}
-                    （{chart.birthInfo.trueSolarOffset > 0 ? '+' : ''}
-                    {chart.birthInfo.trueSolarOffset} 分）
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-4 gap-2 md:gap-4">
+                {/* 区块标题栏 */}
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-5 py-3 md:px-8">
+                  <div className="flex items-center gap-3">
+                    <span className="label-mono text-primary">02 / NATAL CHART</span>
+                    <span className="h-3 w-px bg-border" />
+                    <span className="text-sm font-bold tracking-[0.15em] text-foreground">四柱排盘总览</span>
+                  </div>
+                  <span className="label-mono text-muted-foreground">
+                    {chart.birthInfo.solarDate} · {chart.gender === 'male' ? '乾造' : '坤造'} · 真太阳时 {chart.birthInfo.trueSolarTime}
+                  </span>
+                </div>
+
+                <CardContent className="p-4 md:p-8">
+                  <div className="grid grid-cols-4 gap-2 md:gap-3">
                     {[chart.year, chart.month, chart.day, chart.hour].map((pillar, idx) => (
                       <div
                         key={idx}
-                        className={`flex flex-col items-center rounded-xl border p-3 md:p-4 ${
-                          idx === 2 ? 'border-primary/40 bg-primary/5 ring-1 ring-primary/20' : 'border-border/60 bg-card'
+                        className={`relative flex flex-col items-center border p-2.5 md:p-4 ${
+                          idx === 2
+                            ? 'border-primary/60 bg-primary/[0.04]'
+                            : 'border-border bg-background/40'
                         }`}
                       >
-                        <div className="mb-1 text-xs text-muted-foreground">
-                          {pillarNames[idx]} · {pillarLabels[idx]}
+                        {/* 柱位编码 */}
+                        <div className="mb-2 flex w-full items-center justify-between">
+                          <span className="label-mono text-[9px] text-muted-foreground">
+                            {['YEAR', 'MONTH', 'DAY', 'HOUR'][idx]}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground md:text-[11px]">{pillarLabels[idx]}</span>
                         </div>
                         {/* 天干 */}
                         <div className="relative">
@@ -2175,31 +2127,33 @@ export default function BaZiAnalyzerPage() {
                             const stemMark = isRiZhu
                               ? 'neutral'
                               : yongJi.stemMarks[`${['年', '月', '日', '时'][idx]}干`];
+                            const stemStyle: React.CSSProperties =
+                              !isRiZhu && stemMark === 'useful'
+                                ? { background: 'hsl(168 40% 14%)', color: 'hsl(168 72% 64%)', border: '1px solid hsl(168 55% 30%)' }
+                                : !isRiZhu && stemMark === 'taboo'
+                                  ? { background: 'hsl(352 45% 15%)', color: 'hsl(352 82% 72%)', border: '1px solid hsl(352 55% 32%)' }
+                                  : { background: 'transparent', color: 'var(--foreground)', border: '1px solid var(--border)' };
                             return (
                               <>
                                 <div
-                                  className={`flex size-14 items-center justify-center rounded-lg text-2xl font-bold md:size-16 md:text-3xl ${
-                                    !isRiZhu && stemMark === 'useful'
-                                      ? 'bg-emerald-100 text-emerald-700'
-                                      : !isRiZhu && stemMark === 'taboo'
-                                        ? 'bg-rose-100 text-rose-700'
-                                        : 'bg-muted text-foreground'
-                                  }`}
+                                  className="flex size-14 items-center justify-center text-[28px] font-black leading-none md:size-16 md:text-[34px]"
+                                  style={stemStyle}
                                 >
                                   {pillar.stem}
                                 </div>
-                                <div className="absolute -top-1 -right-1">
+                                <div className="absolute -right-1.5 -top-1.5">
                                   {isRiZhu ? (
-                                    <Badge
-                                      className="text-[10px] font-bold"
+                                    <span
+                                      className="rounded-sm px-1 py-0 text-[9px] font-bold tracking-[0.1em]"
                                       style={{
-                                        background: `var(--st-primary)`,
-                                        color: '#ffffff',
-                                        border: `1px solid ${solarTermTheme.palette.primary}`,
+                                        background: 'var(--primary)',
+                                        color: '#04100E',
+                                        border: '1px solid var(--primary)',
+                                        fontFamily: 'var(--font-mono)',
                                       }}
                                     >
                                       日主
-                                    </Badge>
+                                    </span>
                                   ) : (
                                     renderMarkBadge(stemMark)
                                   )}
@@ -2208,37 +2162,45 @@ export default function BaZiAnalyzerPage() {
                             );
                           })()}
                         </div>
-                        <div className="mt-1 text-[10px] text-muted-foreground md:text-xs">
-                          {ELEMENT_NAMES[pillar.stemElement]}·{pillar.stemYinYang === 'yang' ? '阳' : '阴'}
+                        <div className="mt-1.5 label-mono text-[9px] text-muted-foreground" style={{ letterSpacing: '0.08em' }}>
+                          {ELEMENT_NAMES[pillar.stemElement]} · {pillar.stemYinYang === 'yang' ? '阳' : '阴'}
                         </div>
                         {pillar.shiShen && (
-                          <div className="mt-0.5 text-[10px] font-medium text-primary md:text-xs">{pillar.shiShen}</div>
+                          <div className="mt-0.5 text-[10px] font-bold text-primary md:text-[11px]">{pillar.shiShen}</div>
                         )}
                         {/* 分隔线 */}
-                        <div className="my-2 h-px w-full bg-border/60" />
+                        <div className="my-2.5 h-px w-full bg-border" />
                         {/* 地支 */}
                         <div className="relative">
-                          <div
-                            className={`flex size-14 items-center justify-center rounded-lg text-2xl font-bold md:size-16 md:text-3xl ${
-                              yongJi.branchMarks[`${['年', '月', '日', '时'][idx]}支`] === 'useful'
-                                ? 'bg-emerald-100 text-emerald-700'
-                                : yongJi.branchMarks[`${['年', '月', '日', '时'][idx]}支`] === 'taboo'
-                                  ? 'bg-rose-100 text-rose-700'
-                                  : 'bg-muted text-foreground'
-                            }`}
-                          >
-                            {pillar.branch}
-                          </div>
-                          <div className="absolute -top-1 -right-1">
-                            {renderMarkBadge(yongJi.branchMarks[`${['年', '月', '日', '时'][idx]}支`])}
-                          </div>
+                          {(() => {
+                            const branchMark = yongJi.branchMarks[`${['年', '月', '日', '时'][idx]}支`];
+                            const branchStyle: React.CSSProperties =
+                              branchMark === 'useful'
+                                ? { background: 'hsl(168 40% 14%)', color: 'hsl(168 72% 64%)', border: '1px solid hsl(168 55% 30%)' }
+                                : branchMark === 'taboo'
+                                  ? { background: 'hsl(352 45% 15%)', color: 'hsl(352 82% 72%)', border: '1px solid hsl(352 55% 32%)' }
+                                  : { background: 'transparent', color: 'var(--foreground)', border: '1px solid var(--border)' };
+                            return (
+                              <>
+                                <div
+                                  className="flex size-14 items-center justify-center text-[28px] font-black leading-none md:size-16 md:text-[34px]"
+                                  style={branchStyle}
+                                >
+                                  {pillar.branch}
+                                </div>
+                                <div className="absolute -right-1.5 -top-1.5">
+                                  {renderMarkBadge(branchMark)}
+                                </div>
+                              </>
+                            );
+                          })()}
                         </div>
-                        <div className="mt-1 text-[10px] text-muted-foreground md:text-xs">
-                          {ELEMENT_NAMES[pillar.branchElement]}·{pillar.branchYinYang === 'yang' ? '阳' : '阴'}
+                        <div className="mt-1.5 label-mono text-[9px] text-muted-foreground" style={{ letterSpacing: '0.08em' }}>
+                          {ELEMENT_NAMES[pillar.branchElement]} · {pillar.branchYinYang === 'yang' ? '阳' : '阴'}
                         </div>
-                        <div className="mt-2 w-full">
-                          <div className="text-[10px] text-muted-foreground">藏干</div>
-                          <div className="mt-0.5 flex justify-center gap-1">
+                        <div className="mt-2.5 w-full">
+                          <div className="label-mono text-[8.5px] text-muted-foreground">藏干 HIDDEN</div>
+                          <div className="mt-1 flex flex-wrap justify-center gap-1">
                             {pillar.hiddenStems.map((s, i) => {
                               const stemEl = STEM_ELEMENTS[s];
                               const stemYY = STEM_YINYANG[s];
@@ -2252,13 +2214,20 @@ export default function BaZiAnalyzerPage() {
                               return (
                                 <span
                                   key={i}
-                                  className={`relative inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] ${
-                                    isJi ? 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200' : 'bg-muted'
-                                  }`}
+                                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-bold"
+                                  style={{
+                                    fontFamily: 'var(--font-mono)',
+                                    background: isJi ? 'hsl(168 40% 14%)' : 'var(--muted)',
+                                    color: isJi ? 'hsl(168 72% 64%)' : 'var(--muted-foreground)',
+                                    border: `1px solid ${isJi ? 'hsl(168 55% 30%)' : 'var(--border)'}`,
+                                  }}
                                 >
                                   {s}
                                   {isJi && (
-                                    <span className="ml-0.5 inline-flex size-[12px] items-center justify-center rounded-full bg-emerald-500 text-[8px] font-bold leading-none text-white">
+                                    <span
+                                      className="ml-0.5 inline-flex size-3 items-center justify-center text-[7.5px] font-bold leading-none"
+                                      style={{ background: 'var(--primary)', color: '#04100E', borderRadius: 1 }}
+                                    >
                                       吉
                                     </span>
                                   )}
@@ -2270,18 +2239,19 @@ export default function BaZiAnalyzerPage() {
                       </div>
                     ))}
                   </div>
-                  <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <span className="inline-block size-3 rounded bg-emerald-100 ring-1 ring-emerald-300" />
-                      用神（有助平衡）
+                  {/* 图例：发丝线元数据 */}
+                  <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-border pt-4 label-mono text-[10px] text-muted-foreground">
+                    <span className="flex items-center gap-2">
+                      <span className="inline-block size-2.5" style={{ background: 'hsl(168 40% 14%)', border: '1px solid hsl(168 55% 30%)' }} />
+                      用神 · 有助平衡
                     </span>
-                    <span className="flex items-center gap-1">
-                      <span className="inline-block size-3 rounded bg-rose-100 ring-1 ring-rose-300" />
-                      忌神（破坏平衡）
+                    <span className="flex items-center gap-2">
+                      <span className="inline-block size-2.5" style={{ background: 'hsl(352 45% 15%)', border: '1px solid hsl(352 55% 32%)' }} />
+                      忌神 · 破坏平衡
                     </span>
-                    <span className="flex items-center gap-1">
-                      <span className="inline-block size-3 rounded bg-muted" />
-                      中性（无直接助损）
+                    <span className="flex items-center gap-2">
+                      <span className="inline-block size-2.5 border border-border" />
+                      中性 · 无直接助损
                     </span>
                   </div>
                 </CardContent>
@@ -2291,49 +2261,35 @@ export default function BaZiAnalyzerPage() {
               {/* 二、命局模式分析 */}
               <Card
                 id="section-mingju-pattern"
-                className="scroll-mt-6 shadow-[0_4px_24px_-12px_rgba(0,0,0,0.08)]"
-                style={{ borderLeft: `3px solid ${solarTermTheme.palette.secondary}` }}
+                className="relative crosshair scroll-mt-6 rounded-sm border-border bg-card"
               >
-                <CardHeader className="pt-8 pb-5 text-center">
-                  <CardTitle
-                    className="flex justify-center text-center text-[28px] font-black leading-tight md:text-[34px]"
-                    style={{
-                      fontFamily: "'Noto Serif SC', serif",
-                      color: 'var(--foreground)',
-                      letterSpacing: '-0.01em',
-                    }}
-                  >
-                    命局模式分析
-                  </CardTitle>
-                  <CardDescription
-                    className="mt-3 text-[15px] font-normal md:text-[16px]"
-                    style={{
-                      fontFamily: "'Noto Serif SC', serif",
-                      opacity: 0.65,
-                      letterSpacing: '0.01em',
-                    }}
-                  >从<span className="mark-highlight">四柱结构</span>判断格局类型与主生克路线</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+                <div className="flex items-center justify-between border-b border-border px-5 py-3 md:px-8">
+                  <div className="flex items-center gap-3">
+                    <span className="label-mono text-primary">03 / PATTERN</span>
+                    <span className="h-3 w-px bg-border" />
+                    <span className="text-sm font-bold tracking-[0.15em] text-foreground">命局模式分析</span>
+                  </div>
+                  <span className="label-mono hidden text-muted-foreground md:inline">四柱结构 · 主生克路线</span>
+                </div>
+                <CardContent className="space-y-4 p-4 md:p-8">
                   {/* 年月太极（《太极阴阳法》：年为格局根本，年月组合构成命局核心太极） */}
                   {pattern.nianYueTaiJi && (
                     <div
                       className="rounded-lg p-4"
-                      style={{ backgroundColor: `${solarTermTheme.palette.primary}0A`, border: `1px solid ${solarTermTheme.palette.primary}22` }}
+                      style={{ backgroundColor: `${palette.primary}0A`, border: `1px solid ${palette.primary}22` }}
                     >
-                      <div className="text-sm font-bold" style={{ color: `${solarTermTheme.palette.primary}` }}><span className="mark-highlight">年月太极分析</span></div>
+                      <div className="text-sm font-bold" style={{ color: `${palette.primary}` }}><span className="mark-highlight">年月太极分析</span></div>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <span className="rounded-md px-2.5 py-1 text-[13px] font-black text-foreground" style={{ fontFamily: "'Noto Serif SC', serif", backgroundColor: `${solarTermTheme.palette.primary}14`, border: `1px solid ${solarTermTheme.palette.primary}30` }}>
+                        <span className="rounded-md px-2.5 py-1 text-[13px] font-black text-foreground" style={{ fontFamily: "'Noto Serif SC', serif", backgroundColor: `${palette.primary}14`, border: `1px solid ${palette.primary}30` }}>
                           {pattern.nianYueTaiJi.yearGZ}年 · {pattern.nianYueTaiJi.monthGZ}月
                         </span>
-                        <span className="rounded-md px-2.5 py-1 text-[13px] font-black" style={{ fontFamily: "'Noto Serif SC', serif", color: '#FFFFFF', backgroundColor: `${solarTermTheme.palette.primary}` }}>
+                        <span className="rounded-md px-2.5 py-1 text-[13px] font-black" style={{ fontFamily: "'Noto Serif SC', serif", color: '#FFFFFF', backgroundColor: `${palette.primary}` }}>
                           {pattern.nianYueTaiJi.taijiName}
                         </span>
-                        <span className="rounded-md px-2.5 py-1 text-[13px] font-black" style={{
-                          fontFamily: "'Noto Serif SC', serif",
-                          color: pattern.nianYueTaiJi.state === '两仪完整' ? '#047857' : pattern.nianYueTaiJi.state === '两仪受损' ? '#B45309' : '#B91C1C',
-                          backgroundColor: pattern.nianYueTaiJi.state === '两仪完整' ? '#ECFDF5' : pattern.nianYueTaiJi.state === '两仪受损' ? '#FFFBEB' : '#FEF2F2',
-                          border: `1px solid ${pattern.nianYueTaiJi.state === '两仪完整' ? '#A7F3D0' : pattern.nianYueTaiJi.state === '两仪受损' ? '#FDE68A' : '#FECACA'}`,
+                        <span className="rounded-sm px-2.5 py-1 text-[13px] font-black" style={{
+                          color: pattern.nianYueTaiJi.state === '两仪完整' ? '#34D399' : pattern.nianYueTaiJi.state === '两仪受损' ? '#FBBF24' : '#F87171',
+                          backgroundColor: pattern.nianYueTaiJi.state === '两仪完整' ? 'rgba(52,211,153,.10)' : pattern.nianYueTaiJi.state === '两仪受损' ? 'rgba(251,191,36,.10)' : 'rgba(248,113,113,.10)',
+                          border: `1px solid ${pattern.nianYueTaiJi.state === '两仪完整' ? 'rgba(52,211,153,.4)' : pattern.nianYueTaiJi.state === '两仪受损' ? 'rgba(251,191,36,.4)' : 'rgba(248,113,113,.4)'}`,
                         }}>
                           {pattern.nianYueTaiJi.state}
                         </span>
@@ -2363,9 +2319,9 @@ export default function BaZiAnalyzerPage() {
                   )}
                   <div
                     className="rounded-lg p-4"
-                    style={{ backgroundColor: `${solarTermTheme.palette.secondary}0C`, border: `1px solid ${solarTermTheme.palette.secondary}28` }}
+                    style={{ backgroundColor: `${palette.secondary}0C`, border: `1px solid ${palette.secondary}28` }}
                   >
-                    <div className="text-sm font-bold" style={{ color: `${solarTermTheme.palette.secondary}` }}><span className="mark-highlight">命局模式类型</span></div>
+                    <div className="text-sm font-bold" style={{ color: `${palette.secondary}` }}><span className="mark-highlight">命局模式类型</span></div>
                     <div className="mt-2 text-lg font-black text-foreground">{pattern.patternType}</div>
                     <p className="mt-2 text-sm leading-relaxed font-bold text-muted-foreground">{pattern.description}</p>
                   </div>
@@ -2374,7 +2330,7 @@ export default function BaZiAnalyzerPage() {
                     <div className="space-y-1.5">
                       {pattern.mainShengKe.map((rel, i) => (
                         <div key={i} className="flex items-center gap-2 rounded-md border border-border/60 bg-card px-3 py-1.5 text-sm font-bold">
-                          <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: `${solarTermTheme.palette.secondary}` }} />
+                          <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: `${palette.secondary}` }} />
                           {rel}
                         </div>
                       ))}
@@ -2387,50 +2343,37 @@ export default function BaZiAnalyzerPage() {
               {/* 三、大运流年分析 */}
               <Card
                 id="section-dayun"
-                className="scroll-mt-6 shadow-[0_4px_24px_-12px_rgba(0,0,0,0.08)]"
-                style={{ borderLeft: '3px solid #0EA5E9' }}
+                className="relative crosshair scroll-mt-6 rounded-sm border-border bg-card"
               >
-                <CardHeader className="pt-8 pb-5 text-center">
-                  <CardTitle
-                    className="flex justify-center text-center text-[28px] font-black leading-tight md:text-[34px]"
-                    style={{
-                      fontFamily: "'Noto Serif SC', serif",
-                      color: 'var(--foreground)',
-                      letterSpacing: '-0.01em',
-                    }}
-                  >
-                    大运流年分析
-                  </CardTitle>
-                  <CardDescription
-                    className="mt-3 text-[15px] font-normal md:text-[16px]"
-                    style={{
-                      fontFamily: "'Noto Serif SC', serif",
-                      opacity: 0.65,
-                      letterSpacing: '0.01em',
-                    }}
-                  >十年一大运、一年一流年，<span className="mark-highlight">岁运引动</span>定吉凶应期</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+                <div className="flex items-center justify-between border-b border-border px-5 py-3 md:px-8">
+                  <div className="flex items-center gap-3">
+                    <span className="label-mono text-primary">04 / FORTUNE</span>
+                    <span className="h-3 w-px bg-border" />
+                    <span className="text-sm font-bold tracking-[0.15em] text-foreground">大运流年分析</span>
+                  </div>
+                  <span className="label-mono hidden text-muted-foreground md:inline">十年大运 · 岁运引动</span>
+                </div>
+                <CardContent className="space-y-4 p-4 md:p-8">
                   {(() => {
                     // ===== 大运/流年 新九档字母等级视觉映射（S+ > S > A+ > A > B+ > B- > C > C- > D）=====
                     const LETTER_META: Record<string, { bg: string; border: string; text: string; ring: string; labelColor: string; dot: string }> = {
-                      'S+': { bg: 'linear-gradient(135deg,#fff1f2,#fef3c7)', border: '#E11D48', text: '#881337', ring: '#F43F5E', labelColor: '#9F1239', dot: '#E11D48' },
-                      'S':  { bg: 'linear-gradient(135deg,#fefce8,#fef9c3)', border: '#D97706', text: '#78350F', ring: '#F59E0B', labelColor: '#B45309', dot: '#F59E0B' },
-                      'A+': { bg: '#ECFDF5', border: '#059669', text: '#064E3B', ring: '#10B981', labelColor: '#047857', dot: '#059669' },
-                      'A':  { bg: '#F0FDF4', border: '#16A34A', text: '#14532D', ring: '#22C55E', labelColor: '#15803D', dot: '#16A34A' },
-                      'B+': { bg: '#F0F9FF', border: '#0284C7', text: '#082F49', ring: '#0EA5E9', labelColor: '#0369A1', dot: '#0284C7' },
-                      'B-': { bg: '#F8FAFC', border: '#475569', text: '#0F172A', ring: '#64748B', labelColor: '#334155', dot: '#64748B' },
-                      'C':  { bg: '#FFF7ED', border: '#EA580C', text: '#7C2D12', ring: '#F97316', labelColor: '#C2410C', dot: '#EA580C' },
-                      'C-': { bg: '#FEF2F2', border: '#DC2626', text: '#450A0A', ring: '#EF4444', labelColor: '#B91C1C', dot: '#DC2626' },
-                      'D':  { bg: 'linear-gradient(135deg,#18181B,#27272A)', border: '#09090B', text: '#FAFAFA', ring: '#52525B', labelColor: '#F4F4F5', dot: '#18181B' },
+                      'S+': { bg: 'linear-gradient(135deg,rgba(244,63,94,.12),rgba(251,191,36,.08))', border: '#FB7185', text: '#FDA4AF', ring: '#FB7185', labelColor: '#FB7185', dot: '#FB7185' },
+                      'S':  { bg: 'rgba(245,158,11,.10)', border: '#FBBF24', text: '#FDE68A', ring: '#FBBF24', labelColor: '#FBBF24', dot: '#FBBF24' },
+                      'A+': { bg: 'rgba(16,185,129,.10)', border: '#34D399', text: '#6EE7B7', ring: '#34D399', labelColor: '#34D399', dot: '#34D399' },
+                      'A':  { bg: 'rgba(34,197,94,.10)', border: '#4ADE80', text: '#86EFAC', ring: '#4ADE80', labelColor: '#4ADE80', dot: '#4ADE80' },
+                      'B+': { bg: 'rgba(14,165,233,.10)', border: '#38BDF8', text: '#7DD3FC', ring: '#38BDF8', labelColor: '#38BDF8', dot: '#38BDF8' },
+                      'B-': { bg: 'rgba(148,163,184,.10)', border: '#94A3B8', text: '#CBD5E1', ring: '#94A3B8', labelColor: '#94A3B8', dot: '#94A3B8' },
+                      'C':  { bg: 'rgba(249,115,22,.10)', border: '#FB923C', text: '#FDBA74', ring: '#FB923C', labelColor: '#FB923C', dot: '#FB923C' },
+                      'C-': { bg: 'rgba(239,68,68,.12)', border: '#F87171', text: '#FCA5A5', ring: '#F87171', labelColor: '#F87171', dot: '#F87171' },
+                      'D':  { bg: 'linear-gradient(135deg,#27272A,#3F3F46)', border: '#71717A', text: '#FAFAFA', ring: '#71717A', labelColor: '#E4E4E7', dot: '#71717A' },
                     };
                     // 旧五档兼容映射（数据未切换时的兜底）
                     const WUDANG_META: Record<string, { bg: string; border: string; text: string; ring: string; labelColor: string; dot: string }> = {
-                      '夯':     { bg: '#FFF7ED', border: '#B45309', text: '#0C0A09', ring: '#F59E0B', labelColor: '#9A3412', dot: '#B45309' },
-                      '人上人': { bg: '#F5F3FF', border: '#6D28D9', text: '#0C0A09', ring: '#8B5CF6', labelColor: '#5B21B6', dot: '#6D28D9' },
-                      'npc':    { bg: '#F8FAFC', border: '#475569', text: '#0F172A', ring: '#94A3B8', labelColor: '#334155', dot: '#475569' },
-                      '拉':     { bg: '#FFF7ED', border: '#EA580C', text: '#0C0A09', ring: '#FB923C', labelColor: '#C2410C', dot: '#EA580C' },
-                      '拉完了': { bg: '#FEF2F2', border: '#B91C1C', text: '#0C0A09', ring: '#EF4444', labelColor: '#991B1B', dot: '#B91C1C' },
+                      '夯':     { bg: 'rgba(245,158,11,.10)', border: '#FBBF24', text: '#FDE68A', ring: '#FBBF24', labelColor: '#FBBF24', dot: '#FBBF24' },
+                      '人上人': { bg: 'rgba(139,92,246,.10)', border: '#A78BFA', text: '#C4B5FD', ring: '#A78BFA', labelColor: '#A78BFA', dot: '#A78BFA' },
+                      'npc':    { bg: 'rgba(148,163,184,.10)', border: '#94A3B8', text: '#CBD5E1', ring: '#94A3B8', labelColor: '#94A3B8', dot: '#94A3B8' },
+                      '拉':     { bg: 'rgba(251,146,60,.10)', border: '#FB923C', text: '#FDBA74', ring: '#FB923C', labelColor: '#FB923C', dot: '#FB923C' },
+                      '拉完了': { bg: 'rgba(239,68,68,.12)', border: '#F87171', text: '#FCA5A5', ring: '#F87171', labelColor: '#F87171', dot: '#F87171' },
                     };
                     // 取显示等级：优先用新九档 letterLevel，兜底用老 fortune/level
                     const getLevel = (row: any): string => {
@@ -2481,12 +2424,12 @@ export default function BaZiAnalyzerPage() {
                           style={{ backgroundColor: 'rgba(14,165,233,0.08)', border: '1px solid rgba(14,165,233,0.22)' }}
                         >
                           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                            <div className="text-sm font-bold" style={{ color: isCurrentDY ? '#0284C7' : '#334155' }}>
+                            <div className="text-sm font-bold" style={{ color: isCurrentDY ? '#38BDF8' : '#94A3B8' }}>
                               <span className="mark-highlight">
                                 {isCurrentDY ? '当前大运' : '查看大运'}
                               </span>
                               {!isCurrentDY && (
-                                <span className="ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-black" style={{ backgroundColor: '#F3F4F6', color: '#334155', border: '1px solid #0C0A09' }}>
+                                <span className="ml-2 inline-flex items-center rounded-sm px-2 py-0.5 text-[10px] font-black" style={{ backgroundColor: 'rgba(56,189,248,.12)', color: '#7DD3FC', border: '1px solid rgba(56,189,248,.35)' }}>
                                   点击下方大运行可切换
                                 </span>
                               )}
@@ -2494,14 +2437,16 @@ export default function BaZiAnalyzerPage() {
                                 {activeCurve.label}
                               </span>
                             </div>
-                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-bold text-muted-foreground">
+                            <div
+                              className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] font-black"
+                              title={'分值梯度：S+ > +6 ｜ S: +4~+6 ｜ A+: +2~+4 ｜ A: 0~+2 ｜ B+: -2~0 ｜ B-: -4~-2 ｜ C: -6~-4 ｜ C-: -8~-6 ｜ D < -8'}
+                            >
                               {(['S+','S','A+','A','B+','B-','C','C-','D'] as const).map(lv => (
                                 <span key={lv} className="inline-flex items-center gap-1">
-                                  <span className="size-2.5 rounded-full" style={{ backgroundColor: LETTER_META[lv].dot }} />
-                                  {lv}
+                                  <span className="size-2.5" style={{ backgroundColor: LETTER_META[lv].dot }} />
+                                  <span style={{ color: LETTER_META[lv].text }}>{lv}</span>
                                 </span>
                               ))}
-                              <span className="text-[10px] text-muted-foreground/70">（分值梯度拉开：S+ {' > '} +6 ｜ S: +4~+6 ｜ A+: +2~+4 ｜ A: 0~+2 ｜ B+: -2~0 ｜ B-: -4~-2 ｜ C: -6~-4 ｜ C-: -8~-6 ｜ D {' < '} -8）</span>
                             </div>
                           </div>
                           <DaYunCurveChart items={activeCurve.items as any} />
@@ -2532,7 +2477,7 @@ export default function BaZiAnalyzerPage() {
                                     <Fragment key={dy.index}>
                                         <TableRow
                                           onClick={() => setExpandedDY(isOpen ? null : dy.index)}
-                                          className={`cursor-pointer select-none transition-colors hover:bg-sky-50/30 ${isCurrent ? 'bg-sky-50/60' : ''}`}
+                                          className={`cursor-pointer select-none transition-colors hover:bg-primary/5 ${isCurrent ? 'bg-primary/10' : ''}`}
                                         >
                                           <TableCell className="font-bold">
                                             <span className="inline-flex items-center gap-1.5">
@@ -2582,10 +2527,10 @@ export default function BaZiAnalyzerPage() {
                                           </TableCell>
                                         </TableRow>
                                         {isOpen && (
-                                          <TableRow className="bg-gradient-to-b from-sky-50/40 to-white/0 hover:bg-inherit">
-                                            <TableCell colSpan={6} className="border-t border-dashed border-sky-200/60 px-2 py-4 sm:px-6">
+                                          <TableRow className="hover:bg-inherit">
+                                            <TableCell colSpan={6} className="border-t border-dashed border-border px-2 py-4 sm:px-6">
                                               <div className="mb-2 flex items-center justify-between">
-                                                <div className="text-xs font-semibold text-sky-800">
+                                                <div className="text-xs font-semibold" style={{ color: '#7DD3FC' }}>
                                                   {dy.stem}
                                                   {dy.branch}运 · 下辖十年流年（每一年的总判和量化得分）
                                                 </div>
@@ -2599,22 +2544,21 @@ export default function BaZiAnalyzerPage() {
                                                   return (
                                                     <div
                                                       key={ln.year}
-                                                      className="group rounded-xl border p-2 transition-all hover:-translate-y-0.5 hover:shadow-md"
+                                                      className="group rounded-sm border p-2"
                                                       style={{
                                                         background: lmeta.bg,
                                                         borderColor: lmeta.border,
-                                                        boxShadow: `0 0 0 1px ${lmeta.ring}1A`,
                                                       }}
                                                     >
                                                       <div className="flex items-baseline justify-between">
                                                         <div className="text-xs font-bold tabular-nums">{ln.year}</div>
                                                         <div className="inline-flex items-center">
                                                           <span
-                                                            className="rounded-full px-1.5 py-0.5 text-[10px] font-black"
+                                                            className="rounded-sm px-1.5 py-0.5 text-[10px] font-black"
                                                             style={{
                                                               color: lmeta.labelColor,
                                                               border: `1px solid ${lmeta.border}`,
-                                                              background: 'rgba(255,255,255,0.78)',
+                                                              background: lmeta.bg,
                                                             }}
                                                           >
                                                             {displayLevel(ln)}
@@ -2679,7 +2623,7 @@ export default function BaZiAnalyzerPage() {
                                     className="mt-1 flex items-center justify-center gap-1.5 text-xs font-black flex-wrap"
                                     style={{ color: meta.labelColor, letterSpacing: '0.06em' }}
                                   >
-                                    <span className="rounded-full px-1.5 py-0.5" style={{ border: `1px solid ${meta.border}`, background: 'rgba(255,255,255,0.78)' }}>
+                                    <span className="rounded-sm px-1.5 py-0.5" style={{ border: `1px solid ${meta.border}`, background: meta.bg }}>
                                       {displayLevel(ln)}
                                     </span>
                                     <span className="font-bold opacity-85">
@@ -2703,99 +2647,68 @@ export default function BaZiAnalyzerPage() {
               {/* 四、命主速览 */}
               <Card
                 id="section-overview"
-                className="scroll-mt-6 overflow-hidden shadow-[0_4px_24px_-12px_rgba(0,0,0,0.08)]"
-                style={{
-                  background: `linear-gradient(135deg, ${solarTermTheme.palette.card}33 0%, #FFFFFF 60%, ${solarTermTheme.palette.muted}22 100%)`,
-                  border: `1px solid ${solarTermTheme.palette.primary}1A`,
-                }}
+                className="relative crosshair scroll-mt-6 overflow-hidden rounded-sm border-border bg-card"
               >
-                <div className="flex h-1.5 w-full">
-                  {solarTermTheme.colors.map((c, i) => (
-                    <div key={`hero-bar-${i}`} className="flex-1" style={{ backgroundColor: c }} />
-                  ))}
+                <div className="flex items-center justify-between border-b border-border px-5 py-3 md:px-8">
+                  <div className="flex items-center gap-3">
+                    <span className="label-mono text-primary">05 / OVERVIEW</span>
+                    <span className="h-3 w-px bg-border" />
+                    <span className="text-sm font-bold tracking-[0.15em] text-foreground">命主速览</span>
+                  </div>
+                  <span className="label-mono hidden text-muted-foreground md:inline">日主 · 格局 · 用神 · 整体定调</span>
                 </div>
-                <CardHeader className="pt-7 pb-1 text-center">
-                  <CardTitle
-                    className="flex justify-center text-center text-[28px] font-black leading-tight md:text-[34px]"
-                    style={{
-                      fontFamily: "'Noto Serif SC', serif",
-                      color: 'var(--foreground)',
-                      letterSpacing: '-0.01em',
-                    }}
-                  >
-                    命主速览
-                  </CardTitle>
-                  <CardDescription
-                    className="mt-3 text-[15px] font-normal md:text-[16px]"
-                    style={{
-                      fontFamily: "'Noto Serif SC', serif",
-                      opacity: 0.65,
-                      letterSpacing: '0.01em',
-                    }}
-                  >日主 · 格局 · 用神 · <span className="mark-highlight">整体定调</span>一图速览</CardDescription>
-                </CardHeader>
-                <CardContent className="pt-3">
+                <CardContent className="p-4 md:p-8">
                   <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                     {/* 1. 日主 */}
                     <div
-                      className="rounded-xl p-4 transition-transform hover:-translate-y-0.5"
+                      className="rounded-sm p-4"
                       style={{
-                        backgroundColor: `${solarTermTheme.palette.primary}0C`,
-                        border: `1px solid ${solarTermTheme.palette.primary}1F`,
+                        backgroundColor: `${TERMINAL_PALETTE.primary}0C`,
+                        border: `1px solid ${TERMINAL_PALETTE.primary}30`,
                       }}
                     >
-                      <div className="text-[10px] font-bold tracking-[0.2em] text-muted-foreground">日主</div>
-                      <div
-                        className="mt-2 text-3xl font-black"
-                        style={{ fontFamily: "'Noto Serif SC', serif" }}
-                      >
+                      <div className="label-mono text-[9.5px] text-muted-foreground">日主 DAY MASTER</div>
+                      <div className="mt-2 text-3xl font-black text-foreground">
                         {chart.day.stem}{ELEMENT_NAMES[chart.day.stemElement]}
                       </div>
-                      <div className="mt-1 text-xs text-muted-foreground">
+                      <div className="mt-1 label-mono text-[10px] text-muted-foreground">
                         {chart.day.stemYinYang === 'yang' ? '阳' : '阴'}{ELEMENT_NAMES[chart.day.stemElement]}
                       </div>
                     </div>
                     {/* 2. 格局 */}
                     <div
-                      className="rounded-xl p-4 transition-transform hover:-translate-y-0.5"
+                      className="rounded-sm p-4"
                       style={{
-                        backgroundColor: `${solarTermTheme.palette.secondary}0D`,
-                        border: `1px solid ${solarTermTheme.palette.secondary}22`,
+                        backgroundColor: `${TERMINAL_PALETTE.secondary}12`,
+                        border: `1px solid ${TERMINAL_PALETTE.secondary}33`,
                       }}
                     >
-                      <div className="text-[10px] font-bold tracking-[0.2em] text-muted-foreground">格局</div>
+                      <div className="label-mono text-[9.5px] text-muted-foreground">格局 PATTERN</div>
                       <div
-                        className="mt-2 text-xl font-black leading-tight"
-                        style={{
-                          fontFamily: "'Noto Serif SC', serif",
-                          lineHeight: '1.3',
-                          minHeight: '3.2rem',
-                        }}
+                        className="mt-2 text-lg font-bold leading-snug text-foreground"
+                        style={{ minHeight: '3.2rem' }}
                       >
                         {pattern.patternType || '常规格局'}
                       </div>
-                      <div className="mt-1 text-xs text-muted-foreground">
+                      <div className="mt-1 label-mono text-[10px] text-muted-foreground">
                         {monthQi.fourSymbol} · {monthQi.monthName}
                       </div>
                     </div>
                     {/* 3. 用神 */}
                     <div
-                      className="rounded-xl p-4 transition-transform hover:-translate-y-0.5"
+                      className="rounded-sm p-4"
                       style={{
-                        backgroundColor: 'rgba(16,185,129,0.08)',
-                        border: '1px solid rgba(16,185,129,0.25)',
+                        backgroundColor: 'hsl(168 40% 12%)',
+                        border: '1px solid hsl(168 50% 28%)',
                       }}
                     >
-                      <div className="text-[10px] font-bold tracking-[0.2em] text-muted-foreground">用神</div>
-                      <div
-                        className="mt-2 text-2xl font-black"
-                        style={{ fontFamily: "'Noto Serif SC', serif" }}
-                      >
+                      <div className="label-mono text-[9.5px] text-muted-foreground">用神 FAVORABLE</div>
+                      <div className="mt-2 text-2xl font-black text-foreground">
                         {yongJi.usefulElements.length > 0
                           ? yongJi.usefulElements.map((el) => ELEMENT_NAMES[el]).join(' · ')
                           : '—'}
                       </div>
-                      <div className="mt-1 text-xs text-emerald-700">
+                      <div className="mt-1 label-mono text-[10px]" style={{ color: 'hsl(168 70% 62%)' }}>
                         {yongJi.usefulElements.length > 0 ? '助平衡为吉' : '待细查'}
                       </div>
                     </div>
@@ -2832,30 +2745,29 @@ export default function BaZiAnalyzerPage() {
                         letterLv === 'B-' ? '#475569' :
                         letterLv === 'C' || letterLv === 'C-' ? '#C2410C' : '#7F1D1D';
                       const letterColorMap: Record<string, string> = {
-                        'S+': '#E11D48','S':'#D97706','A+':'#059669','A':'#16A34A',
-                        'B+':'#0284C7','B-':'#475569','C':'#EA580C','C-':'#DC2626','D':'#18181B',
+                        'S+': '#FB7185','S':'#FBBF24','A+':'#34D399','A':'#4ADE80',
+                        'B+':'#38BDF8','B-':'#94A3B8','C':'#FB923C','C-':'#F87171','D':'#E5E7EB',
                       };
-                      const letterCol = letterColorMap[letterLv] ?? '#059669';
+                      const letterCol = letterColorMap[letterLv] ?? '#34D399';
                       const fmt = (n: number) => (n >= 0 ? '+' : '') + Math.round(n * 10) / 10;
                       return (
                         <div
-                          className="col-span-2 rounded-xl p-4 transition-transform hover:-translate-y-0.5 md:col-span-1"
+                          className="col-span-2 rounded-sm p-4 md:col-span-1"
                           style={{
-                            background: `linear-gradient(135deg, #FFFFFF 0%, ${letterCol}0A 100%)`,
-                            border: `2px solid ${letterCol}`,
-                            boxShadow: `0 0 0 1px ${letterCol}26, 0 2px 10px -4px ${letterCol}50`,
+                            background: `linear-gradient(135deg, hsl(220 18% 10%) 0%, ${letterCol}14 100%)`,
+                            border: `1px solid ${letterCol}66`,
                           }}
                         >
                           <div className="flex items-center justify-between">
-                            <div className="text-[10px] font-bold tracking-[0.2em]" style={{ color: letterCol }}>
-                              格局综合分
+                            <div className="label-mono text-[9.5px]" style={{ color: letterCol }}>
+                              格局综合分 SCORE
                             </div>
                             <div className="flex items-center gap-1.5">
                               <span
-                                className="rounded-full px-2 py-0.5 text-[11px] font-black"
+                                className="rounded-sm px-2 py-0.5 text-[11px] font-black tabular-nums"
                                 style={{
                                   background: letterCol,
-                                  color: '#FFFFFF',
+                                  color: 'hsl(222 26% 6%)',
                                   letterSpacing: '0.06em',
                                 }}
                               >
@@ -2864,8 +2776,9 @@ export default function BaZiAnalyzerPage() {
                               <span
                                 className="rounded-sm px-1.5 py-0.5 text-[10px] font-black"
                                 style={{
-                                  color: '#FFFFFF',
-                                  backgroundColor: tagColor,
+                                  color: 'hsl(222 26% 6%)',
+                                  backgroundColor: letterCol,
+                                  opacity: 0.75,
                                 }}
                               >
                                 {lvTag}
@@ -2876,21 +2789,21 @@ export default function BaZiAnalyzerPage() {
                             <span className="text-[28px] font-black tabular-nums leading-none" style={{ color: letterCol }}>
                               {overall}
                             </span>
-                            <span className="text-xs font-bold text-muted-foreground">/ 100</span>
+                            <span className="label-mono text-[10px] text-muted-foreground">/ 100</span>
                           </div>
-                          <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full" style={{ backgroundColor: '#E5E7EB' }}>
-                            <div className="h-full rounded-full transition-all"
+                          <div className="mt-2 h-2.5 w-full overflow-hidden rounded-sm" style={{ backgroundColor: 'hsl(220 14% 18%)' }}>
+                            <div className="h-full rounded-sm transition-all"
                               style={{ width: `${Math.max(0, Math.min(100, overall))}%`, backgroundColor: letterCol }}
                             />
                           </div>
                           <div className="mt-2 space-y-0.5">
-                            <div className="text-[10px] font-bold leading-snug" style={{ color: '#0C0A09', opacity: 0.72 }}>
+                            <div className="label-mono text-[9.5px] leading-snug text-muted-foreground">
                               · 原局先天 {fmt(mingRaw)}（{mingPanScore?.letterLevel ?? '—'}）
                             </div>
-                            <div className="text-[10px] font-bold leading-snug" style={{ color: '#0C0A09', opacity: 0.72 }}>
+                            <div className="label-mono text-[9.5px] leading-snug text-muted-foreground">
                               · 一生大运均分 {fmt(dyAvg)}（{daysArr.length} 步）
                             </div>
-                            <div className="text-[10px] font-bold leading-snug" style={{ color: letterCol, opacity: 0.9 }}>
+                            <div className="label-mono text-[9.5px] leading-snug" style={{ color: letterCol }}>
                               · 综合 = 原局60% + 大运40%
                             </div>
                           </div>
@@ -2905,21 +2818,16 @@ export default function BaZiAnalyzerPage() {
               {/* 五、寒热气·阴阳气占比 */}
               <Card
                 id="section-pie"
-                className="scroll-mt-6 overflow-hidden shadow-[0_4px_24px_-12px_rgba(0,0,0,0.08)]"
-                style={{
-                  background: `linear-gradient(180deg, #FFFFFF 0%, ${solarTermTheme.palette.muted}10 100%)`,
-                  border: `1px solid ${solarTermTheme.palette.primary}18`,
-                }}
+                className="relative crosshair scroll-mt-6 overflow-hidden rounded-sm border-border bg-card"
               >
-                <CardHeader className="pt-7 pb-3 text-center">
-                  <CardTitle
-                    className="flex justify-center text-center text-[26px] font-black leading-tight md:text-[32px]"
-                    style={{ fontFamily: "'Noto Serif SC', serif", color: 'var(--foreground)', letterSpacing: '-0.01em' }}
-                  >
-                    寒热气·阴阳气占比
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pb-7">
+                <div className="flex items-center justify-between border-b border-border px-5 py-3 md:px-8">
+                  <div className="flex items-center gap-3">
+                    <span className="label-mono text-primary">06 / BALANCE</span>
+                    <span className="h-3 w-px bg-border" />
+                    <span className="text-sm font-bold tracking-[0.15em] text-foreground">寒热气 · 阴阳气占比</span>
+                  </div>
+                </div>
+                <CardContent className="p-4 md:p-8">
                   <div className="grid items-start gap-6 md:grid-cols-2">
                     {/* 左：寒热气 饼图（纯视觉，无文字解释） */}
                     <div className="flex flex-col items-center">
@@ -2964,47 +2872,33 @@ export default function BaZiAnalyzerPage() {
               {/* 七、特别提示 */}
               <Card
                 id="section-special-tips"
-                className="scroll-mt-6 overflow-hidden shadow-[0_4px_24px_-12px_rgba(0,0,0,0.08)]"
-                style={{
-                  borderLeft: '3px solid #0C0A09',
-                  background: `linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 60%, ${solarTermTheme.palette.muted}14 100%)`,
-                }}
+                className="relative crosshair scroll-mt-6 overflow-hidden rounded-sm border-border bg-card"
               >
-                <div className="flex h-[3px] w-full">
-                  <div className="w-full" style={{ background: 'linear-gradient(90deg, #94A3B8, #EF4444, #94A3B8, #7C3AED, #94A3B8)' }} />
+                <div className="flex items-center justify-between border-b border-border px-5 py-3 md:px-8">
+                  <div className="flex items-center gap-3">
+                    <span className="label-mono text-primary">07 / SPECIAL TIPS</span>
+                    <span className="h-3 w-px bg-border" />
+                    <span className="text-sm font-bold tracking-[0.15em] text-foreground">特别提示</span>
+                  </div>
+                  <span className="label-mono hidden text-muted-foreground md:inline">典籍检索 · 关键提示点</span>
                 </div>
-                <CardHeader className="pt-8 pb-5 text-center">
-                  <CardTitle
-                    className="flex justify-center text-center text-[28px] font-black leading-tight md:text-[34px]"
-                    style={{ fontFamily: "'Noto Serif SC', serif", color: 'var(--foreground)', letterSpacing: '-0.01em' }}
-                  >
-                    特别提示
-                  </CardTitle>
-                  <CardDescription
-                    className="mt-3 text-[15px] font-normal md:text-[16px]"
-                    style={{ fontFamily: "'Noto Serif SC', serif", opacity: 0.65, letterSpacing: '0.01em' }}
-                  >
-                    文章 &amp; 数据库中检索到与<span className="mark-highlight">本命局</span>高度契合的关键提示点
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3 pb-7 text-sm leading-relaxed font-bold">
+                <CardContent className="space-y-3 p-4 text-sm leading-relaxed md:p-8">
                   {specialTips.map((tip, i) => {
                     const tone =
                       tip.level === '关键'
-                        ? { title: '#0C0A09', bg: '#F3F4F6', border: '#6B7280', ring: '#4B5563', badgeBg: '#0C0A09', badgeText: '#fff', badgeLabel: '关键' }
+                        ? { title: '#CBD5E1', bg: 'rgba(148,163,184,.08)', border: 'rgba(148,163,184,.4)', ring: '#94A3B8', badgeBg: '#94A3B8', badgeText: 'hsl(222 26% 6%)', badgeLabel: '关键' }
                         : tip.level === '吉'
-                          ? { title: '#064E3B', bg: '#D1FAE5', border: '#10B981', ring: '#059669', badgeBg: '#059669', badgeText: '#fff', badgeLabel: '吉' }
+                          ? { title: '#6EE7B7', bg: 'rgba(52,211,153,.08)', border: 'rgba(52,211,153,.4)', ring: '#34D399', badgeBg: '#34D399', badgeText: 'hsl(222 26% 6%)', badgeLabel: '吉' }
                           : tip.level === '凶'
-                            ? { title: '#7F1D1D', bg: '#FEE2E2', border: '#EF4444', ring: '#B91C1C', badgeBg: '#DC2626', badgeText: '#fff', badgeLabel: '凶' }
-                            : { title: '#1F2937', bg: '#F3F4F6', border: '#9CA3AF', ring: '#6B7280', badgeBg: '#6B7280', badgeText: '#fff', badgeLabel: '平' };
+                            ? { title: '#FCA5A5', bg: 'rgba(248,113,113,.08)', border: 'rgba(248,113,113,.4)', ring: '#F87171', badgeBg: '#F87171', badgeText: 'hsl(222 26% 6%)', badgeLabel: '凶' }
+                            : { title: '#CBD5E1', bg: 'rgba(148,163,184,.08)', border: 'rgba(148,163,184,.35)', ring: '#94A3B8', badgeBg: '#64748B', badgeText: 'hsl(222 26% 6%)', badgeLabel: '平' };
                     return (
                       <div
                         key={`tip-${i}`}
-                        className="rounded-xl p-4 transition-all hover:-translate-y-0.5"
+                        className="rounded-sm p-4"
                         style={{
                           backgroundColor: tone.bg,
-                          border: `1px solid ${tone.border}60`,
-                          boxShadow: `0 2px 12px -6px ${tone.ring}50`,
+                          border: `1px solid ${tone.border}`,
                         }}
                       >
                         <div className="flex flex-wrap items-center gap-2">
@@ -3045,33 +2939,16 @@ export default function BaZiAnalyzerPage() {
 
 
               {/* 八、月气分析 */}
-              <Card id="section-monthqi" className="scroll-mt-6 overflow-hidden shadow-[0_4px_24px_-12px_rgba(0,0,0,0.08)]">
-                <div className="flex h-[3px] w-full">
-                  {solarTermTheme.colors.map((c, i) => (
-                    <div key={`mq-bar-${i}`} className="flex-1" style={{ backgroundColor: c }} />
-                  ))}
+              <Card id="section-monthqi" className="relative crosshair scroll-mt-6 overflow-hidden rounded-sm border-border bg-card">
+                <div className="flex items-center justify-between border-b border-border px-5 py-3 md:px-8">
+                  <div className="flex items-center gap-3">
+                    <span className="label-mono text-primary">08 / MONTH QI</span>
+                    <span className="h-3 w-px bg-border" />
+                    <span className="text-sm font-bold tracking-[0.15em] text-foreground">月气分析</span>
+                  </div>
+                  <span className="label-mono hidden text-muted-foreground md:inline">月令为权 · 吉凶准绳</span>
                 </div>
-                <CardHeader className="pt-8 pb-5 text-center">
-                  <CardTitle
-                    className="flex justify-center text-center text-[28px] font-black leading-tight md:text-[34px]"
-                    style={{
-                      fontFamily: "'Noto Serif SC', serif",
-                      color: 'var(--foreground)',
-                      letterSpacing: '-0.01em',
-                    }}
-                  >
-                    月气分析
-                  </CardTitle>
-                  <CardDescription
-                    className="mt-3 text-[15px] font-normal md:text-[16px]"
-                    style={{
-                      fontFamily: "'Noto Serif SC', serif",
-                      opacity: 0.65,
-                      letterSpacing: '0.01em',
-                    }}
-                  ><span className="mark-highlight">月令</span>为权，一切吉凶以<span className="mark-highlight">月气</span>为判断标准</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 p-4 md:p-8">
                   {/* 月对日主·十二长生状态 */}
                   <MonthRiZhuChangShengCard
                     chart={chart}
@@ -3082,7 +2959,7 @@ export default function BaZiAnalyzerPage() {
                     <div
                       className="flex size-16 shrink-0 items-center justify-center rounded-xl text-2xl font-black"
                       style={{
-                        backgroundColor: `${solarTermTheme.palette.primary}14`,
+                        backgroundColor: `${palette.primary}14`,
                         color: 'var(--foreground)',
                         fontFamily: "'Noto Serif SC', serif",
                       }}
@@ -3115,7 +2992,7 @@ export default function BaZiAnalyzerPage() {
                   </div>
                   <div
                     className="rounded-lg p-4"
-                    style={{ backgroundColor: `${solarTermTheme.palette.primary}0D` }}
+                    style={{ backgroundColor: `${palette.primary}0D` }}
                   >
                     <div
                       className="text-sm font-black"
@@ -3133,86 +3010,73 @@ export default function BaZiAnalyzerPage() {
               {/* 九、用神忌神判断 */}
               <Card
                 id="section-yongji"
-                className="scroll-mt-6 shadow-[0_4px_24px_-12px_rgba(0,0,0,0.08)]"
-                style={{ borderLeft: `3px solid ${solarTermTheme.palette.primary}` }}
+                className="relative crosshair scroll-mt-6 rounded-sm border-border bg-card"
               >
-                <CardHeader className="pt-8 pb-5 text-center">
-                  <CardTitle
-                    className="flex justify-center text-center text-[28px] font-black leading-tight md:text-[34px]"
-                    style={{
-                      fontFamily: "'Noto Serif SC', serif",
-                      color: 'var(--foreground)',
-                      letterSpacing: '-0.01em',
-                    }}
-                  >
-                    用神忌神判断
-                  </CardTitle>
-                  <CardDescription
-                    className="mt-3 text-[15px] font-normal md:text-[16px]"
-                    style={{
-                      fontFamily: "'Noto Serif SC', serif",
-                      opacity: 0.65,
-                      letterSpacing: '0.01em',
-                    }}
-                  >以<span className="mark-highlight">平衡</span>为原则定用忌方向</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+                <div className="flex items-center justify-between border-b border-border px-5 py-3 md:px-8">
+                  <div className="flex items-center gap-3">
+                    <span className="label-mono text-primary">09 / FAVORABLE & TABOO</span>
+                    <span className="h-3 w-px bg-border" />
+                    <span className="text-sm font-bold tracking-[0.15em] text-foreground">用神忌神判断</span>
+                  </div>
+                  <span className="label-mono hidden text-muted-foreground md:inline">平衡为则</span>
+                </div>
+                <CardContent className="space-y-4 p-4 md:p-8">
                   <div className="flex gap-4 flex-col md:flex-row">
-                    <div className="flex-1 rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
-                      <div className="text-sm font-bold text-emerald-700"><span className="mark-highlight">用神</span>（喜用）</div>
+                    <div className="flex-1 rounded-sm border p-4" style={{ borderColor: 'hsl(168 50% 28%)', background: 'hsl(168 40% 11%)' }}>
+                      <div className="label-mono text-[10px] font-bold" style={{ color: 'hsl(168 70% 62%)' }}>用神 FAVORABLE · 喜用</div>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {yongJi.usefulElements.map((el) => (
-                          <span key={el} className="rounded-lg bg-emerald-500 px-3 py-1 text-sm font-bold text-white">
+                          <span key={el} className="rounded-sm px-3 py-1 text-sm font-black" style={{ background: 'hsl(172 76% 47%)', color: 'hsl(222 26% 6%)' }}>
                             {ELEMENT_NAMES[el]}
                           </span>
                         ))}
                       </div>
-                      <div className="mt-2 text-xs font-bold text-emerald-600">有利于<span className="mark-highlight">阴阳平衡</span>，助之则吉</div>
+                      <div className="mt-2 label-mono text-[10px]" style={{ color: 'hsl(168 60% 66%)' }}>有利于阴阳平衡，助之则吉</div>
                     </div>
-                    <div className="flex-1 rounded-xl border border-rose-200 bg-rose-50/60 p-4">
-                      <div className="text-sm font-bold text-rose-700"><span className="mark-highlight">忌神</span>（所忌）</div>
+                    <div className="flex-1 rounded-sm border p-4" style={{ borderColor: 'hsl(352 50% 32%)', background: 'hsl(352 38% 11%)' }}>
+                      <div className="label-mono text-[10px] font-bold" style={{ color: 'hsl(352 80% 72%)' }}>忌神 TABOO · 所忌</div>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {yongJi.tabooElements.map((el) => (
-                          <span key={el} className="rounded-lg bg-rose-500 px-3 py-1 text-sm font-bold text-white">
+                          <span key={el} className="rounded-sm px-3 py-1 text-sm font-black" style={{ background: 'hsl(352 70% 56%)', color: 'hsl(222 26% 6%)' }}>
                             {ELEMENT_NAMES[el]}
                           </span>
                         ))}
                       </div>
-                      <div className="mt-2 text-xs font-bold text-rose-600">破坏<span className="mark-highlight">阴阳平衡</span>，助之则凶</div>
+                      <div className="mt-2 label-mono text-[10px]" style={{ color: 'hsl(352 70% 74%)' }}>破坏阴阳平衡，助之则凶</div>
                     </div>
                   </div>
 
                   {/* 土专区：中宫承载制衡之气（数据书优先级 2，独立判定是否取用土） */}
                   {earthXiJi && (
-                    <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+                    <div className="rounded-sm border p-4" style={{ borderColor: 'rgba(251,191,36,.35)', background: 'rgba(251,191,36,.07)' }}>
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="text-sm font-bold text-amber-800"><span className="mark-highlight">土</span>（中宫·承载制衡）</div>
+                        <div className="text-sm font-bold" style={{ color: '#FCD34D' }}>土（中宫 · 承载制衡）</div>
                         <span
-                          className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-black"
+                          className="label-mono inline-flex items-center rounded-sm px-2.5 py-0.5 text-[10px] font-black"
                           style={{
-                            background: earthXiJi.decision === 'useful' ? '#F59E0B' : earthXiJi.decision === 'taboo' ? '#B45309' : '#A8A29E',
-                            color: '#FFFFFF',
+                            background: earthXiJi.decision === 'useful' ? '#FBBF24' : earthXiJi.decision === 'taboo' ? '#F87171' : '#94A3B8',
+                            color: 'hsl(222 26% 6%)',
                           }}
                         >
                           {earthXiJi.overall}
                         </span>
                       </div>
-                      <p className="mt-2 text-sm leading-relaxed font-bold text-muted-foreground">{earthXiJi.reason}</p>
+                      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{earthXiJi.reason}</p>
                       {earthXiJi.details.length > 0 && (
                         <div className="mt-3 flex flex-wrap gap-2">
                           {earthXiJi.details.map((d) => (
                             <span
                               key={d.ganzhi}
-                              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold"
+                              className="inline-flex items-center gap-1 rounded-sm px-2 py-1 text-xs font-bold"
                               style={{
-                                background: d.mark === 'useful' ? '#FEF3C7' : d.mark === 'taboo' ? '#FDE68A' : '#F5F5F4',
+                                background: d.mark === 'useful' ? 'rgba(251,191,36,.14)' : d.mark === 'taboo' ? 'rgba(248,113,113,.12)' : 'rgba(148,163,184,.1)',
                                 color: 'var(--foreground)',
-                                border: `1px solid ${d.mark === 'useful' ? '#F59E0B' : d.mark === 'taboo' ? '#B45309' : '#D6D3D1'}`,
+                                border: `1px solid ${d.mark === 'useful' ? 'rgba(251,191,36,.45)' : d.mark === 'taboo' ? 'rgba(248,113,113,.45)' : 'rgba(148,163,184,.35)'}`,
                               }}
                               title={d.note}
                             >
                               {d.ganzhi}
-                              <span className="text-[10px] font-black" style={{ color: d.mark === 'useful' ? '#B45309' : d.mark === 'taboo' ? '#92400E' : '#78716C' }}>
+                              <span className="label-mono text-[9px] font-black" style={{ color: d.mark === 'useful' ? '#FBBF24' : d.mark === 'taboo' ? '#F87171' : '#94A3B8' }}>
                                 {d.mark === 'useful' ? '宜用' : d.mark === 'taboo' ? '忌' : '调和'}
                               </span>
                             </span>
@@ -3222,7 +3086,7 @@ export default function BaZiAnalyzerPage() {
                     </div>
                   )}
 
-                  <p className="text-sm leading-relaxed font-bold text-muted-foreground">{yongJi.description}</p>
+                  <p className="text-sm leading-relaxed text-muted-foreground">{yongJi.description}</p>
                 </CardContent>
               </Card>
 
@@ -3230,22 +3094,16 @@ export default function BaZiAnalyzerPage() {
               {/* 十、象意·财富·感情·学历（《象法》数据书，优先级 2，最终参考） */}
               <Card
                 id="section-xiangfa"
-                className="scroll-mt-6 shadow-[0_4px_24px_-12px_rgba(0,0,0,0.08)]"
-                style={{ borderLeft: `3px solid ${solarTermTheme.palette.accent}` }}
+                className="relative crosshair scroll-mt-6 rounded-sm border-border bg-card"
               >
-                <CardHeader className="pt-8 pb-5 text-center">
-                  <CardTitle
-                    className="flex justify-center text-center text-[28px] font-black leading-tight md:text-[34px]"
-                    style={{
-                      fontFamily: "'Noto Serif SC', serif",
-                      color: 'var(--foreground)',
-                      letterSpacing: '-0.01em',
-                    }}
-                  >
-                    象意
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
+                <div className="flex items-center justify-between border-b border-border px-5 py-3 md:px-8">
+                  <div className="flex items-center gap-3">
+                    <span className="label-mono text-primary">10 / XIANG FA</span>
+                    <span className="h-3 w-px bg-border" />
+                    <span className="text-sm font-bold tracking-[0.15em] text-foreground">象意 · 财富 · 感情 · 学历</span>
+                  </div>
+                </div>
+                <CardContent className="p-4 md:p-8">
                   {xiangYi && wealthVerdict ? (
                     <Tabs defaultValue="xiangyi" className="w-full">
                       <TabsList className="w-full justify-center">
@@ -3282,66 +3140,31 @@ export default function BaZiAnalyzerPage() {
 
           {/* 右：报告目录 TOC（大屏 sticky） */}
           <aside className="hidden lg:block">
-            <div
-              className="sticky top-6 space-y-2 rounded-2xl p-5 shadow-[0_4px_24px_-12px_rgba(0,0,0,0.08)]"
-              style={{
-                background: `linear-gradient(180deg, #FFFFFF 0%, ${solarTermTheme.palette.muted}2A 100%)`,
-                border: `1px solid ${solarTermTheme.palette.primary}18`,
-              }}
-            >
-              <div
-                className="mb-3 flex justify-center text-center text-sm font-black"
-                style={{
-                  fontFamily: "'Noto Serif SC', serif",
-                  letterSpacing: '0.08em',
-                  color: 'var(--foreground)',
-                }}
-              >
-                报告目录
+            <div className="sticky top-6 rounded-sm border border-border bg-card p-4">
+              <div className="label-mono mb-3 border-b border-border pb-2 text-[10px] text-primary">
+                INDEX / 报告目录
               </div>
               {[
-                { id: 'pillars', label: '一、四柱排盘总览' },
-                { id: 'mingju-pattern', label: '二、命局模式分析' },
-                { id: 'dayun', label: '三、大运流年分析' },
-                { id: 'overview', label: '四、命主速览' },
-                { id: 'pie', label: '五、寒热气·阴阳气占比' },
-                { id: 'special-tips', label: '六、特别提示' },
-                { id: 'monthqi', label: '七、月气分析' },
-                { id: 'yongji', label: '八、用神忌神判断' },
-                { id: 'xiangfa', label: '九、象意' },
+                { id: 'pillars', no: '02', label: '四柱排盘总览' },
+                { id: 'mingju-pattern', no: '03', label: '命局模式分析' },
+                { id: 'dayun', no: '04', label: '大运流年分析' },
+                { id: 'overview', no: '05', label: '命主速览' },
+                { id: 'pie', no: '06', label: '寒热气·阴阳气' },
+                { id: 'special-tips', no: '07', label: '特别提示' },
+                { id: 'monthqi', no: '08', label: '月气分析' },
+                { id: 'yongji', no: '09', label: '用神忌神判断' },
+                { id: 'xiangfa', no: '10', label: '象意' },
               ].map((item) => (
                 <a
                   key={item.id}
                   href={`#section-${item.id}`}
-                  className="group flex justify-center text-center rounded-lg px-2.5 py-1.5 text-sm font-bold text-muted-foreground transition-all hover:pl-3"
-                  style={{
-                    fontFamily: "'Noto Serif SC', serif",
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLAnchorElement).style.backgroundColor = `${solarTermTheme.palette.primary}12`;
-                    (e.currentTarget as HTMLAnchorElement).style.color = 'var(--foreground)';
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'transparent';
-                    (e.currentTarget as HTMLAnchorElement).style.color = '';
-                  }}
+                  className="group flex items-center gap-3 rounded-sm px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-primary/10 hover:text-foreground"
                 >
-                  <span className="truncate group-hover:font-black">{item.label}</span>
+                  <span className="label-mono text-[10px] text-primary/70 group-hover:text-primary">{item.no}</span>
+                  <span className="truncate">{item.label}</span>
                 </a>
               ))}
-              {/* 底部节气色板小横条装饰 */}
-              <div className="mt-5 flex h-1.5 w-full overflow-hidden rounded-full">
-                {solarTermTheme.colors.map((c, i) => (
-                  <div key={`toc-bar-${i}`} className="flex-1" style={{ backgroundColor: c }} />
-                ))}
-              </div>
-              <div
-                className="mt-2 text-center text-[10px] font-bold tracking-widest text-muted-foreground"
-                style={{
-                  fontFamily: "'Noto Serif SC', serif",
-                  letterSpacing: '0.2em',
-                }}
-              >
+              <div className="label-mono mt-4 border-t border-border pt-2 text-[9.5px] leading-relaxed text-muted-foreground">
                 {solarTermTheme.name} · {chart.birthInfo.solarDate}
               </div>
             </div>
@@ -3357,7 +3180,7 @@ export default function BaZiAnalyzerPage() {
             沛然堂 · 以太极阴阳为体，以月气动应为用
           </p>
           <p className="mt-1 text-xs">本工具仅供命理研究与学习参考，不构成任何人生决策建议</p>
-          <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-[11px] font-bold text-muted-foreground">
+          <p className="label-mono mt-3 inline-flex items-center gap-2 rounded-sm border border-border/60 bg-muted/40 px-3 py-1 text-[10px] font-bold text-muted-foreground">
             v{APP_VERSION} · 正式版
           </p>
           {/* 内部代码声明：置于页面最下方 */}
