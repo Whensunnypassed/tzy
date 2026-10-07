@@ -75,24 +75,30 @@ const ELEMENT_NAMES: Record<string, string> = {
   water: '水',
 };
 
-// 五行正色（符合 WCAG AA，木青/火朱/土黄/金白/水玄）
-const ELEMENT_COLORS: Record<string, string> = ELEMENT_PALETTE_FORMAL;
+// 五行 Kawaii 马卡龙色（木绿/火粉/土黄/金紫/水蓝）
+const ELEMENT_COLORS: Record<string, string> = {
+  wood: '#4ADE80',
+  fire: '#FB7185',
+  earth: '#FBBF24',
+  metal: '#A78BFA',
+  water: '#38BDF8',
+};
 
 // ============ 命盘终端 MINGPAN TERMINAL：统一深色色板 ============
 // 界面配色不再随节气变化；节气仅保留名称与诗句作为元数据
 const TERMINAL_PALETTE = {
-  bg1: '#0A0C10',
-  bg2: '#0D1016',
-  card: '#10141B',
-  primary: '#1FD4BC', // 信号青
-  secondary: '#4E93EE', // 冷靛蓝
-  accent: '#F2A93B', // 警示琥珀
-  muted: '#1D2025',
-  prose: '#E0E5EC',
+  bg1: '#FFF0F8',
+  bg2: '#F5ECFF',
+  card: '#FFFFFF',
+  primary: '#FF6BB5', // 热粉 Blingee 主色
+  secondary: '#C4B5FD', // 薰衣草紫
+  accent: '#86EFAC', // 薄荷绿
+  muted: '#FCE7F3',
+  prose: '#831843',
 } as const;
 
-// 终端光谱：用于发丝线/读数点缀（克制使用）
-const TERMINAL_SPECTRUM = ['#1FD4BC', '#4E93EE', '#8B7CF6', '#F2A93B', '#E85D6C', '#2A313C'];
+// 彩虹光谱：Kawaii 马卡龙五色
+const TERMINAL_SPECTRUM = ['#FF6BB5', '#C4B5FD', '#7DD3FC', '#86EFAC', '#FDE047', '#F472B6'];
 
 // ============ 辅助组件：SVG 环形百分比饼图 ============
 function DonutPieChart({
@@ -285,15 +291,15 @@ function DaYunCurveChart({
           items.reduce((a, b) => a + b.displayScore, 0) / Math.max(1, items.length)
         )} opacity="0.9" />
 
-        {/* 折线 */}
+        {/* 折线：热粉闪光 */}
         <polyline
           points={polylinePts}
           fill="none"
-          stroke="#22D3EE"
-          strokeWidth="2.4"
+          stroke="#FF6BB5"
+          strokeWidth="2.8"
           strokeLinecap="round"
           strokeLinejoin="round"
-          style={{ filter: 'drop-shadow(0 0 4px rgba(34,211,238,0.45))' }}
+          style={{ filter: 'drop-shadow(0 0 6px rgba(255,107,181,0.5))' }}
         />
 
         {/* 点 + 年份标签 + 干支 + 分数 */}
@@ -302,8 +308,8 @@ function DaYunCurveChart({
           const c = dotColor(p.it.level);
           return (
             <g key={i}>
-              <circle cx={p.x} cy={p.y} r="5" fill="hsl(222 26% 8%)" stroke={c} strokeWidth="2" />
-              <circle cx={p.x} cy={p.y} r="2.2" fill={c} />
+              <circle cx={p.x} cy={p.y} r="5.5" fill="white" stroke={c} strokeWidth="2.5" />
+              <circle cx={p.x} cy={p.y} r="2.5" fill={c} />
               {/* 年份 */}
               <text
                 x={p.x}
@@ -1404,49 +1410,68 @@ export default function BaZiAnalyzerPage() {
           </div>
         </div>
 
-        {/* 主网格：左侧标题系统 / 右侧诗句元数据面板 */}
-        <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-10 px-4 pb-16 pt-14 md:grid-cols-12 md:gap-8 md:px-6 md:pb-24 md:pt-20">
-          <div className="md:col-span-7">
-            {/* 编号 overline */}
-            <p className="label-mono mb-6 text-primary">
-              BAZI ANALYSIS SYSTEM
-            </p>
-            {/* 主标题：粗黑体，左对齐 */}
+        {/* 主视觉：Kawaii Webcore 古早网页风 */}
+        <div className="mx-auto w-full max-w-7xl px-4 pb-16 pt-14 md:px-6 md:pb-24 md:pt-20">
+          <div className="relative flex flex-col items-center text-center">
+            {/* 顶部装饰星星 */}
+            <div className="mb-4 flex items-center gap-3">
+              <span className="sparkle-decor text-xl">✦</span>
+              <span className="kawaii-tag">
+                <span>♡</span> BAZI ANALYSIS SYSTEM <span>♡</span>
+              </span>
+              <span className="sparkle-decor text-xl" style={{ animationDelay: '0.5s' }}>✧</span>
+            </div>
+
+            {/* 主标题：彩虹闪光 + 大字号 */}
             <h1
-              className="text-[56px] font-black leading-[0.95] tracking-tight text-foreground md:text-[96px] lg:text-[112px]"
+              className="text-blingee text-[56px] font-black leading-[0.95] tracking-tight md:text-[96px] lg:text-[112px]"
+              style={{ fontFamily: "'Fredoka', 'Zen Maru Gothic', 'Noto Sans SC', sans-serif" }}
             >
               沛然堂
             </h1>
-            {/* 副标题行：发丝线 + 中文系统名 */}
-            <div className="mt-6 flex items-center gap-4">
-              <span className="h-px w-12 bg-primary" />
-              <span className="text-base font-bold tracking-[0.3em] text-foreground/90 md:text-lg">
-                八字命理智能分析系统
+
+            {/* 副标题：彩虹分割线 + 可爱标签 */}
+            <div className="mt-6 flex w-full max-w-md flex-col items-center gap-4">
+              <hr className="hr-rainbow w-48" />
+              <span className="text-base font-bold tracking-wide text-foreground/80 md:text-lg" style={{ fontFamily: "'Zen Maru Gothic', 'Noto Sans SC', sans-serif" }}>
+                ✦ 八字命理智能分析系统 ✦
               </span>
             </div>
-            <p className="mt-8 max-w-xl text-sm leading-relaxed text-muted-foreground md:text-base">
+
+            <p className="mt-6 max-w-xl text-sm leading-relaxed text-muted-foreground md:text-base">
               以太极阴阳为体 · 以月气动应为用 · 以平衡为得失
             </p>
-          </div>
 
-          {/* 节气诗句：降级为毛体点缀，置于带发丝线的元数据面板 */}
-          <div className="relative md:col-span-5 md:pt-2">
-            <div className="relative crosshair border border-border bg-card/60 p-6 md:p-8">
-              <p className="label-mono mb-5 text-muted-foreground">
-                SOLAR TERM / {solarTermTheme.name}
-              </p>
-              <p
-                className="text-[26px] leading-[1.5] text-foreground/85 md:text-[30px]"
-                style={{
-                  fontFamily: "'Maoti', 'Noto Serif SC', serif",
-                  letterSpacing: '0.05em',
-                }}
-              >
-                「{solarTermTheme.poem}」
-              </p>
-              <p className="mt-5 label-mono text-muted-foreground" style={{ textTransform: 'none', letterSpacing: '0.08em', fontSize: 11.5 }}>
-                —— {solarTermTheme.source}
-              </p>
+            {/* 节气诗句卡：Kawaii 风格 */}
+            <div className="mt-10 w-full max-w-lg">
+              <div className="relative rounded-3xl border-2 border-white/70 bg-white/70 p-6 shadow-xl shadow-primary/20 backdrop-blur-sm md:p-8">
+                {/* 装饰蝴蝶结 */}
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <span className="text-2xl bounce-cute" style={{ display: 'inline-block', animationDelay: '0.3s' }}>🎀</span>
+                </div>
+                <p className="label-cute mb-4" style={{ fontFamily: "'Fredoka', 'Zen Maru Gothic', sans-serif" }}>
+                  ✦ {solarTermTheme.name} ✦
+                </p>
+                <p
+                  className="text-[22px] leading-[1.6] text-foreground/85 md:text-[26px]"
+                  style={{
+                    fontFamily: "'Maoti', 'Noto Serif SC', serif",
+                    letterSpacing: '0.05em',
+                    color: 'hsl(330 45% 30%)',
+                  }}
+                >
+                  「{solarTermTheme.poem}」
+                </p>
+                <p className="mt-4 text-xs font-bold text-muted-foreground" style={{ letterSpacing: '0.08em' }}>
+                  —— {solarTermTheme.source}
+                </p>
+                {/* 底部闪光装饰 */}
+                <div className="mt-4 flex justify-center gap-2">
+                  <span className="sparkle-decor">⋆</span>
+                  <span className="sparkle-decor" style={{ animationDelay: '0.3s' }}>✧</span>
+                  <span className="sparkle-decor" style={{ animationDelay: '0.6s' }}>⋆</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1455,28 +1480,30 @@ export default function BaZiAnalyzerPage() {
       <main
         className="mx-auto w-full max-w-7xl space-y-10 px-4 py-12 md:space-y-14 md:px-6 md:py-16"
       >
-        {/* 输入表单区：终端控制台风格 */}
+        {/* 输入表单区：Kawaii Webcore 风格 */}
         <Card
-          className="relative crosshair overflow-hidden rounded-sm border-border bg-card"
+          className="relative overflow-hidden"
         >
-          {/* 区块标题栏：瑞士编号系统 */}
-          <div className="flex items-center justify-between border-b border-border px-5 py-3 md:px-8">
+          {/* 区块标题栏：可爱编号 */}
+          <div className="flex items-center justify-between border-b-2 border-border/60 bg-gradient-to-r from-pink-50/80 via-purple-50/60 to-blue-50/60 px-5 py-4 md:px-8">
             <div className="flex items-center gap-3">
-              <span className="label-mono text-primary">01 / INPUT</span>
-              <span className="h-3 w-px bg-border" />
-              <span className="text-sm font-bold tracking-[0.15em] text-foreground">出生信息录入</span>
+              <span className="label-cute">01</span>
+              <span className="text-sm font-black tracking-wide text-foreground" style={{ fontFamily: "'Fredoka', 'Zen Maru Gothic', sans-serif" }}>
+                ✿ 出生信息录入 ✿
+              </span>
             </div>
-            <span className="label-mono hidden text-muted-foreground md:inline">
-              {solarTermTheme.name} · 本地计算 · 不上传
+            <span className="hidden text-xs font-bold text-muted-foreground md:inline" style={{ fontFamily: "'Fredoka', sans-serif" }}>
+              {solarTermTheme.name} · 本地计算 · 不上传 ♡
             </span>
           </div>
 
           <CardHeader className="pt-8 pb-4 md:px-8">
             <div>
               <CardTitle
-                className="text-2xl font-black leading-tight tracking-tight text-foreground md:text-[28px]"
+                className="text-2xl font-black leading-tight text-foreground md:text-[28px]"
+                style={{ fontFamily: "'Fredoka', 'Zen Maru Gothic', 'Noto Sans SC', sans-serif" }}
               >
-                输入出生信息
+                <span className="text-blingee">输入出生信息</span>
               </CardTitle>
               <CardDescription
                 className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground"
@@ -2087,17 +2114,18 @@ export default function BaZiAnalyzerPage() {
               {/* 一、四柱排盘总览 */}
               <Card
                 id="section-pillars"
-                className="relative crosshair scroll-mt-6 rounded-sm border-border bg-card"
+                className="relative scroll-mt-6"
               >
-                {/* 区块标题栏 */}
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-5 py-3 md:px-8">
+                {/* 区块标题栏：Kawaii 风格 */}
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-border/60 bg-gradient-to-r from-pink-50/80 via-purple-50/60 to-blue-50/60 px-5 py-4 md:px-8">
                   <div className="flex items-center gap-3">
-                    <span className="label-mono text-primary">02 / NATAL CHART</span>
-                    <span className="h-3 w-px bg-border" />
-                    <span className="text-sm font-bold tracking-[0.15em] text-foreground">四柱排盘总览</span>
+                    <span className="label-cute">02</span>
+                    <span className="text-sm font-black tracking-wide text-foreground" style={{ fontFamily: "'Fredoka', 'Zen Maru Gothic', sans-serif" }}>
+                      ✿ 四柱排盘总览 ✿
+                    </span>
                   </div>
-                  <span className="label-mono text-muted-foreground">
-                    {chart.birthInfo.solarDate} · {chart.gender === 'male' ? '乾造' : '坤造'} · 真太阳时 {chart.birthInfo.trueSolarTime}
+                  <span className="text-xs font-bold text-muted-foreground" style={{ fontFamily: "'Fredoka', sans-serif" }}>
+                    {chart.birthInfo.solarDate} · {chart.gender === 'male' ? '乾造' : '坤造'} · 真太阳时 {chart.birthInfo.trueSolarTime} ♡
                   </span>
                 </div>
 
@@ -2357,23 +2385,23 @@ export default function BaZiAnalyzerPage() {
                   {(() => {
                     // ===== 大运/流年 新九档字母等级视觉映射（S+ > S > A+ > A > B+ > B- > C > C- > D）=====
                     const LETTER_META: Record<string, { bg: string; border: string; text: string; ring: string; labelColor: string; dot: string }> = {
-                      'S+': { bg: 'linear-gradient(135deg,rgba(244,63,94,.12),rgba(251,191,36,.08))', border: '#FB7185', text: '#FDA4AF', ring: '#FB7185', labelColor: '#FB7185', dot: '#FB7185' },
-                      'S':  { bg: 'rgba(245,158,11,.10)', border: '#FBBF24', text: '#FDE68A', ring: '#FBBF24', labelColor: '#FBBF24', dot: '#FBBF24' },
-                      'A+': { bg: 'rgba(16,185,129,.10)', border: '#34D399', text: '#6EE7B7', ring: '#34D399', labelColor: '#34D399', dot: '#34D399' },
-                      'A':  { bg: 'rgba(34,197,94,.10)', border: '#4ADE80', text: '#86EFAC', ring: '#4ADE80', labelColor: '#4ADE80', dot: '#4ADE80' },
-                      'B+': { bg: 'rgba(14,165,233,.10)', border: '#38BDF8', text: '#7DD3FC', ring: '#38BDF8', labelColor: '#38BDF8', dot: '#38BDF8' },
-                      'B-': { bg: 'rgba(148,163,184,.10)', border: '#94A3B8', text: '#CBD5E1', ring: '#94A3B8', labelColor: '#94A3B8', dot: '#94A3B8' },
-                      'C':  { bg: 'rgba(249,115,22,.10)', border: '#FB923C', text: '#FDBA74', ring: '#FB923C', labelColor: '#FB923C', dot: '#FB923C' },
-                      'C-': { bg: 'rgba(239,68,68,.12)', border: '#F87171', text: '#FCA5A5', ring: '#F87171', labelColor: '#F87171', dot: '#F87171' },
-                      'D':  { bg: 'linear-gradient(135deg,#27272A,#3F3F46)', border: '#71717A', text: '#FAFAFA', ring: '#71717A', labelColor: '#E4E4E7', dot: '#71717A' },
+                      'S+': { bg: 'linear-gradient(135deg,#FFF1F2,#FECDD3)', border: '#FB7185', text: '#BE123C', ring: '#FB7185', labelColor: '#BE123C', dot: '#F43F5E' },
+                      'S':  { bg: 'linear-gradient(135deg,#FEF3C7,#FDE68A)', border: '#F59E0B', text: '#92400E', ring: '#F59E0B', labelColor: '#92400E', dot: '#F59E0B' },
+                      'A+': { bg: 'linear-gradient(135deg,#D1FAE5,#6EE7B7)', border: '#10B981', text: '#065F46', ring: '#10B981', labelColor: '#065F46', dot: '#10B981' },
+                      'A':  { bg: 'linear-gradient(135deg,#DCFCE7,#86EFAC)', border: '#22C55E', text: '#14532D', ring: '#22C55E', labelColor: '#14532D', dot: '#22C55E' },
+                      'B+': { bg: 'linear-gradient(135deg,#E0F2FE,#7DD3FC)', border: '#0EA5E9', text: '#0C4A6E', ring: '#0EA5E9', labelColor: '#0C4A6E', dot: '#0EA5E9' },
+                      'B-': { bg: 'linear-gradient(135deg,#F1F5F9,#CBD5E1)', border: '#94A3B8', text: '#475569', ring: '#94A3B8', labelColor: '#475569', dot: '#94A3B8' },
+                      'C':  { bg: 'linear-gradient(135deg,#FFEDD5,#FDBA74)', border: '#F97316', text: '#7C2D12', ring: '#F97316', labelColor: '#7C2D12', dot: '#F97316' },
+                      'C-': { bg: 'linear-gradient(135deg,#FEE2E2,#FCA5A5)', border: '#EF4444', text: '#991B1B', ring: '#EF4444', labelColor: '#991B1B', dot: '#EF4444' },
+                      'D':  { bg: 'linear-gradient(135deg,#E5E7EB,#9CA3AF)', border: '#6B7280', text: '#1F2937', ring: '#6B7280', labelColor: '#1F2937', dot: '#6B7280' },
                     };
                     // 旧五档兼容映射（数据未切换时的兜底）
                     const WUDANG_META: Record<string, { bg: string; border: string; text: string; ring: string; labelColor: string; dot: string }> = {
-                      '夯':     { bg: 'rgba(245,158,11,.10)', border: '#FBBF24', text: '#FDE68A', ring: '#FBBF24', labelColor: '#FBBF24', dot: '#FBBF24' },
-                      '人上人': { bg: 'rgba(139,92,246,.10)', border: '#A78BFA', text: '#C4B5FD', ring: '#A78BFA', labelColor: '#A78BFA', dot: '#A78BFA' },
-                      'npc':    { bg: 'rgba(148,163,184,.10)', border: '#94A3B8', text: '#CBD5E1', ring: '#94A3B8', labelColor: '#94A3B8', dot: '#94A3B8' },
-                      '拉':     { bg: 'rgba(251,146,60,.10)', border: '#FB923C', text: '#FDBA74', ring: '#FB923C', labelColor: '#FB923C', dot: '#FB923C' },
-                      '拉完了': { bg: 'rgba(239,68,68,.12)', border: '#F87171', text: '#FCA5A5', ring: '#F87171', labelColor: '#F87171', dot: '#F87171' },
+                      '夯':     { bg: 'linear-gradient(135deg,#FEF3C7,#FDE68A)', border: '#F59E0B', text: '#92400E', ring: '#F59E0B', labelColor: '#92400E', dot: '#F59E0B' },
+                      '人上人': { bg: 'linear-gradient(135deg,#EDE9FE,#C4B5FD)', border: '#8B5CF6', text: '#5B21B6', ring: '#8B5CF6', labelColor: '#5B21B6', dot: '#8B5CF6' },
+                      'npc':    { bg: 'linear-gradient(135deg,#F1F5F9,#CBD5E1)', border: '#94A3B8', text: '#475569', ring: '#94A3B8', labelColor: '#475569', dot: '#94A3B8' },
+                      '拉':     { bg: 'linear-gradient(135deg,#FFEDD5,#FDBA74)', border: '#FB923C', text: '#7C2D12', ring: '#FB923C', labelColor: '#7C2D12', dot: '#FB923C' },
+                      '拉完了': { bg: 'linear-gradient(135deg,#FEE2E2,#FCA5A5)', border: '#F87171', text: '#991B1B', ring: '#F87171', labelColor: '#991B1B', dot: '#F87171' },
                     };
                     // 取显示等级：优先用新九档 letterLevel，兜底用老 fortune/level
                     const getLevel = (row: any): string => {

@@ -1,87 +1,113 @@
 :root {
-  --button-outline: rgba(255,255,255, .16);
-  --badge-outline: rgba(255,255,255, .12);
+  --button-outline: rgba(255, 105, 180, 0.35);
+  --badge-outline: rgba(255, 105, 180, 0.25);
 
-  /* Automatic computation of border around primary / danger buttons */
-  --opaque-button-border-intensity: 8; /* In terms of percentages */
+  --opaque-button-border-intensity: 10;
 
-  /* Backgrounds applied on top of other backgrounds when hovered/active */
-  --elevate-1: rgba(255,255,255, .05);
-  --elevate-2: rgba(255,255,255, .10);
+  --elevate-1: rgba(255, 255, 255, 0.35);
+  --elevate-2: rgba(255, 255, 255, 0.5);
 
-  /* ===== 命盘终端 MINGPAN TERMINAL · 深空终端色板 ===== */
-  --background: hsl(222 26% 5%);
-  --foreground: hsl(216 24% 88%);
-  --card: hsl(220 18% 8%);
-  --card-foreground: hsl(216 24% 88%);
-  --card-border: hsl(220 14% 19%);
-  --popover: hsl(220 20% 7%);
-  --popover-foreground: hsl(216 24% 88%);
-  /* 信号青：CTA、激活态、关键读数 */
-  --primary: hsl(172 76% 47%);
-  --primary-foreground: hsl(185 80% 5%);
-  /* 磷光绿青：用神/吉 */
-  --secondary: hsl(168 38% 13%);
-  --secondary-foreground: hsl(168 70% 62%);
-  --muted: hsl(220 13% 13%);
-  --muted-foreground: hsl(218 9% 56%);
-  --accent: hsl(168 38% 13%);
-  --accent-foreground: hsl(168 70% 62%);
-  --info: hsl(214 82% 62%);
-  --info-foreground: hsl(214 100% 97%);
-  --destructive: hsl(352 74% 56%);
+  /* ===== ✦˚ʚ Kawaii Webcore ɞ˚✦ 古早网页 × 可爱闪光核 ===== */
+
+  /* 奶油粉紫背景 */
+  --background: hsl(310 100% 97%);
+  --foreground: hsl(330 45% 25%);
+
+  /* 卡片：半透明奶白 + 粉紫发光边 */
+  --card: hsl(0 0% 100% / 0.75);
+  --card-foreground: hsl(330 45% 25%);
+  --card-border: hsl(320 80% 82%);
+
+  --popover: hsl(0 0% 100% / 0.9);
+  --popover-foreground: hsl(330 45% 25%);
+
+  /* 主色：热粉 Hot Pink —— Blingee 闪光核灵魂色 */
+  --primary: hsl(330 100% 65%);
+  --primary-foreground: hsl(0 0% 100%);
+
+  /* 次色：薰衣草紫 */
+  --secondary: hsl(270 90% 85%);
+  --secondary-foreground: hsl(270 55% 30%);
+
+  --muted: hsl(320 60% 94%);
+  --muted-foreground: hsl(330 25% 45%);
+
+  --accent: hsl(280 85% 78%);
+  --accent-foreground: hsl(280 50% 25%);
+
+  --info: hsl(200 90% 70%);
+  --info-foreground: hsl(210 60% 20%);
+
+  --destructive: hsl(350 85% 62%);
   --destructive-foreground: hsl(0 0% 100%);
-  --success: hsl(152 62% 48%);
-  --success-foreground: hsl(160 80% 6%);
-  --warning: hsl(33 92% 56%);
-  --warning-foreground: hsl(36 100% 8%);
-  --border: hsl(220 13% 20%);
-  --input: hsl(220 13% 22%);
-  --ring: hsl(172 76% 47%);
-  --chart-1: hsl(172 76% 47%);
-  --chart-2: hsl(214 82% 62%);
-  --chart-3: hsl(33 92% 56%);
-  --chart-4: hsl(352 74% 56%);
-  --chart-5: hsl(280 60% 66%);
-  --sidebar: hsl(220 20% 7%);
-  --sidebar-foreground: hsl(216 24% 86%);
-  --sidebar-primary: hsl(172 76% 47%);
-  --sidebar-primary-foreground: hsl(185 80% 5%);
-  --sidebar-accent: hsl(220 14% 14%);
-  --sidebar-accent-foreground: hsl(172 70% 60%);
-  --sidebar-border: hsl(220 13% 18%);
-  --sidebar-ring: hsl(172 76% 47%);
 
-  /* Computed borders using hsl relative color syntax */
-  --primary-border: hsl(from hsl(172 76% 47%) h s calc(l + var(--opaque-button-border-intensity)));
-  --secondary-border: hsl(from hsl(168 38% 13%) h s calc(l + var(--opaque-button-border-intensity)));
-  --destructive-border: hsl(from hsl(352 74% 56%) h s calc(l + var(--opaque-button-border-intensity)));
-  --accent-border: hsl(from hsl(168 38% 13%) h s calc(l + var(--opaque-button-border-intensity)));
-  --muted-border: hsl(from hsl(220 13% 13%) h s calc(l + var(--opaque-button-border-intensity)));
+  --success: hsl(150 70% 60%);
+  --success-foreground: hsl(160 50% 15%);
+
+  --warning: hsl(45 100% 65%);
+  --warning-foreground: hsl(40 60% 20%);
+
+  --border: hsl(320 70% 85%);
+  --input: hsl(320 60% 92%);
+  --ring: hsl(330 100% 70%);
+
+  /* 图表彩虹色 */
+  --chart-1: hsl(330 100% 68%);  /* 热粉 */
+  --chart-2: hsl(270 85% 75%);   /* 薰衣草 */
+  --chart-3: hsl(180 75% 70%);   /* 薄荷蓝 */
+  --chart-4: hsl(45 100% 70%);   /* 奶油黄 */
+  --chart-5: hsl(150 70% 68%);   /* 薄荷绿 */
+
+  /* Sidebar */
+  --sidebar: hsl(310 100% 98%);
+  --sidebar-foreground: hsl(330 45% 28%);
+  --sidebar-primary: hsl(330 100% 68%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(280 90% 92%);
+  --sidebar-accent-foreground: hsl(280 50% 35%);
+  --sidebar-border: hsl(320 70% 88%);
+  --sidebar-ring: hsl(330 100% 70%);
+
+  /* 计算边框 */
+  --primary-border: hsl(from hsl(330 100% 65%) h s calc(l + var(--opaque-button-border-intensity)));
+  --secondary-border: hsl(from hsl(270 90% 85%) h s calc(l - var(--opaque-button-border-intensity)));
+  --destructive-border: hsl(from hsl(350 85% 62%) h s calc(l + var(--opaque-button-border-intensity)));
+  --accent-border: hsl(from hsl(280 85% 78%) h s calc(l - var(--opaque-button-border-intensity)));
+  --muted-border: hsl(from hsl(320 60% 94%) h s calc(l - var(--opaque-button-border-intensity)));
+
+  /* 字体：可爱圆润日系 + 像素装饰体 */
   --font-sans:
-    'Space Grotesk', 'Noto Sans SC', -apple-system, BlinkMacSystemFont,
+    'Zen Maru Gothic', 'M PLUS Rounded 1c', 'Noto Sans SC',
     'PingFang SC', 'Microsoft Yahei', 'Segoe UI', sans-serif;
   --font-serif:
-    'Noto Serif SC', ui-serif, Georgia, Cambria, 'Times New Roman', serif;
-  --font-mono: 'JetBrains Mono', 'IBM Plex Mono', 'Noto Sans SC', ui-monospace, SFMono-Regular, Menlo, monospace;
-  /* 瑞士国际主义：尖角，仅保留 2px 微圆 */
-  --radius: 0.125rem;
-  /* 终端美学：以发丝线代替投影 */
+    'Zen Maru Gothic', 'Noto Serif SC', ui-serif, Georgia, serif;
+  --font-mono:
+    'VT323', 'Press Start 2P', 'JetBrains Mono', 'Noto Sans SC',
+    ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-display:
+    'Fredoka', 'Zen Maru Gothic', 'M PLUS Rounded 1c', 'Noto Sans SC', sans-serif;
+
+  /* Kawaii 大圆角 */
+  --radius: 1rem;
+
+  /* Blingee 发光阴影 */
   --shadow-x: 0px;
-  --shadow-y: 0px;
-  --shadow-blur: 0px;
-  --shadow-spread: 0px;
-  --shadow-opacity: 0;
-  --shadow-color: #000000;
-  --shadow-2xs: 0 0 0 0 transparent;
-  --shadow-xs: 0 0 0 0 transparent;
-  --shadow-sm: 0 0 0 0 transparent;
-  --shadow: 0 0 0 0 transparent;
-  --shadow-md: 0 0 0 0 transparent;
-  --shadow-lg: 0 0 0 0 transparent;
-  --shadow-xl: 0 0 0 0 transparent;
-  --shadow-2xl: 0 0 0 0 transparent;
-  --tracking-normal: 0em;
+  --shadow-y: 4px;
+  --shadow-blur: 20px;
+  --shadow-spread: -2px;
+  --shadow-opacity: 0.15;
+  --shadow-color: 330 100% 65%;
+
+  --shadow-2xs: 0 1px 2px hsl(330 50% 70% / 0.15);
+  --shadow-xs: 0 2px 6px hsl(330 60% 70% / 0.18);
+  --shadow-sm: 0 4px 12px hsl(330 60% 70% / 0.2);
+  --shadow: 0 6px 20px hsl(330 60% 70% / 0.22);
+  --shadow-md: 0 10px 30px hsl(330 60% 70% / 0.25);
+  --shadow-lg: 0 16px 48px hsl(330 60% 70% / 0.3);
+  --shadow-xl: 0 24px 64px hsl(330 60% 70% / 0.35);
+  --shadow-2xl: 0 32px 80px hsl(330 60% 70% / 0.4);
+
+  --tracking-normal: 0.01em;
   --spacing: 0.25rem;
 }
 
@@ -129,11 +155,13 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
   --font-serif: var(--font-serif);
+  --font-display: var(--font-display);
 
-  --radius-sm: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
   --radius-md: var(--radius);
-  --radius-lg: calc(var(--radius) + 2px);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-lg: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 8px);
+  --radius-full: 9999px;
 
   --shadow-2xs: var(--shadow-2xs);
   --shadow-xs: var(--shadow-xs);
@@ -145,67 +173,38 @@
   --shadow-2xl: var(--shadow-2xl);
 }
 
-/**
- * Using the elevate system.
- * Automatic contrast adjustment.
- *
- * <element className="hover-elevate" />
- * <element className="active-elevate-2" />
- *
- * // Using the tailwind utility when a data attribute is "on"
- * <element className="toggle-elevate data-[state=on]:toggle-elevated" />
- * // Or manually controlling the toggle state
- * <element className="toggle-elevate toggle-elevated" />
- */
 @layer utilities {
-  /* Hide ugly search cancel button in Chrome until we can style it properly */
   input[type="search"]::-webkit-search-cancel-button {
     @apply hidden;
   }
 
-  /* Placeholder styling for contentEditable div */
   [contenteditable][data-placeholder]:empty::before {
     content: attr(data-placeholder);
     color: var(--muted-foreground);
     pointer-events: none;
   }
 
-  /* .no-default-hover-elevate/no-default-active-elevate is an escape hatch so consumers of
-   * buttons/badges can remove the automatic brightness adjustment on interactions
-   * and program their own. */
   .no-default-hover-elevate {}
   .no-default-active-elevate {}
 
-
-  /**
-   * Toggleable backgrounds go behind the content. Hoverable/active goes on top.
-   * This way they can stack/compound. Both will overlap the parent's borders!
-   * So borders will be automatically adjusted both on toggle, and hover/active,
-   * and they will be compounded.
-   */
   .toggle-elevate::before,
   .toggle-elevate-2::before {
     content: "";
     pointer-events: none;
     position: absolute;
     inset: 0px;
-    /*border-radius: inherit;   match rounded corners */
     border-radius: inherit;
     z-index: -1;
-    /* sits behind content but above backdrop */
   }
 
   .toggle-elevate.toggle-elevated::before {
     background-color: var(--elevate-2);
   }
 
-  /* If there's a 1px border, adjust the inset so that it covers that parent's border */
   .border.toggle-elevate::before {
     inset: -1px;
   }
 
-  /* Does not work on elements with overflow:hidden!
-   * Wrap in :where() to zero out specificity so Tailwind position utilities (absolute/fixed/sticky) can override */
   :where(.hover-elevate:not(.no-default-hover-elevate)),
   :where(.active-elevate:not(.no-default-active-elevate)),
   :where(.hover-elevate-2:not(.no-default-hover-elevate)),
@@ -222,10 +221,8 @@
     pointer-events: none;
     position: absolute;
     inset: 0px;
-    /*border-radius: inherit;   match rounded corners */
     border-radius: inherit;
     z-index: 999;
-    /* sits in front of content */
   }
 
   .hover-elevate:hover:not(.no-default-hover-elevate)::after,
@@ -238,7 +235,6 @@
     background-color: var(--elevate-2);
   }
 
-  /* If there's a 1px border, adjust the inset so that it covers that parent's border */
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after,
   .border.active-elevate:not(.no-active-interaction-elevate)::after,
   .border.hover-elevate-2:not(.no-hover-interaction-elevate)::after,
