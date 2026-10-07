@@ -1390,96 +1390,198 @@ export default function BaZiAnalyzerPage() {
         background: 'var(--background)',
       }}
     >
-      {/* ===== 命盘终端 Hero：瑞士网格 + 深空元数据栏 ===== */}
-      <section className="relative w-full border-b border-border">
-        {/* 终端状态条：系统标识 / 节气元数据 / 版本号 */}
-        <div className="border-b border-border">
-          <div className="mx-auto grid w-full max-w-7xl grid-cols-3 items-center gap-2 px-4 py-2.5 md:px-6">
+      {/* ===== ✿˚ʚ 沛然堂命盘小站 ɞ˚✿ GeoCities Webcore ===== */}
+      {/* 顶部跑马灯：Webcore 经典 marquee */}
+      <div className="w-full overflow-hidden border-y-2 border-primary/50 bg-gradient-to-r from-pink-200 via-purple-200 to-blue-200 py-1.5">
+        <div className="whitespace-nowrap text-sm font-bold text-foreground/70" style={{ animation: 'marquee 25s linear infinite' }}>
+          ✨ 欢迎来到沛然堂命盘小站 ✨ 今日节气：{solarTermTheme.name} ♡ 八字命理智能分析系统 ♡ 纯本地计算，不上传任何数据 ♡ 祝您好运连连 ✨ 欢迎来到沛然堂命盘小站 ✨ 今日节气：{solarTermTheme.name} ♡
+        </div>
+      </div>
+
+      {/* GeoCities 横幅区 */}
+      <section className="relative w-full border-b-4 border-double border-primary/40 bg-gradient-to-b from-pink-100/80 via-purple-50/60 to-transparent pb-6 pt-4">
+        {/* 站点标题横幅 */}
+        <div className="mx-auto w-full max-w-6xl px-3 md:px-4">
+          {/* 顶栏：小站信息条 */}
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs font-bold">
             <div className="flex items-center gap-2">
-              <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-primary" style={{ boxShadow: '0 0 8px #1FD4BC' }} />
-              <span className="label-mono text-muted-foreground">MINGPAN TERMINAL</span>
-            </div>
-            <div className="justify-self-center">
-              <span className="label-mono text-foreground/70">
-                {solarTermTheme.name} · 出生节气
+              <span className="inline-flex items-center gap-1 rounded-sm bg-primary px-2 py-0.5 text-white" style={{ fontFamily: "'VT323', monospace", fontSize: '14px' }}>
+                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-white" />
+                ONLINE
               </span>
+              <span className="text-muted-foreground">♡ yukiri &amp; zhiya ♡ 八字小站</span>
             </div>
-            <div className="justify-self-end">
-              <span className="label-mono text-muted-foreground">v{APP_VERSION}</span>
+            <div className="flex items-center gap-3 text-muted-foreground">
+              <span>v{APP_VERSION}</span>
+              <span>·</span>
+              <span className="text-blink" style={{ color: 'var(--primary)' }}>● NEW!</span>
+              <span>·</span>
+              <span>更新: {solarTermTheme.name}</span>
             </div>
           </div>
-        </div>
 
-        {/* 主视觉：Kawaii Webcore 古早网页风 */}
-        <div className="mx-auto w-full max-w-7xl px-4 pb-16 pt-14 md:px-6 md:pb-24 md:pt-20">
-          <div className="relative flex flex-col items-center text-center">
-            {/* 顶部装饰星星 */}
-            <div className="mb-4 flex items-center gap-3">
-              <span className="sparkle-decor text-xl">✦</span>
-              <span className="kawaii-tag">
-                <span>♡</span> BAZI ANALYSIS SYSTEM <span>♡</span>
-              </span>
-              <span className="sparkle-decor text-xl" style={{ animationDelay: '0.5s' }}>✧</span>
-            </div>
-
-            {/* 主标题：彩虹闪光 + 大字号 */}
-            <h1
-              className="text-blingee text-[56px] font-black leading-[0.95] tracking-tight md:text-[96px] lg:text-[112px]"
-              style={{ fontFamily: "'Fredoka', 'Zen Maru Gothic', 'Noto Sans SC', sans-serif" }}
-            >
-              沛然堂
-            </h1>
-
-            {/* 副标题：彩虹分割线 + 可爱标签 */}
-            <div className="mt-6 flex w-full max-w-md flex-col items-center gap-4">
-              <hr className="hr-rainbow w-48" />
-              <span className="text-base font-bold tracking-wide text-foreground/80 md:text-lg" style={{ fontFamily: "'Zen Maru Gothic', 'Noto Sans SC', sans-serif" }}>
-                ✦ 八字命理智能分析系统 ✦
-              </span>
-            </div>
-
-            <p className="mt-6 max-w-xl text-sm leading-relaxed text-muted-foreground md:text-base">
-              以太极阴阳为体 · 以月气动应为用 · 以平衡为得失
-            </p>
-
-            {/* 节气诗句卡：Kawaii 风格 */}
-            <div className="mt-10 w-full max-w-lg">
-              <div className="relative rounded-3xl border-2 border-white/70 bg-white/70 p-6 shadow-xl shadow-primary/20 backdrop-blur-sm md:p-8">
-                {/* 装饰蝴蝶结 */}
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="text-2xl bounce-cute" style={{ display: 'inline-block', animationDelay: '0.3s' }}>🎀</span>
+          {/* 主横幅：GeoCities 风格 */}
+          <div className="relative beveled bg-gradient-to-b from-white to-pink-50 p-5 md:p-8">
+            <div className="flex flex-col items-center text-center md:flex-row md:items-stretch md:text-left">
+              {/* 左侧：装饰像素图 + 标题 */}
+              <div className="flex-1">
+                <div className="mb-2 flex items-center justify-center gap-2 md:justify-start">
+                  <span className="sparkle-decor text-lg">✦</span>
+                  <span className="retro-counter" style={{ fontSize: '14px', padding: '1px 8px' }}>
+                    ♡ PAI RAN TANG ♡
+                  </span>
+                  <span className="sparkle-decor text-lg" style={{ animationDelay: '0.4s' }}>✧</span>
                 </div>
-                <p className="label-cute mb-4" style={{ fontFamily: "'Fredoka', 'Zen Maru Gothic', sans-serif" }}>
-                  ✦ {solarTermTheme.name} ✦
-                </p>
-                <p
-                  className="text-[22px] leading-[1.6] text-foreground/85 md:text-[26px]"
-                  style={{
-                    fontFamily: "'Maoti', 'Noto Serif SC', serif",
-                    letterSpacing: '0.05em',
-                    color: 'hsl(330 45% 30%)',
-                  }}
+                <h1
+                  className="text-blingee text-[42px] font-black leading-none md:text-[64px] lg:text-[72px]"
+                  style={{ fontFamily: "'Fredoka', 'Zen Maru Gothic', 'Noto Sans SC', sans-serif" }}
                 >
-                  「{solarTermTheme.poem}」
+                  沛然堂
+                </h1>
+                <p className="mt-2 text-sm font-bold text-foreground/70 md:text-base">
+                  ～ 八字命理智能分析系统 ～
                 </p>
-                <p className="mt-4 text-xs font-bold text-muted-foreground" style={{ letterSpacing: '0.08em' }}>
-                  —— {solarTermTheme.source}
+                <p className="mt-1 text-xs text-muted-foreground">
+                  以太极阴阳为体 · 以月气动应为用 · 以平衡为得失
                 </p>
-                {/* 底部闪光装饰 */}
-                <div className="mt-4 flex justify-center gap-2">
-                  <span className="sparkle-decor">⋆</span>
-                  <span className="sparkle-decor" style={{ animationDelay: '0.3s' }}>✧</span>
-                  <span className="sparkle-decor" style={{ animationDelay: '0.6s' }}>⋆</span>
+              </div>
+
+              {/* 中间：彩虹分割线（竖） */}
+              <div className="my-4 hidden h-auto w-1 md:mx-6 md:my-0 md:block">
+                <hr className="h-full w-1 hr-rainbow" style={{ writingMode: 'vertical-lr' }} />
+              </div>
+              <div className="mx-auto mb-4 h-1 w-32 md:hidden">
+                <hr className="hr-rainbow" />
+              </div>
+
+              {/* 右侧：节气诗句卡 + 访客计数 */}
+              <div className="flex flex-col gap-3 md:w-64">
+                {/* 节气小卡 */}
+                <div className="beveled-inset bg-white/80 p-3 text-left">
+                  <div className="mb-1 flex items-center gap-2">
+                    <span className="text-blink text-xs font-black" style={{ color: 'var(--primary)' }}>NEW!</span>
+                    <span className="text-xs font-bold text-foreground/70">今日节气</span>
+                  </div>
+                  <p
+                    className="text-[15px] leading-relaxed"
+                    style={{
+                      fontFamily: "'Maoti', 'Noto Serif SC', serif",
+                      color: 'hsl(330 45% 30%)',
+                    }}
+                  >
+                    「{solarTermTheme.poem}」
+                  </p>
+                  <p className="mt-1 text-[10px] font-bold text-muted-foreground">
+                    —— {solarTermTheme.source}
+                  </p>
+                </div>
+
+                {/* 访客计数器 */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-muted-foreground">访客:</span>
+                    <span className="retro-counter" style={{ fontSize: '16px' }}>000000</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-xs font-bold text-muted-foreground">
+                    <span>在线:</span>
+                    <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-green-500" />
+                    <span style={{ color: '#22c55e' }}>1</span>
+                  </div>
                 </div>
               </div>
+            </div>
+
+            {/* 底部装饰：星星串 */}
+            <div className="mt-4 flex justify-center gap-3">
+              {['✦', '✧', '⋆', '✡', '✦', '✧', '⋆', '✡', '✦'].map((s, i) => (
+                <span
+                  key={i}
+                  className="sparkle-decor text-lg"
+                  style={{ animationDelay: `${i * 0.15}s`, color: ['#FF6BB5', '#C4B5FD', '#7DD3FC', '#86EFAC', '#FDE047', '#FB923C', '#F472B6', '#A78BFA', '#38BDF8'][i] }}
+                >
+                  {s}
+                </span>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
-      <main
-        className="mx-auto w-full max-w-7xl space-y-10 px-4 py-12 md:space-y-14 md:px-6 md:py-16"
-      >
+      {/* 主体：三栏布局 — 左侧边栏 + 主内容 + 右侧装饰 */}
+      <div className="mx-auto w-full max-w-6xl px-3 py-6 md:px-4 md:py-8">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-[200px_1fr] lg:grid-cols-[220px_1fr_180px]">
+
+          {/* ===== 左侧边栏：小站信息 ===== */}
+          <aside className="space-y-4">
+            {/* 导航菜单 */}
+            <div className="beveled bg-white p-2">
+              <div className="mb-2 bg-gradient-to-r from-primary/20 to-transparent px-2 py-1 text-xs font-black text-foreground">
+                ✿ 页面导航 ✿
+              </div>
+              <nav className="space-y-0.5">
+                {[
+                  { id: 'pillars', label: '四柱排盘', icon: '❀' },
+                  { id: 'overview', label: '命主速览', icon: '★' },
+                  { id: 'mingju-pattern', label: '命局模式', icon: '✿' },
+                  { id: 'dayun', label: '大运流年', icon: '☯' },
+                  { id: 'pie', label: '五行阴阳', icon: '◈' },
+                  { id: 'special-tips', label: '特别提示', icon: '!' },
+                  { id: 'monthqi', label: '月气分析', icon: '☾' },
+                  { id: 'yongji', label: '用神忌神', icon: '✦' },
+                  { id: 'xiangfa', label: '象意解读', icon: '♪' },
+                ].map((item) => (
+                  <a
+                    key={item.id}
+                    href={`#section-${item.id}`}
+                    className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-xs font-bold text-foreground/70 transition-colors hover:bg-primary/20 hover:text-primary"
+                  >
+                    <span className="text-primary">{item.icon}</span>
+                    {item.label}
+                  </a>
+                ))}
+              </nav>
+            </div>
+
+            {/* 小站信息 */}
+            <div className="beveled bg-pink-50/80 p-2">
+              <div className="mb-2 bg-gradient-to-r from-pink-200/80 to-transparent px-2 py-1 text-xs font-black text-pink-700">
+                ♡ 小站信息 ♡
+              </div>
+              <div className="space-y-1 px-1 text-[11px] text-muted-foreground">
+                <div>站名：沛然堂</div>
+                <div>站长：未知</div>
+                <div>类型：命理小站</div>
+                <div>风格：Webcore</div>
+                <div>更新：{solarTermTheme.name}</div>
+              </div>
+            </div>
+
+            {/* 友情链接 */}
+            <div className="beveled bg-purple-50/80 p-2">
+              <div className="mb-2 bg-gradient-to-r from-purple-200/80 to-transparent px-2 py-1 text-xs font-black text-purple-700">
+                ✧ 友情链接 ✧
+              </div>
+              <div className="space-y-1 px-1 text-[11px]">
+                <div className="text-primary hover:underline cursor-pointer">→ 紫微斗数</div>
+                <div className="text-primary hover:underline cursor-pointer">→ 姓名学</div>
+                <div className="text-primary hover:underline cursor-pointer">→ 风水堪舆</div>
+                <div className="text-primary hover:underline cursor-pointer">→ 塔罗占卜</div>
+              </div>
+            </div>
+
+            {/* 装饰：Under Construction */}
+            <div className="beveled-inset bg-yellow-50 p-2 text-center">
+              <div className="text-blink text-xs font-black text-yellow-600">
+                ⚠ UNDER CONSTRUCTION ⚠
+              </div>
+              <div className="mt-1 text-[10px] text-yellow-700/70">
+                小站持续施工中…
+              </div>
+            </div>
+          </aside>
+
+          {/* ===== 中间主内容区 ===== */}
+          <main className="space-y-4 md:space-y-5">
         {/* 输入表单区：Kawaii Webcore 风格 */}
         <Card
           className="relative overflow-hidden"
@@ -2090,24 +2192,32 @@ export default function BaZiAnalyzerPage() {
           </Card>
         )}
 
-        {/* 分析结果区：左主内容 + 右侧 TOC（大屏显示） */}
+        {/* 分析结果区：主内容列 */}
         {analyzedBoolean && (
-          <div className="grid gap-8 lg:grid-cols-[1fr_260px]">
-            {/* 左：主内容列 */}
-            <div className="space-y-8 min-w-0 md:space-y-12">
-              {/* 分析结果总标题：瑞士网格左对齐 */}
-              <div className="border-t-2 border-foreground pt-4">
-                <p className="label-mono mb-3 text-primary">ANALYSIS REPORT</p>
+          <div>
+            {/* 主内容列 */}
+            <div className="space-y-5 min-w-0">
+              {/* 分析结果总标题：Webcore 风格 */}
+              <div className="beveled bg-gradient-to-b from-white to-pink-50 p-4 text-center md:p-6">
+                <div className="mb-2 flex items-center justify-center gap-2">
+                  <span className="sparkle-decor">✦</span>
+                  <span className="text-blink text-xs font-black" style={{ color: 'var(--primary)' }}>NEW!</span>
+                  <span className="sparkle-decor" style={{ animationDelay: '0.3s' }}>✧</span>
+                </div>
                 <h2
-                  className="text-[32px] font-black leading-none tracking-tight text-foreground md:text-[44px]"
+                  className="text-blingee text-[28px] font-black leading-none md:text-[36px]"
+                  style={{ fontFamily: "'Fredoka', 'Zen Maru Gothic', 'Noto Sans SC', sans-serif" }}
                 >
                   命局分析报告
                 </h2>
-                <p
-                  className="mt-3 text-sm text-muted-foreground md:text-base"
-                >
-                  基于天之易八字命理体系 · 完整结构化解读
+                <p className="mt-2 text-xs text-muted-foreground md:text-sm">
+                  ♡ 基于天之易八字命理体系 · 完整结构化解读 ♡
                 </p>
+                <div className="mt-3 flex justify-center gap-2">
+                  <span className="retro-counter" style={{ fontSize: '13px' }}>{chart.birthInfo.solarDate}</span>
+                  <span className="text-xs text-muted-foreground">·</span>
+                  <span className="text-xs font-bold text-primary">{chart.gender === 'male' ? '乾造' : '坤造'}</span>
+                </div>
               </div>
 
 
@@ -3164,58 +3274,116 @@ export default function BaZiAnalyzerPage() {
                 导出报告
               </Button>
             </div>
+            </div>
           </div>
+        )}
+          </main>
 
-          {/* 右：报告目录 TOC（大屏 sticky） */}
-          <aside className="hidden lg:block">
-            <div className="sticky top-6 rounded-sm border border-border bg-card p-4">
-              <div className="label-mono mb-3 border-b border-border pb-2 text-[10px] text-primary">
-                INDEX / 报告目录
+          {/* ===== 右侧装饰边栏（大屏） ===== */}
+          <aside className="hidden space-y-4 lg:block">
+            {/* 报告目录 TOC */}
+            {analyzedBoolean && (
+              <div className="beveled bg-white p-2">
+                <div className="mb-2 bg-gradient-to-r from-accent/30 to-transparent px-2 py-1 text-xs font-black text-accent-foreground">
+                  ✦ 报告目录 ✦
+                </div>
+                <nav className="space-y-0.5">
+                  {[
+                    { id: 'pillars', no: '01', label: '四柱排盘' },
+                    { id: 'mingju-pattern', no: '02', label: '命局模式' },
+                    { id: 'dayun', no: '03', label: '大运流年' },
+                    { id: 'overview', no: '04', label: '命主速览' },
+                    { id: 'pie', no: '05', label: '五行阴阳' },
+                    { id: 'special-tips', no: '06', label: '特别提示' },
+                    { id: 'monthqi', no: '07', label: '月气分析' },
+                    { id: 'yongji', no: '08', label: '用神忌神' },
+                    { id: 'xiangfa', no: '09', label: '象意解读' },
+                  ].map((item) => (
+                    <a
+                      key={item.id}
+                      href={`#section-${item.id}`}
+                      className="flex items-center gap-2 rounded-sm px-2 py-1 text-[11px] font-bold text-foreground/60 transition-colors hover:bg-primary/15 hover:text-primary"
+                    >
+                      <span className="font-mono text-[10px] text-primary/70">{item.no}</span>
+                      <span className="truncate">{item.label}</span>
+                    </a>
+                  ))}
+                </nav>
               </div>
-              {[
-                { id: 'pillars', no: '02', label: '四柱排盘总览' },
-                { id: 'mingju-pattern', no: '03', label: '命局模式分析' },
-                { id: 'dayun', no: '04', label: '大运流年分析' },
-                { id: 'overview', no: '05', label: '命主速览' },
-                { id: 'pie', no: '06', label: '寒热气·阴阳气' },
-                { id: 'special-tips', no: '07', label: '特别提示' },
-                { id: 'monthqi', no: '08', label: '月气分析' },
-                { id: 'yongji', no: '09', label: '用神忌神判断' },
-                { id: 'xiangfa', no: '10', label: '象意' },
-              ].map((item) => (
-                <a
-                  key={item.id}
-                  href={`#section-${item.id}`}
-                  className="group flex items-center gap-3 rounded-sm px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-primary/10 hover:text-foreground"
-                >
-                  <span className="label-mono text-[10px] text-primary/70 group-hover:text-primary">{item.no}</span>
-                  <span className="truncate">{item.label}</span>
-                </a>
-              ))}
-              <div className="label-mono mt-4 border-t border-border pt-2 text-[9.5px] leading-relaxed text-muted-foreground">
-                {solarTermTheme.name} · {chart.birthInfo.solarDate}
+            )}
+
+            {/* 快捷工具 */}
+            <div className="beveled bg-blue-50/80 p-2">
+              <div className="mb-2 bg-gradient-to-r from-blue-200/80 to-transparent px-2 py-1 text-xs font-black text-blue-700">
+                ⚡ 快捷工具
+              </div>
+              <div className="space-y-1 px-1 text-[11px] font-bold">
+                <div className="cursor-pointer text-blue-600 hover:underline">→ 重新排盘</div>
+                <div className="cursor-pointer text-blue-600 hover:underline">→ 复制摘要</div>
+                <div className="cursor-pointer text-blue-600 hover:underline">→ 导出报告</div>
+              </div>
+            </div>
+
+            {/* 今日运势 */}
+            <div className="beveled-inset bg-gradient-to-b from-yellow-50 to-pink-50 p-3 text-center">
+              <div className="text-xs font-black text-yellow-600">
+                ★ 今日运势 ★
+              </div>
+              <div className="mt-1 text-[10px] text-muted-foreground">
+                {solarTermTheme.name}
+              </div>
+              <div className="mt-2 flex justify-center gap-1">
+                {['⭐', '⭐', '⭐', '⭐', '☆'].map((s, i) => (
+                  <span key={i} className="text-sm">{s}</span>
+                ))}
+              </div>
+            </div>
+
+            {/* 装饰：Link Exchange */}
+            <div className="beveled bg-green-50/80 p-2 text-center">
+              <div className="mb-1 text-[10px] font-black text-green-700">
+                🔗 LINK EXCHANGE
+              </div>
+              <div className="text-[9px] text-green-600/70">
+                欢迎交换链接
+              </div>
+            </div>
+
+            {/* 装饰：访客留言 */}
+            <div className="beveled-inset bg-pink-50 p-2 text-center">
+              <div className="text-blink text-[10px] font-black text-pink-500">
+                💌 留言板
+              </div>
+              <div className="mt-1 text-[9px] text-pink-400/70">
+                来踩踩吧~
               </div>
             </div>
           </aside>
-          </div>
-        )}
-      </main>
+
+        </div>
+      </div>
 
       {/* 页脚 */}
-      <footer className="w-full border-t border-border/40 bg-background/80 py-8 backdrop-blur-sm">
-        <div className="mx-auto max-w-7xl px-4 text-center text-sm text-muted-foreground md:px-6">
-          <p style={{ fontFamily: "'Maoti', 'Noto Serif SC', serif", fontSize: '18px', letterSpacing: '0.05em' }}>
+      <footer className="w-full border-t-4 border-double border-primary/40 bg-gradient-to-t from-pink-100/60 to-transparent py-8">
+        <div className="mx-auto max-w-6xl px-4 text-center text-sm text-muted-foreground md:px-6">
+          {/* 彩虹分割线 */}
+          <hr className="hr-rainbow mx-auto mb-6 w-48" />
+          <p style={{ fontFamily: "'Maoti', 'Noto Serif SC', serif", fontSize: '20px', letterSpacing: '0.05em', color: 'hsl(330 45% 30%)' }}>
             沛然堂 · 以太极阴阳为体，以月气动应为用
           </p>
-          <p className="mt-1 text-xs">本工具仅供命理研究与学习参考，不构成任何人生决策建议</p>
-          <p className="label-mono mt-3 inline-flex items-center gap-2 rounded-sm border border-border/60 bg-muted/40 px-3 py-1 text-[10px] font-bold text-muted-foreground">
-            v{APP_VERSION} · 正式版
-          </p>
-          {/* 内部代码声明：置于页面最下方 */}
-          <p
-            className="mx-auto mt-6 max-w-3xl text-center text-[12px] font-medium leading-relaxed tracking-wider"
-            style={{ fontFamily: "'Noto Serif SC', serif", color: 'var(--foreground)', opacity: 0.55 }}
-          >
+          <p className="mt-2 text-xs">本工具仅供命理研究与学习参考，不构成任何人生决策建议</p>
+          <div className="mt-4 flex items-center justify-center gap-3">
+            <span className="retro-counter" style={{ fontSize: '14px' }}>v{APP_VERSION}</span>
+            <span className="text-xs text-muted-foreground">·</span>
+            <span className="text-xs font-bold text-primary">正式版</span>
+          </div>
+          {/* 底部装饰星星 */}
+          <div className="mt-4 flex justify-center gap-2">
+            {['✦', '✧', '⋆', '✡', '✦', '✧', '⋆'].map((s, i) => (
+              <span key={i} className="sparkle-decor" style={{ animationDelay: `${i * 0.2}s` }}>{s}</span>
+            ))}
+          </div>
+          <p className="mt-4 text-[11px] font-medium text-muted-foreground/70">
             内部代码 · 不可商用盈利 · 公开代码仅作为无害公开供人民群众监督
           </p>
         </div>

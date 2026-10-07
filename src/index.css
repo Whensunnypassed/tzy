@@ -303,6 +303,12 @@ body::after {
   100% { transform: translateY(0); opacity: 1; }
 }
 
+/* Webcore 跑马灯 */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
 /* 减少动效偏好支持 */
 @media (prefers-reduced-motion: reduce) {
   *,
