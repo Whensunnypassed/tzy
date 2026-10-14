@@ -2698,17 +2698,29 @@ export function letterFromScore(rawScore: number): { level: LetterLevel; band: s
   return { level, band: LETTER_BAND[level], displayScore };
 }
 
-// 命盘基准 + 岁运调整 叠加后的九档映射（±14 尺度，阈值约为两倍 scale）
-export function letterFromCombined(combinedDisplayScore: number): { level: LetterLevel; band: string } {
+/**
+ * 大运/流年九档分级：按「岁运调整分」定档（= 综合分 − 命盘基准，即岁运对命盘的净增益）
+ * 评级只与命盘基准自身比较，不受先天盘高低影响，保证同一盘内严格形成梯度：
+ *   S+: > +3.0
+ *   S : +2.0 ~ +3.0
+ *   A+: +1.0 ~ +2.0
+ *   A : +0.3 ~ +1.0
+ *   B+: -0.3 ~ +0.3（仅气机真正持平者）
+ *   B-: -1.0 ~ -0.3
+ *   C : -2.0 ~ -1.0
+ *   C-: -3.0 ~ -2.0
+ *   D : < -3.0
+ */
+export function letterFromCombined(adjustDisplayScore: number): { level: LetterLevel; band: string } {
   let level: LetterLevel;
-  if      (combinedDisplayScore > 12) level = 'S+';
-  else if (combinedDisplayScore > 8)  level = 'S';
-  else if (combinedDisplayScore > 4)  level = 'A+';
-  else if (combinedDisplayScore > 0)  level = 'A';
-  else if (combinedDisplayScore >= -4) level = 'B+';
-  else if (combinedDisplayScore >= -8) level = 'B-';
-  else if (combinedDisplayScore >= -12) level = 'C';
-  else if (combinedDisplayScore >= -16) level = 'C-';
+  if      (adjustDisplayScore > 3.0)  level = 'S+';
+  else if (adjustDisplayScore > 2.0)  level = 'S';
+  else if (adjustDisplayScore > 1.0)  level = 'A+';
+  else if (adjustDisplayScore > 0.3)  level = 'A';
+  else if (adjustDisplayScore >= -0.3) level = 'B+';
+  else if (adjustDisplayScore >= -1.0) level = 'B-';
+  else if (adjustDisplayScore >= -2.0) level = 'C';
+  else if (adjustDisplayScore >= -3.0) level = 'C-';
   else                         level = 'D';
   return { level, band: LETTER_BAND[level] };
 }
@@ -3841,42 +3853,53 @@ export function analyzeDaYunLiuNian(
   // （即不再参考"上一个大运/流年好/坏"来改变当前条目的评分或提示）
   // 每一步评分完全按本条 rawScore 独立计算。
 
-  // —— 命盘基准联动：大运/流年分 = 命盘基准分 + 岁运调整分（±14 尺度，用 letterFromCombined 九档映射） ——
+  // —— 命盘基准联动：展示综合分 = 命盘基准分 + 岁运调整分；
+  //    九档评级只按「岁运调整分」（combined − 命盘基准）定档，与先天盘高低无关，
+  //    保证同一盘内好坏严格拉开梯度（letterFromCombined 阈值 ±3 尺度） ——
   for (const dy of daYunWithFortune as any[]) {
-    const dyCombined = mingPanCompress + (dy.displayScore || 0);
-    const dyLetter = letterFromCombined(dyCombined);
-    const dyMap = wuDangFromCombined(dyCombined);
+    const dyAdjust = dy.displayScore || 0; // 叠加命盘基准前的岁运调整压缩分
+    const dyCombined = mingPanCompress + dyAdjust;
+    const dyLetter = letterFromCombined(dyAdjust);
+    const dyMap = wuDangFromCombined(dyAdjust);
     dy.displayScore = Math.round(dyCombined * 10) / 10;
     dy.score = dy.displayScore;
+    dy.adjustScore = Math.round(dyAdjust * 10) / 10;  // 岁运调整分（评级依据）
     dy.letterLevel = dyLetter.level;  // 新九档字母等级
     dy.level = dyMap.level;
     dy.fortune = dyMap.level;
     dy.band = dyLetter.band;
     dy.mingPanBase = mingPanCompress;
     for (const ln of (dy.liuNian10 || [])) {
-      const lnCombined = mingPanCompress + (ln.displayScore || 0);
-      const lnLetter = letterFromCombined(lnCombined);
-      const lnMap = wuDangFromCombined(lnCombined);
+      const lnAdjust = ln.displayScore || 0;
+      const lnCombined = mingPanCompress + lnAdjust;
+      const lnLetter = letterFromCombined(lnAdjust);
+      const lnMap = wuDangFromCombined(lnAdjust);
       ln.displayScore = Math.round(lnCombined * 10) / 10;
       ln.score = ln.displayScore;
+      ln.adjustScore = Math.round(lnAdjust * 10) / 10;
       ln.letterLevel = lnLetter.level;  // 新九档字母等级
       ln.level = lnMap.level;
       ln.fortune = lnMap.level;
       ln.band = lnLetter.band;
       ln.mingPanBase = mingPanCompress;
+      // hint 与最终评级同源：综合分 + 岁运调整分 + 九档字母
+      ln.hint = `${ln.year}${ln.ganzhi}（综合 ${ln.displayScore >= 0 ? '+' : ''}${ln.displayScore}，岁运调整 ${ln.adjustScore >= 0 ? '+' : ''}${ln.adjustScore}，${lnLetter.level}）：${lnLetter.band}。关键阴阳作用：${(ln.topReasons || []).slice(0, 2).join('；')}。`;
     }
   }
   for (const ln of recentLiuNian as any[]) {
-    const lnCombined = mingPanCompress + (ln.displayScore || 0);
-    const lnLetter = letterFromCombined(lnCombined);
-    const lnMap = wuDangFromCombined(lnCombined);
+    const lnAdjust = ln.displayScore || 0;
+    const lnCombined = mingPanCompress + lnAdjust;
+    const lnLetter = letterFromCombined(lnAdjust);
+    const lnMap = wuDangFromCombined(lnAdjust);
     ln.displayScore = Math.round(lnCombined * 10) / 10;
     ln.score = ln.displayScore;
+    ln.adjustScore = Math.round(lnAdjust * 10) / 10;
     ln.letterLevel = lnLetter.level;  // 新九档字母等级
     ln.level = lnMap.level;
     ln.fortune = lnMap.level;
     ln.band = lnLetter.band;
     ln.mingPanBase = mingPanCompress;
+    ln.hint = `${ln.year}${ln.ganzhi}（综合 ${ln.displayScore >= 0 ? '+' : ''}${ln.displayScore}，岁运调整 ${ln.adjustScore >= 0 ? '+' : ''}${ln.adjustScore}，${lnLetter.level}）：${lnLetter.band}。关键阴阳作用：${(ln.topReasons || []).slice(0, 2).join('；')}。`;
   }
 
   return {

@@ -805,7 +805,7 @@ function computeTaiJiDbReferences(
 }
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.6.5';
+const APP_VERSION = '2.6.6';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -1340,28 +1340,26 @@ export default function BaZiAnalyzerPage() {
   const analyzedBoolean = analyzed && chart && monthQi && yongJi && elementPower && yinYangPct && coldHotPct && pattern && wealthNobility && daYunAnalysis && specialTips;
 
   // 角标统一不透明白底 + 实色描边彩字：无论压在描边天干块还是实心地支块上，视觉完全一致
-  // dai=月令逐字资料库中的「待定」（双面/两局/条件救应）：灰边 + 红色问号，区别于真中性
-  type PillarMark = 'useful' | 'taboo' | 'neutral' | 'dai';
+  // 排盘总览只出「用/忌/中」三态：月令逐字资料库中的「待定（dai）」不在总览显示问号，
+  // 一律回退引擎元素级用忌 marks（大方向判定）；待定的完整信息仅保留在 09 逐字喜忌表
+  type PillarMark = 'useful' | 'taboo' | 'neutral';
   const renderMarkBadge = (mark: PillarMark) => {
     const base = "rounded-none px-1.5 py-0.5 text-[10px] font-black tracking-wide";
     if (mark === 'useful') return <Badge className={base} style={{ background: '#FFFFFF', color: '#2E7654', border: '1.5px solid #2E7654', boxShadow: 'none' }}>用</Badge>;
     if (mark === 'taboo') return <Badge className={base} style={{ background: '#FFFFFF', color: '#E31C29', border: '1.5px solid #E31C29', boxShadow: 'none' }}>忌</Badge>;
-    if (mark === 'dai') return <Badge className={base} title="月令逐字待定：双面/两局/须条件救应，悬停逐字表查看" style={{ background: '#FFFFFF', color: '#E31C29', border: '1.5px solid #94A3B8', boxShadow: 'none' }}>?</Badge>;
     return <Badge className={base} style={{ background: '#FFFFFF', color: '#64748B', border: '1.5px solid #94A3B8', boxShadow: 'none' }}>中</Badge>;
   };
-  // 四柱徽章取值：优先月令逐字资料库（保留 dai 待定态），缺字回退引擎用忌 marks
+  // 四柱徽章取值：优先月令逐字资料库（xi/ji 定论），dai 待定或缺字回退引擎用忌 marks
   const pillarStemMark = (c: string, fallback: 'useful' | 'taboo' | 'neutral'): PillarMark => {
     const z = zhuZiXiJi?.stems.find((r) => r.char === c)?.mark;
     if (z === 'xi') return 'useful';
     if (z === 'ji') return 'taboo';
-    if (z === 'dai') return 'dai';
     return (fallback as PillarMark) ?? 'neutral';
   };
   const pillarBranchMark = (c: string, fallback: 'useful' | 'taboo' | 'neutral'): PillarMark => {
     const z = zhuZiXiJi?.branches.find((r) => r.char === c)?.mark;
     if (z === 'xi') return 'useful';
     if (z === 'ji') return 'taboo';
-    if (z === 'dai') return 'dai';
     return (fallback as PillarMark) ?? 'neutral';
   };
 
@@ -2156,9 +2154,7 @@ export default function BaZiAnalyzerPage() {
                                 ? { background: 'rgba(46,118,84,0.07)', color: '#2E7654', border: '2px solid #2E7654', borderRadius: 0 }
                                 : !isRiZhu && stemMark === 'taboo'
                                   ? { background: 'rgba(227,28,41,0.06)', color: '#E31C29', border: '2px solid #E31C29', borderRadius: 0 }
-                                  : !isRiZhu && stemMark === 'dai'
-                                    ? { background: '#F1F5F9', color: '#788491', border: '2px dashed #94A3B8', borderRadius: 0 }
-                                    : { background: 'white', color: 'var(--foreground)', border: '2px solid var(--border)', borderRadius: 0 };
+                                  : { background: 'white', color: 'var(--foreground)', border: '2px solid var(--border)', borderRadius: 0 };
                             return (
                               <>
                                 <div
@@ -2208,9 +2204,7 @@ export default function BaZiAnalyzerPage() {
                                 ? { background: '#2E7654', color: '#FFFFFF', border: '2px solid #2E7654', borderRadius: 0 }
                                 : branchMark === 'taboo'
                                   ? { background: '#E31C29', color: '#FFFFFF', border: '2px solid #E31C29', borderRadius: 0 }
-                                  : branchMark === 'dai'
-                                    ? { background: '#F1F5F9', color: '#788491', border: '2px dashed #94A3B8', borderRadius: 0 }
-                                    : { background: 'white', color: 'var(--foreground)', border: '2px solid var(--border)', borderRadius: 0 };
+                                  : { background: 'white', color: 'var(--foreground)', border: '2px solid var(--border)', borderRadius: 0 };
                             return (
                               <>
                                 <div
@@ -2233,13 +2227,12 @@ export default function BaZiAnalyzerPage() {
                           <div className="label-mono text-[8.5px] text-muted-foreground">藏干 HIDDEN</div>
                           <div className="mt-1 flex flex-wrap justify-center gap-1">
                             {pillar.hiddenStems.map((s, i) => {
-                              // 与天干/地支同源：优先月令逐字资料库（保留待定 dai），回退干支级判定
+                              // 与天干/地支同源：逐字定论（xi/ji）优先，待定/缺字回退引擎干支级 marks（待定按中性，与打分一致）
                               const hsMark: PillarMark = pillarStemMark(s, yongJi?.allStemMarks?.[s] ?? 'neutral');
                               const isUseful = hsMark === 'useful';
                               const isTaboo = hsMark === 'taboo';
-                              const isDai = hsMark === 'dai';
                               const zzNote = zhuZiXiJi?.stems.find((r) => r.char === s)?.note ?? '';
-                              const tagText = isUseful ? '喜用（吉）' : isTaboo ? '忌神（凶）' : isDai ? '待定（双面/须条件）' : '中性';
+                              const tagText = isUseful ? '喜用（吉）' : isTaboo ? '忌神（凶）' : '中性';
                               return (
                                 <span
                                   key={i}
@@ -2249,7 +2242,7 @@ export default function BaZiAnalyzerPage() {
                                     fontFamily: 'var(--font-mono)',
                                     background: isUseful ? 'rgba(46,118,84,0.08)' : isTaboo ? 'rgba(227,28,41,0.06)' : '#F1F5F9',
                                     color: isUseful ? '#2E7654' : isTaboo ? '#E31C29' : '#64748B',
-                                    border: `1px ${isDai ? 'dashed' : 'solid'} ${isUseful ? '#2E7654' : isTaboo ? '#E31C29' : '#E2E8F0'}`,
+                                    border: `1px solid ${isUseful ? '#2E7654' : isTaboo ? '#E31C29' : '#E2E8F0'}`,
                                     borderRadius: 0,
                                   }}
                                 >
@@ -2268,14 +2261,6 @@ export default function BaZiAnalyzerPage() {
                                       style={{ background: '#E31C29', color: '#FFFFFF', borderRadius: 0 }}
                                     >
                                       凶
-                                    </span>
-                                  )}
-                                  {isDai && (
-                                    <span
-                                      className="ml-0.5 inline-flex size-3 items-center justify-center text-[9px] font-black leading-none"
-                                      style={{ color: '#E31C29', borderRadius: 0 }}
-                                    >
-                                      ?
                                     </span>
                                   )}
                                 </span>
@@ -2298,11 +2283,7 @@ export default function BaZiAnalyzerPage() {
                     </span>
                     <span className="flex items-center gap-2">
                       <span className="inline-block size-3 border-2 border-border bg-white" />
-                      中性 · 无直接助损
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <span className="inline-flex size-3 items-center justify-center border-2 border-dashed border-[#94A3B8] bg-[#F1F5F9] text-[9px] font-black leading-none text-[#E31C29]">?</span>
-                      待定 · 双面/须条件（见逐字喜忌表）
+                      中性 · 无直接助损（逐字待定字按中性计，详见逐字喜忌表）
                     </span>
                   </div>
                 </CardContent>
@@ -2553,7 +2534,7 @@ export default function BaZiAnalyzerPage() {
                             </div>
                             <div
                               className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] font-black"
-                              title={'分值梯度：S+ > +6 ｜ S: +4~+6 ｜ A+: +2~+4 ｜ A: 0~+2 ｜ B+: -2~0 ｜ B-: -4~-2 ｜ C: -6~-4 ｜ C-: -8~-6 ｜ D < -8'}
+                              title={'评级按「岁运调整分」（综合分 − 命盘基准）定档，与先天盘高低无关：S+ > +3.0 ｜ S: +2.0~+3.0 ｜ A+: +1.0~+2.0 ｜ A: +0.3~+1.0 ｜ B+: -0.3~+0.3 ｜ B-: -1.0~-0.3 ｜ C: -2.0~-1.0 ｜ C-: -3.0~-2.0 ｜ D < -3.0'}
                             >
                               {(['S+','S','A+','A','B+','B-','C','C-','D'] as const).map(lv => (
                                 <span key={lv} className="inline-flex items-center gap-1">
@@ -3150,7 +3131,7 @@ export default function BaZiAnalyzerPage() {
 
                   {/* 元素二分恒为月气大方向；逐字取舍以资料库为准，条件字显示问号（中性不增减） */}
                   <p className="text-[10px] font-bold text-muted-foreground">
-                    五行用忌示月气阴阳大方向；个别干支的条件取舍（两局反转、救应、土双面）以「逐字喜忌表」为准——表中标 <span className="font-black" style={{ color: '#E31C29' }}>?</span> 待定者，四柱徽章同示问号，打分按中性不增减。
+                    五行用忌示月气阴阳大方向；个别干支的条件取舍（两局反转、救应、土双面）以「逐字喜忌表」为准——表中标 <span className="font-black" style={{ color: '#E31C29' }}>?</span> 待定者在排盘总览按「中」显示，打分按中性不增减。
                   </p>
 
                   {/* 干支级取用例外：五行标记为月令大方向，个别干支有无条件定论 */}
