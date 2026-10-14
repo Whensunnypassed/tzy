@@ -193,91 +193,89 @@ interface BaZiReport {
 
 # UI 设计指南
 
+> 2026-10 起全站改为**瑞士国际主义设计（Swiss International Style / Helvetica 网格传统）**。Memorial 纪念页（/memorial、/memorial/mao）保留原有庄重水墨风，与主站视觉切割，不适用本指南。
+
 ## 1. 设计推导依据
 
 - **参考意图**: Free Direction —— 参考手册提供理论体系与内容语义，不参与视觉与布局决策
-- **核心情绪 / 应用类型**: 命理分析工具，追求"沉静、可信、有古意但不迷信"的专业感
-- **独特记忆点**: 以"水火阴阳鱼"太极圆环为核心视觉母题，贯穿排盘、阴阳平衡可视化与用神忌神标记，形成可识别的命理体系感
+- **核心情绪 / 应用类型**: 命理分析工具，追求"客观、精确、可信"的专业感，像一份排版严谨的分析报告而非命书
+- **独特记忆点**: 严格基线网格 + 编号式版块（01/02…）+ 大写等宽元信息标签（label-mono）+ 单一朱红点缀，形成"瑞士印刷厂排出的命理报告"识别度
 
 ## 2. Art Direction
 
-- **方向名**: 水墨命理 · 现代典籍
-- **Design Style**: Editorial 经典排版 + Soft Blocks 柔色块 —— 命理内容厚重且专业，需典籍式阅读舒适感；柔色块用于五行分类与吉凶标记，降低玄秘感
-- **DNA 参数**: 圆角 subtle (`rounded-md`) / 阴影 subtle (`shadow-sm`) / 间距 standard (`gap-4 p-6`) / 字体方向 衬线标题 + 无衬线正文 / 装饰手法 细横线分隔、太极图形元素、干支方格排版
+- **方向名**: 瑞士国际主义 · 命理报告
+- **Design Style**: Swiss International Typographic Style —— 严格网格、非对称构图、功能至上；装饰为零，一切视觉元素承载信息或层级
+- **DNA 参数**: 圆角 0（直角，`rounded-none`）/ 阴影 无（纯扁平，全部 shadow 置 none）/ 间距 standard（`gap-4 p-6`，网格对齐）/ 字体方向 全无衬线 + 等宽元信息 / 装饰手法 细规线（hairline）、编号版块、印刷对位角标（crosshair）、朱红下划线式高亮（mark-highlight）
 - **应用类型**: Tool + Report —— 首页输入为聚焦任务流，结果页为结构化长报告
 
 ## 3. Color System
 
-**色彩关系**: 墨黑主文字 + 宣纸米白背景 + 朱砂红 primary + 石绿 accent + 浅灰褐分隔线；用神用石绿系，忌神用朱砂系，阴阳用暖橙（阳）与冷靛蓝（阴）表达
-**配色设计理由**: 取传统命理典籍的墨色、朱砂印、宣纸底与石绿批注语义，既保留东方文化气质，又通过现代比例控制避免封建迷信感；primary 朱砂只用于 CTA、忌神标记与关键状态，accent 石绿用于用神与辅助高亮
-**主色推导**: 从"朱批命书"语义提取朱砂红为 primary，对应忌神与主行动；石绿为传统批注色，对应用神与辅助；阴阳二气用橙与靛蓝表达水火概念
-**使用比例**: 65% 中性（墨/纸/灰褐） / 25% 辅助（石绿+靛蓝+暖橙） / 10% primary（朱砂）；primary 仅用于主按钮、忌神标记、当前大运高亮，不滥用
+**色彩关系**: 纸白底 + 墨黑主文字 + 灰网格线 + 单一朱红（#E31C29）primary；用神石绿（#2E7654），忌神朱红，阳气暖橙（hsl(28 82% 48%)），阴气冷靛蓝（hsl(215 55% 38%)）
+**配色设计理由**: 瑞士传统的中性基底（白/黑/灰）承担 90% 以上画面，色彩只在语义判断处出现——朱红既是主行动也是忌神，石绿即用神；五行色为低饱和平涂色板，服务图表与干支标记
+**使用比例**: 70% 中性（纸白/墨黑/灰线） / 20% 语义辅助（石绿/靛蓝/暖橙/五行色） / 10% primary（朱红）；primary 仅用于主按钮、忌神标记、版块编号与关键状态
 
 | 角色 | CSS 变量 | Tailwind Class | HSL 值 | 设计说明 |
 |---|---|---|---|---|
-| bg | `--background` | `bg-background` | hsl(40 35% 97%) | 宣纸米白底，长阅读不刺眼 |
+| bg | `--background` | `bg-background` | hsl(210 17% 98%) | 冷纸白底 |
 | card | `--card` | `bg-card` | hsl(0 0% 100%) | 纯白卡片承载分析模块 |
-| text | `--foreground` | `text-foreground` | hsl(24 15% 15%) | 墨色正文，典籍质感 |
-| textMuted | `--muted-foreground` | `text-muted-foreground` | hsl(24 8% 45%) | 淡褐灰辅助文字 |
-| primary | `--primary` | `bg-primary` / `text-primary` | hsl(3 72% 48%) | 朱砂红，主CTA与忌神标记 |
-| primaryForeground | `--primary-foreground` | `text-primary-foreground` | hsl(0 0% 100%) | 朱砂上的白字 |
-| accent | `--accent` | `bg-accent` | hsl(145 35% 92%) | 石绿浅底，hover/选中与用神背景 |
-| accentForeground | `--accent-foreground` | `text-accent-foreground` | hsl(145 45% 28%) | 深石绿文字，用神标签 |
-| border | `--border` | `border-border` | hsl(24 12% 86%) | 浅褐灰分隔线，宣纸折痕感 |
+| text | `--foreground` | `text-foreground` | hsl(222 14% 16%) | 墨黑正文（≈#1F2937） |
+| textMuted | `--muted-foreground` | `text-muted-foreground` | hsl(222 10% 45%) | 中灰辅助文字 |
+| primary | `--primary` | `bg-primary` / `text-primary` | hsl(356 78% 50%) | 朱红 #E31C29，主CTA与忌神标记 |
+| primaryForeground | `--primary-foreground` | `text-primary-foreground` | hsl(0 0% 100%) | 朱红上的白字 |
+| accent | `--accent` | `bg-accent` | hsl(210 15% 94%) | 浅灰底，hover/选中 |
+| accentForeground | `--accent-foreground` | `text-accent-foreground` | hsl(222 14% 16%) | 深墨文字 |
+| border | `--border` | `border-border` | hsl(222 10% 85%) | 灰规线（hairline） |
 
 **语义色提示**:
-- 用神（吉）: bg `hsl(145 35% 92%)` / border `hsl(145 40% 75%)` / text `hsl(145 45% 28%)` —— 石绿系，饱和度与 primary 对齐
-- 忌神（凶）: bg `hsl(3 70% 95%)` / border `hsl(3 65% 80%)` / text `hsl(3 72% 40%)` —— 朱砂系，直接使用 primary 色温
-- 阳气（火/富）: bg `hsl(28 90% 94%)` / border `hsl(28 80% 75%)` / text `hsl(24 85% 35%)` —— 暖橙，高于 primary 明度
-- 阴气（水/贵寿）: bg `hsl(210 40% 93%)` / border `hsl(210 45% 75%)` / text `hsl(215 50% 30%)` —— 冷靛蓝，与 primary 饱和度接近
-- 五行色: 木 `hsl(90 35% 45%)`、火 `hsl(24 85% 50%)`、土 `hsl(38 55% 55%)`、金 `hsl(45 15% 65%)`、水 `hsl(210 50% 45%)` —— 饱和度统一 35-55%，用于图表与干支标记
+- 用神（吉）: `#2E7654`（石绿）—— 边框/实心块/文字，背景用 `rgba(46,118,84,.07)`
+- 忌神（凶）: `#E31C29`（朱红）—— 背景用 `rgba(227,28,41,.06)`
+- 阳气: `hsl(28 82% 48%)` 暖橙 / 阴气: `hsl(215 55% 38%)` 冷靛蓝
+- 五行色（低饱和平涂）: 木 `#4A834E`、火 `#DC4824`、土 `#B98C31`、金 `#788491`、水 `#31669B`
+- 九档评级色: S+ `#E31C29` / S `#B98C31` / A+ `#2E7654` / A `#4A834E` / B+ `#31669B` / B- `#788491` / C `#C2410C` / C- `#9A3412` / D `#9CA3AF`
 
 ## 4. 字体与节奏
 
-- **font-display**: Noto Serif SC —— 标题与干支排盘用衬线，呼应命理学典籍气质
-- **font-body**: Noto Sans SC —— 分析正文与说明用无衬线，保证长文阅读效率
-- **字号**: H1 text-4xl ~ text-5xl（Noto Serif SC）；H2 text-xl ~ text-2xl（衬线）；body text-base；muted text-sm；干支大字 text-3xl ~ text-4xl（排盘格内）
-- **圆角**: subtle (`rounded-md`) —— 卡片与输入框微圆，保留典籍方正感
+- **font-sans**: Archivo + Noto Sans SC —— 标题、正文、干支全部无衬线；H1/H2 用 800-900 字重 + 紧字距（tracking-tight）
+- **font-mono**: JetBrains Mono —— 元信息标签（label-mono）、版块编号（01/SECTION）、数字（num-tabular 等宽数字）、干支五行小注
+- **字号**: H1 text-5xl ~ text-7xl（黑体极粗）；H2 text-xl ~ text-2xl；body text-base；muted/label text-[11px]；干支大字 text-3xl ~ text-4xl
+- **圆角**: 0 —— 全站直角，任何 rounded-* 仅 rounded-none（圆形仅用于色点图例等几何元素）
 
 ## 5. 全局布局契约
 
-- **Reference Layout Use**: 按需求结构推导，首页为聚焦输入，结果页为模块式长报告
-- **Page / Section Order**: 首页（输入表单+开始分析）→ 结果页（排盘→月气→用忌→日主→命局模式→富贵贫贱→七大项→六亲→健康→大运流年→十干喜忌）
-- **Standard Content Zone**: 结果页 `max-w-5xl mx-auto`；首页表单收窄至 `max-w-xl`
-- **Shell / Frame Alignment**: 内容容器与框架同宽，顶部简洁导航 + 重新排盘按钮
-- **Padding & Rhythm**: `px-4 md:px-6 lg:px-8 py-10 md:py-14`，卡片间距 `gap-5`，模块间 `space-y-8`
-- **Full-bleed Zones**: 首页 Hero / 结果页顶部排盘横幅可全宽背景，内部内容受内容区约束
-- **Local Narrowing**: 输入表单、日主分析正文、十干喜忌等文本区可在容器内收窄至 `max-w-2xl`
+- **Reference Layout Use**: 严格网格；首页报头为非对称双栏（大标题+节气元信息卡），结果页为编号版块纵列
+- **Page / Section Order**: 首页（输入表单+开始分析）→ 结果页（01排盘→02命局模式→03大运流年→04速览→05五行阴阳→06寒热平衡→07特别提示→08月气→09用忌→象法）
+- **Standard Content Zone**: 结果页 `max-w-6xl mx-auto`，主内容列 + 右侧编号目录边栏（lg 以上）；首页表单 `max-w-xl`
+- **Shell / Frame Alignment**: 版块头栏统一 `label-mono 编号 / EN + 竖线 + 中文标题` 结构；卡头 `border-b`，内容区 `p-4 md:p-8`
+- **Padding & Rhythm**: 版块间距 `space-y-5`；网格列间距 `gap-3 md:gap-4`；一切对齐基线网格
+- **Full-bleed Zones**: 报头与页脚可全宽，内部内容受内容区约束；页脚 `border-t-4 border-foreground`
 - **Overflow Strategy**: 大运流年时间线、五行雷达图、刑冲合害表格使用 `overflow-x-auto`
-- **Flexibility Boundary**: 允许移动端卡片内边距与列数调整；主色、圆角、阴影、干支方格样式全站统一
+- **Flexibility Boundary**: 允许移动端调整列数；朱红/墨黑/灰线/直角/编号版块样式全站统一
 
 ## 6. 视觉与动效
 
-- **装饰**: 细线分隔、干支方格排版、极简太极图形
-- **阴影/边界**: 轻阴影 + 1px 边框，卡片微浮起；用神/忌神标签用填充色+边框
-- **动效**: 克制 —— 折叠展开用 200ms ease；hover 用浅底过渡；分析结果入场用轻微上移淡入；避免夸张动效
+- **装饰**: 仅规线（1px border / hairline）、编号、对位角标（crosshair）、朱红下划线高亮（mark-highlight）；禁止渐变、阴影、emoji 装饰符号
+- **阴影/边界**: 无阴影；层级靠边框粗细（1px 常规 / 2px 强调 / 4px 报头页脚）与留白
+- **动效**: 克制 —— 折叠展开 200ms ease；hover 用底色过渡或反色（outline 按钮 hover 变黑底白字）；结果入场轻微上移淡入（reveal）；无弹跳、无闪烁、无跟随特效
 
 ## 7. 组件原则
 
-- 排盘用 2×4 干支方格：天干在上、地支在下，每格标注五行与阴阳小圆点，用神绿边/忌神红边
-- 阴阳平衡用横向对比条：左侧暖色（阳）右侧冷色（阴），中间垂直分隔线为平衡中点
-- 五行力量用柱状图或雷达图，柱色对应五行色
-- 可折叠卡片：标题左对齐 + 右侧展开箭头，展开状态下边框高亮
+- 排盘用 2×4 干支方格：天干在上（描边块）、地支在下（实心块），用神绿/忌神红/中性灰，直角无圆角
+- 阴阳/寒热对比用横向条或环形图，平涂色，无 glow
+- 五行力量用柱状图或雷达图，柱色对应五行平涂色
+- 可折叠卡片：编号标题左对齐 + 右侧展开箭头；卡头 `label-mono` 元信息
 - 所有按钮、输入框、折叠卡片必须有 Default / Hover / Active / Focus-visible / Disabled 状态
-- Primary 朱砂按钮仅用于"开始分析"与关键行动；"重新排盘"用 outline 次级按钮
+- Primary 朱红按钮仅用于"开始排盘"与关键行动；"重新排盘"等用 outline（hover 黑底反白）
 
 ## 8. Image Direction
 
-- **Image Role**: 首页 Hero 背景氛围图 + 结果页排盘区顶部装饰图形
-- **Image Art Direction**: 极简东方水墨风格，大面积留白，底部隐约山峦/水面剪影，中央上方一轮暖日光晕对应阳气概念，整体低对比、低饱和，不抢文字焦点；作为文字背景使用，需保证前景表单高可读
-- **Image Prompt Keywords**: 东方水墨山水, 极简留白, 宣纸纹理, 暖日光晕, 淡墨远山, 水平构图, 低饱和度, 典籍气质, 底部剪影, 大面积负空间
-- **Image Avoidance**: 避免八卦符号堆砌、算命先生形象、锦鲤铜钱等俗套命理元素、高饱和度渐变、3D 渲染感、通用图库商务人物
+- **Image Role**: 主站不使用氛围图/插画；视觉表达完全由网格、排版与语义色承担
+- **若必须配图**: 极简几何/抽象构成，单色或双色调，高对比，无装饰性纹理
 
 ## 9. Anti-patterns
 
-- **Feudal mysticism**: 满页八卦、太极、符咒、金色龙纹等玄学堆砌；本产品是专业分析工具，视觉克制，只用极简太极与五行色做语义标记
-- **Rainbow five elements**: 五行五色饱和度过高导致页面像儿童读物；统一饱和度 35-55%，以墨色和纸白为基底
-- **SaaS default drift**: 回到蓝色按钮 + 灰白卡片 + 通用图表；必须用朱砂/石绿/墨色/宣纸底色建立命理工具识别度
-- **Status color overload**: 用神/忌神/阴阳/五行全用饱和色填满；颜色按层级使用，基础信息只用墨色，关键判断才上色
-- **Invisible interaction**: 干支格、折叠卡片、大运节点只有颜色没有焦点状态；所有可交互元素必须有 focus-visible 轮廓
-- **Typography chaos**: 干支、标题、正文、说明全用不同字重字号混搭；标题统一 Noto Serif SC，正文 Noto Sans SC，干支用大号衬线但与标题同族
+- **Gradient & shadow drift**: 重新引入渐变、阴影、圆角即破坏瑞士体系；一切平面、直角、规线
+- **Emoji decoration**: ✦♡✿🚀 等装饰符号禁止出现在 UI（引擎输出文本中的符号除外）
+- **Rainbow five elements**: 五行色饱和度过高像儿童读物；只用低饱和平涂色板
+- **Status color overload**: 用神/忌神/阴阳/五行全用饱和色填满；中性信息只用墨黑与灰线，关键判断才上色
+- **Invisible interaction**: 所有可交互元素必须有 focus-visible 轮廓
+- **Typography chaos**: 全站仅无衬线（Archivo/Noto Sans SC）+ 等宽（JetBrains Mono）两族；禁止衬线、禁止手写体、禁止多字重混搭无层级
