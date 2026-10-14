@@ -401,6 +401,18 @@ export function analyzeYongJi(chart: BaZiChart, monthQi: MonthQiResult): YongJiR
   if (chart.month.branch === '午') {
     overrideNotes.push('午月以庚金为首用；壬癸水慎用——丑戌晦火得富亦克水失贵，须庚辛金通关方无虑，土克水态势明确时反取木（水生木、木克土）救水。');
   }
+  if (chart.month.branch === '巳') {
+    overrideNotes.push('巳月以庚金为首用；水木须齐见——孤水被旺土所克、孤木生火助土皆败，壬癸水、甲乙木单见不作确定用神论，逐字标「？」者即此条件取舍。');
+  }
+  if (chart.month.branch === '未') {
+    overrideNotes.push('未月取用同巳午：庚金首用；壬癸水须庚金引水藏根、水木齐见方用，孤见皆败；丑戌阴土晦火藏金可成富基，土过则伤水。');
+  }
+  if (chart.month.branch === '申') {
+    overrideNotes.push('申月须先定局：余热局（火土旺）用水木克土、金泄土，忌木火克金、土旺埋金；成凉局（金气得布）用木火扶阳炼金，忌金水再旺。两局取用相反，定局之前逐字一律待定（显示问号），引擎按中性不增减分。');
+  }
+  if (chart.month.branch === '酉') {
+    overrideNotes.push('酉月多数按成凉论（用木火、忌金水）；若土得火烘成余热局则喜忌反转。土性双面（制水取贵、晦火失富）独立判定，逐字标「？」者须视柱中态势。');
+  }
 
   const direction = monthQi.usageDirection === 'yin' ? '阴气（金水）' : '阳气（火土）';
   const fsMeta = FOUR_SYMBOL_META[monthQi.fourSymbol];
@@ -2825,17 +2837,26 @@ export function applyForwardTrend<T extends { rawScore: number }>(items: T[]): A
 /**
  * 量化打分：大运/流年干支 的「阴阳气喜用关系」（符合《自然易鉴》的判断体系）
  *
- * —— 核心原则（按权重从高到低，刑冲合会仅作最后一步±1~2的修正，不做主判）：
- *   A. 月令喜用方向（月气 usageDirection）：
- *        yang → 需要补阳（喜火、土，喜阳干阳支）； yin → 需要补阴（喜金、水，喜阴干阴支）
- *   B. 原局偏枯弥合度（岁运用来"补缺"，不是"叠加偏枯"）：
- *        命局阳气＜40% → 阳干阳支加分，阴干阴支扣分（不能再雪上加霜补阴）
- *        命局阴气＜40% → 阴干阴支加分，阳干阳支扣分（不能再助纣为虐补阳）
- *   C. 干支自洽（气是否顺流）：
- *        生用神/克忌神→加分；克用神/生忌神→扣分
- *   D. 刑冲合害（修正项·最高权重 ±3 封顶，不单独决定吉凶）
+ * 评分方法论（借鉴权威评级机构记分卡原则：因子透明、不重复计分、置信降权）：
+ *   A. 月令逐字喜忌 × 干支一体落实（主分量，满分 ±13 ≈ 权重50%）：
+ *        喜/忌/待定直接取自月令逐字资料库（allStemMarks/allBranchMarks），干±3、支±10（大运重地支）。
+ *        【干支作为整体评分，不割裂】按六十甲子单柱原理修正：
+ *        截脚（支克干）→ 干分作废（干之喜忌被支否定，如庚午「凉受丁火否定」）；
+ *        盖头（干克支）→ 支分减半（支之质被干所盖）；
+ *        布气（干生支）→ 干分减半（干气下布外泄）。
+ *   B. 原局偏枯弥合（修正分量，满分 ±8 ≈ 权重30%）：
+ *        【仅对 A 段未判定（待定/缺字）的干支启用】寒暖「用阴阳」补偏——
+ *        资料库已定喜忌的字，其寒暖利害已含于逐字定论，不再重复加减（避免双重计分）。
+ *   C. 干支相生·气机流通（小分量，±3 ≈ 权重20%）：
+ *        相生时以受生方逐字 mark 定加减（生用神→流通+3、生忌神→助忌-1）；
+ *        克的关系已由 A 段落实修正承接，不重复计分；含待定字时不增减。
+ *   D. 刑冲合会：【不参与评分】（用户定标：非逐字资料库判定依据）——
+ *        库中以冲/合为据的字（辰月戌冲辰=用、未合木=待定）其吉凶已由 A/B 承接；
+ *        刑冲合害取象仅由象法「干支作用」模块描述，不影响分数。
+ *   【置信降权】月令逐字库待定字占比过半（如申月两局未定）→ B/C 修正分量整体 ×0.3，
+ *        避免补偏逻辑在取用相反的两局间默认站队；A 段本读库不受影响。
  *
- * @returns score（综合分，典型范围 -26 ~ +26）& summary（按分数绝对值从大到小排序的Top判词）
+ * @returns score（综合分，典型范围 ±27）& summary（按分数绝对值从大到小排序的Top判词）
  */
 export function scoreGanZhiImpact(
   stem: string,
@@ -2845,23 +2866,27 @@ export function scoreGanZhiImpact(
   monthQi: MonthQiResult,
   yinYangPct: { yang: number; yin: number },
 ): {
-  score: number;            // 原始分 ±26 级（内部使用）
+  score: number;            // 原始分 ±27 级（内部使用）
   summary: string[];        // 展示给用户的 Top 作用（已是 ÷3.6 的压缩分，与综合分同口径）
-  plusSumRaw: number;       // 原始分：加分项合计（仅用忌/干支自洽的 A/B/C 正分 + 刑冲合会 D 正分）
-  minusSumRaw: number;      // 原始分：扣分项合计（A/B/C 负分 + D 负分）
-  otherSumRaw: number;      // 原始分：刑冲合会修正项合计（D 项总额，已含 ±3 封顶约束）
+  plusSumRaw: number;       // 原始分：加分项合计（A/B/C 正分）
+  minusSumRaw: number;      // 原始分：扣分项合计（A/B/C 负分）
+  otherSumRaw: number;      // 恒为 0：刑冲合会不参与评分（保留字段兼容 UI 明细行）
 } {
-  const pillars = [chart.year, chart.month, chart.day, chart.hour];
-  const chartStems = pillars.map((p) => p.stem);
-  const chartBranches = pillars.map((p) => p.branch);
-
-  const isUsefulEl = (el: string) => yongJi.usefulElements.includes(el);
-  const isTabooEl  = (el: string) => yongJi.tabooElements.includes(el);
-
   // 用忌标记唯一来源：月令逐字资料库（analyzeYongJi 的 allStemMarks/allBranchMarks）
   // 含天干粒度覆盖（辰月甲=用）、土支逐字定论（辰月戌冲辰=用、夏月丑戌晦火=用）、两局/条件字=中性
   const markStem = (s: string): 'useful' | 'taboo' | 'neutral' => yongJi.allStemMarks[s] ?? 'neutral';
   const markBranch = (b: string): 'useful' | 'taboo' | 'neutral' => yongJi.allBranchMarks[b] ?? 'neutral';
+
+  // 置信因子：月令逐字库待定字占比过半（申月两局未定）→ B/C/D 修正分量整体降权至 30%，
+  // 避免寒暖补偏在取用相反的两局之间默认站队；A 段直接读库，不受影响。
+  const refMonth = ZHUZI_XIJI_REF[chart.month.branch];
+  const refRows = refMonth
+    ? [...Object.values(refMonth.stems), ...Object.values(refMonth.branches)]
+    : [];
+  const daiRatio = refRows.length > 0
+    ? refRows.filter((r) => r[0] === 'dai').length / refRows.length
+    : 0;
+  const conf = daiRatio >= 0.5 ? 0.3 : 1.0;
 
   // —— MVP 口径对齐：最终"综合分 displayScore" = compressScore(score) = score / 3.6
   //    因此 topReasons 里展示给用户看的每一项"±X"也要同步除以 3.6，保证用户能手动加起来等于综合分
@@ -2873,7 +2898,7 @@ export function scoreGanZhiImpact(
   let score = 0;
   let plusSumRaw  = 0; // 原始分加分合计（A/B/C 正）
   let minusSumRaw = 0; // 原始分扣分合计（A/B/C 负）
-  let otherSumRaw = 0; // 原始分刑冲合会修正合计（D 项，±3 封顶后）
+  let otherSumRaw = 0; // 刑冲合会不参与评分，恒为 0
 
   const summary: string[] = [];
   const pushSum = (msg: string, s: number) => {
@@ -2898,173 +2923,95 @@ export function scoreGanZhiImpact(
     : branchEl === 'metal' || branchEl === 'water' ? 'yin'
     : (['未', '戌'].includes(branch) ? 'yang' : 'yin');
 
-  // 天干五行（占比少：天干为表象）
-  if (stemMark === 'useful')       { score += 3; pushSum(`天干${stem}属月令用神（${elementName(stemEl)}）`, +3); }
-  else if (stemMark === 'taboo')   { score -= 3; pushSum(`天干${stem}属月令忌神（${elementName(stemEl)}）`, -3); }
-  // 地支五行（大运重地支：地支为实质，权重加大）
-  if (branchMark === 'useful')     { score += 10; pushSum(`地支${branch}属月令用神（${elementName(branchEl)}）`, +10); }
-  else if (branchMark === 'taboo') { score -= 10; pushSum(`地支${branch}属月令忌神（${elementName(branchEl)}）`, -10); }
-  // 说明：月令用阴/用阳大方向（含辰月甲救水、夏月丑戌晦火等干支级例外）已完整体现在
-  //       stemMark/branchMark 的 ±3/±10 中，不再按干支奇偶「体阴阳」重复加减，
-  //       避免同一字既加分又扣分（如庚为首用却因阳干被扣）的矛盾展示。
+  // —— A. 月令逐字喜忌 × 干支一体落实修正（主分量A：支±10、干±3） ——
+  // 六十甲子单柱原理（reference/docs/六十甲子.md）：天干之功须看地支环境是否落实——
+  //   截脚（支克干）：干之喜忌被支否定，干分作废（如庚午「凉受丁火否定」，庚之用不施）；
+  //   盖头（干克支）：支之质被干所盖，支分减半（来源否定落实）；
+  //   布气（干生支）：干气下布外泄，干分减半（功能泄于支）。
+  // 月令用阴/用阳大方向已含于 marks；不再按奇偶「体阴阳」重复加减。
+  const branchKeStem    = isKeyu(branchEl, stemEl);
+  const stemKeBranch    = isKeyu(stemEl, branchEl);
+  const stemShengBranch = isShengyu(stemEl, branchEl);
+  const branchShengStem = isShengyu(branchEl, stemEl);
 
-  // -------- B. 原局偏枯弥合度（主分量B，满分 ±18，按寒暖「用阴阳」补偏） --------
+  if (stemMark === 'useful' || stemMark === 'taboo') {
+    const base  = stemMark === 'useful' ? 3 : -3;
+    const label = stemMark === 'useful' ? `天干${stem}属月令用神（${elementName(stemEl)}）` : `天干${stem}属月令忌神（${elementName(stemEl)}）`;
+    if (branchKeStem) {
+      pushSum(`干支一体·截脚：${label}，其气受${branch}（${elementName(branchEl)}克${elementName(stemEl)}）否定→${stemMark === 'useful' ? '用不施为' : '忌被化解'}（干分作废）`, 0);
+    } else if (stemShengBranch) {
+      const s = base * 0.5; score += s;
+      pushSum(`${label}，其气下布于${branch}（干生支），功能减半`, s);
+    } else {
+      score += base; pushSum(label, base);
+    }
+  }
+  if (branchMark === 'useful' || branchMark === 'taboo') {
+    const base  = branchMark === 'useful' ? 10 : -10;
+    const label = branchMark === 'useful' ? `地支${branch}属月令用神（${elementName(branchEl)}）` : `地支${branch}属月令忌神（${elementName(branchEl)}）`;
+    if (stemKeBranch) {
+      const s = base * 0.5; score += s;
+      pushSum(`干支一体·盖头：${label}，其质被${stem}（${elementName(stemEl)}克${elementName(branchEl)}）所盖，力量减半`, s);
+    } else {
+      score += base; pushSum(label, base);
+    }
+  }
+
+  // -------- B. 原局偏枯弥合度（修正分量B，满分 ±8，按寒暖「用阴阳」补偏） --------
+  // 【不重复计分】仅对 A 段未判定（待定/缺字）的干支启用：资料库已定喜忌的字，
+  // 其寒暖利害已含于逐字定论（如辰月甲木=用，不再因气暖重复加分）；待定字库无定论，方以补偏折中。
   const yangShort = yinYangPct.yang < 40; // 命局偏阴，阳气不够
   const yinShort  = yinYangPct.yin  < 40; // 命局偏阳，阴气不够
   const balanced  = !yangShort && !yinShort; // 二气均衡，弥合权重减半（避免拉向单边）
   const half = balanced ? 0.5 : 1.0;
+  const stemUndecided = stemMark === 'neutral';
+  const branchUndecided = branchMark === 'neutral';
 
-  // 补阳气（命局阳气不足时）—— 地支权重 >> 天干
-  if (yangShort) {
-    if (stemYY   === 'yang') { const s = +2.5*half; score += s; pushSum(`天干${stem}气暖（木火/燥土），补原局阳气不足`, +s); }
-    if (stemYY   === 'yin')  { const s = -1.5*half; score += s; pushSum(`天干${stem}气寒（金水/湿土），再增阴气→偏`,  s); }
-    if (branchYY === 'yang') { const s = +5.5*half; score += s; pushSum(`地支${branch}气暖（木火/燥土），补原局阳气不足`, +s); }
-    if (branchYY === 'yin')  { const s = -3*half;   score += s; pushSum(`地支${branch}气寒（金水/湿土），再增阴气→偏`,  s); }
-  }
-  // 补阴气
-  if (yinShort) {
-    if (stemYY   === 'yin')  { const s = +2.5*half; score += s; pushSum(`天干${stem}气寒（金水/湿土），补原局阴气不足`, +s); }
-    if (stemYY   === 'yang') { const s = -1.5*half; score += s; pushSum(`天干${stem}气暖（木火/燥土），再增阳气→偏`,  s); }
-    if (branchYY === 'yin')  { const s = +5.5*half; score += s; pushSum(`地支${branch}气寒（金水/湿土），补原局阴气不足`, +s); }
-    if (branchYY === 'yang') { const s = -3*half;   score += s; pushSum(`地支${branch}气暖（木火/燥土），再增阳气→偏`,  s); }
-  }
-  // 命局本就平衡，不再做单边偏向（不加分、只扣那些"继续助强一边"的）
-  if (balanced) {
-    const yangDominantYuanju = yinYangPct.yang > yinYangPct.yin;
-    if (yangDominantYuanju) {
-      if (stemYY   === 'yang') { score -= 1; pushSum(`原局阳气略多，${stem}再气暖易失衡`, -1); }
-      if (branchYY === 'yang') { score -= 2; pushSum(`原局阳气略多，${branch}再气暖易失衡`, -2); }
-    } else {
-      if (stemYY   === 'yin') { score -= 1; pushSum(`原局阴气略多，${stem}再气寒易失衡`, -1); }
-      if (branchYY === 'yin') { score -= 2; pushSum(`原局阴气略多，${branch}再气寒易失衡`, -2); }
+  if (stemUndecided) {
+    // 天干补偏（权重小：天干主象）
+    if (yangShort && stemYY === 'yang') { const s = +2.5*half*conf; score += s; pushSum(`天干${stem}月令待定·气暖（木火/燥土），补原局阳气不足`, +s); }
+    if (yangShort && stemYY === 'yin')  { const s = -1.5*half*conf; score += s; pushSum(`天干${stem}月令待定·气寒（金水/湿土），再增阴气→偏`, s); }
+    if (yinShort  && stemYY === 'yin')  { const s = +2.5*half*conf; score += s; pushSum(`天干${stem}月令待定·气寒（金水/湿土），补原局阴气不足`, +s); }
+    if (yinShort  && stemYY === 'yang') { const s = -1.5*half*conf; score += s; pushSum(`天干${stem}月令待定·气暖（木火/燥土），再增阳气→偏`, s); }
+    if (balanced) {
+      const yangDom = yinYangPct.yang > yinYangPct.yin;
+      if (yangDom && stemYY === 'yang') { const s = -1*conf; score += s; pushSum(`原局阳气略多，待定干${stem}再气暖易失衡`, s); }
+      if (!yangDom && stemYY === 'yin') { const s = -1*conf; score += s; pushSum(`原局阴气略多，待定干${stem}再气寒易失衡`, s); }
     }
   }
-
-  // -------- C. 干支自洽 · 气机流通（小分量C，满分 ±8，但仍以用忌为核心标尺） --------
-  if (isShengyu(stemEl, branchEl)) {
-    if (branchMark === 'useful')     { score += 3; pushSum(`干生支（${stem}生${branch}），支为用神→气流通`, +3); }
-    else if (branchMark === 'taboo') { score -= 1; pushSum(`干生支（${stem}生${branch}），支为忌神→助忌`, -1); }
-    else                             { score += 1; pushSum(`干生支，干支相生气机顺`, +1); }
-  } else if (isShengyu(branchEl, stemEl)) {
-    if (stemMark === 'useful')       { score += 3; pushSum(`支生干（${branch}生${stem}），干为用神→气流通`, +3); }
-    else if (stemMark === 'taboo')   { score -= 1; pushSum(`支生干（${branch}生${stem}），干为忌神→助忌`, -1); }
-    else                             { score += 1; pushSum(`支生干，干支相生气机顺`, +1); }
+  if (branchUndecided) {
+    // 地支补偏（权重大：地支主实，大运重地支）
+    if (yangShort && branchYY === 'yang') { const s = +5.5*half*conf; score += s; pushSum(`地支${branch}月令待定·气暖（木火/燥土），补原局阳气不足`, +s); }
+    if (yangShort && branchYY === 'yin')  { const s = -3*half*conf; score += s; pushSum(`地支${branch}月令待定·气寒（金水/湿土），再增阴气→偏`, s); }
+    if (yinShort  && branchYY === 'yin')  { const s = +5.5*half*conf; score += s; pushSum(`地支${branch}月令待定·气寒（金水/湿土），补原局阴气不足`, +s); }
+    if (yinShort  && branchYY === 'yang') { const s = -3*half*conf; score += s; pushSum(`地支${branch}月令待定·气暖（木火/燥土），再增阳气→偏`, s); }
+    if (balanced) {
+      const yangDom = yinYangPct.yang > yinYangPct.yin;
+      if (yangDom && branchYY === 'yang') { const s = -2*conf; score += s; pushSum(`原局阳气略多，待定支${branch}再气暖易失衡`, s); }
+      if (!yangDom && branchYY === 'yin') { const s = -2*conf; score += s; pushSum(`原局阴气略多，待定支${branch}再气寒易失衡`, s); }
+    }
   }
-  if (isKeyu(stemEl, branchEl)) {
-    if (branchMark === 'useful')     { score -= 3; pushSum(`干克支（${stem}克${branch}），克用神→气逆`, -3); }
-    else if (branchMark === 'taboo') { score += 2; pushSum(`干克支（${stem}克${branch}），克忌神→制忌得喜`, +2); }
-    else                             { score -= 0.5; pushSum(`干克支，干支不和`, -0.5); }
-  }
-  if (isKeyu(branchEl, stemEl)) {
-    if (stemMark === 'useful')       { score -= 3; pushSum(`支克干（${branch}克${stem}），克用神→气逆`, -3); }
-    else if (stemMark === 'taboo')   { score += 2; pushSum(`支克干（${branch}克${stem}），克忌神→制忌得喜`, +2); }
-    else                             { score -= 0.5; pushSum(`支克干，干支不和`, -0.5); }
+  if (conf < 1) {
+    pushSum(`${chart.month.branch}月两局未定（逐字待定过半）：补偏/自洽修正按30%置信降权`, 0);
   }
 
-  // -------- D. 刑冲合会（修正项·最低权重，合计±3封顶）【不作为主判，只说明"气机小扰动"】 --------
-  let correctScore = 0;
-  const correctSum: string[] = [];
-  const pushC = (msg: string, s: number) => {
-    correctSum.push(`(气扰)${compressFmt(s)} ${msg}`);
-  };
+  // -------- C. 干支相生 · 气机流通（小分量C，±3；克的关系已由 A 段落实修正承接，不重复计分） --------
+  // 待定字（dai→neutral）不作「气顺加分」的强判——其利害本身存疑，按不增减处理。
+  if (stemShengBranch) {
+    if (branchMark === 'useful')     { const s = +3*conf; score += s; pushSum(`干生支（${stem}生${branch}），支为月令用神→气流通`, +s); }
+    else if (branchMark === 'taboo') { const s = -1*conf; score += s; pushSum(`干生支（${stem}生${branch}），支为月令忌神→助忌`, s); }
+    else                             { pushSum(`干生支（${stem}生${branch}），支为月令待定→气机之益存疑（不增减）`, 0); }
+  } else if (branchShengStem) {
+    if (stemMark === 'useful')       { const s = +3*conf; score += s; pushSum(`支生干（${branch}生${stem}），干为月令用神→得根落实`, +s); }
+    else if (stemMark === 'taboo')   { const s = -1*conf; score += s; pushSum(`支生干（${branch}生${stem}），干为月令忌神→助忌`, s); }
+    else                             { pushSum(`支生干（${branch}生${stem}），干为月令待定→气机之益存疑（不增减）`, 0); }
+  }
 
-  // --- D-1. 原局 + 运流年地支，合聚/冲散的"气之倾向"（仍以月令用忌为基准，不是"合就好冲就坏"） ---
-  for (let i = 0; i < 4; i++) {
-    const otherBranch = chartBranches[i];
-    if (otherBranch === branch) continue;
-    const key = `${branch}${otherBranch}`;
-    const rev = `${otherBranch}${branch}`;
-    // 六合（合聚的是化神气，化神属用神就加分，忌神就减分）
-    if (DI_ZHI_LIU_HE[key] || DI_ZHI_LIU_HE[rev]) {
-      const huaEl = LIU_HE_HUA_ELEMENT[key] || LIU_HE_HUA_ELEMENT[rev];
-      if (isUsefulEl(huaEl)) { correctScore += 1.2; pushC(`六合${branch}${otherBranch}化${elementName(huaEl)}用神，有助气机凝聚`, +1.2); }
-      else if (isTabooEl(huaEl)) { correctScore -= 1.2; pushC(`六合${branch}${otherBranch}化${elementName(huaEl)}忌神，助成忌党`, -1.2); }
-      else { correctScore += 0.3; pushC(`六合${branch}${otherBranch}，气机静聚(中性)`, +0.3); }
-    }
-    // 六冲
-    if (LIU_CHONG_PAIRS[key] || LIU_CHONG_PAIRS[rev]) {
-      const otherMark = markBranch(otherBranch);
-      if (otherMark === 'useful')       { correctScore -= 1.2; pushC(`六冲${branch}↔${otherBranch}，冲散用神之气`, -1.2); }
-      else if (otherMark === 'taboo')   { correctScore += 1.0; pushC(`六冲${branch}↔${otherBranch}，冲散忌神之气`, +1.0); }
-      else                              { correctScore += 0;   pushC(`六冲${branch}↔${otherBranch}，气机动荡(不决定吉凶)`, 0); }
-    }
-    // 三刑/害（扣分控制在 ±1）
-    if (LIU_HAI_PAIRS[key] || LIU_HAI_PAIRS[rev]) {
-      correctScore -= 0.6;
-      pushC(`六害${branch}${otherBranch}，暗损气机`, -0.6);
-    }
-  }
-  // 三刑/自刑
-  const target = branch;
-  const allBranches = [...chartBranches];
-  const checkXing = (list: string[], name: string, maxBad: number) => {
-    const p = list.filter((x) => allBranches.includes(x) || x === target);
-    if (p.length >= 2) {
-      correctScore -= maxBad;
-      pushC(`${name}：${p.join('')}，气机郁塞(小扣)`, -maxBad);
-    }
-  };
-  checkXing(SAN_XING_WUEN,  '三刑无恩', 0.8);
-  checkXing(SAN_XING_SHISHI,'三刑恃势', 0.8);
-  checkXing(ZI_MAO_XING,    '子卯无礼刑', 0.6);
-  if (ZI_XING_LIST.includes(target) && allBranches.includes(target)) {
-    correctScore -= 0.4;
-    pushC(`自刑${target}叠见，自扰气机`, -0.4);
-  }
-  // 三合/三会：仍以月令用神为标尺，不是"成局就吉"
-  SAN_HE_GROUPS.forEach((group) => {
-    const all = [...allBranches, branch];
-    const p = group.members.filter((m) => all.includes(m));
-    if (p.length >= 2) {
-      const quan = p.length >= 3;
-      if (isUsefulEl(group.element)) {
-        const s = quan ? +1.5 : +0.8;
-        correctScore += s; pushC(`三合${group.name}${quan?'全':'半'}聚用神(${elementName(group.element)})`, s);
-      } else if (isTabooEl(group.element)) {
-        const s = quan ? -1.5 : -0.8;
-        correctScore += s; pushC(`三合${group.name}${quan?'全':'半'}聚忌神(${elementName(group.element)})`, s);
-      }
-    }
-  });
-  SAN_HUI_GROUPS.forEach((group) => {
-    const all = [...allBranches, branch];
-    const p = group.members.filter((m) => all.includes(m));
-    if (p.length >= 2) {
-      const quan = p.length >= 3;
-      if (isUsefulEl(group.element)) {
-        const s = quan ? +1.8 : +1.0;
-        correctScore += s; pushC(`三会${group.name}${quan?'全':'半'}聚用神(${elementName(group.element)})`, s);
-      } else if (isTabooEl(group.element)) {
-        const s = quan ? -1.8 : -1.0;
-        correctScore += s; pushC(`三会${group.name}${quan?'全':'半'}聚忌神(${elementName(group.element)})`, s);
-      }
-    }
-  });
-  // --- D-2. 天干五合 ---
-  for (let i = 0; i < 4; i++) {
-    const otherStem = chartStems[i];
-    if (otherStem === stem) continue;
-    const k = `${stem}${otherStem}`;
-    const r = `${otherStem}${stem}`;
-    if (TIAN_GAN_WU_HE[k] || TIAN_GAN_WU_HE[r]) {
-      const huaEl = WU_HE_HUA_ELEMENT[k] || WU_HE_HUA_ELEMENT[r];
-      if (isUsefulEl(huaEl))      { correctScore += 1.0; pushC(`天干五合${stem}${otherStem}化${elementName(huaEl)}用神`, +1.0); }
-      else if (isTabooEl(huaEl))  { correctScore -= 1.0; pushC(`天干五合${stem}${otherStem}化${elementName(huaEl)}忌神`, -1.0); }
-      else                        { correctScore += 0.2; pushC(`天干五合${stem}${otherStem}，有情(中性)`, +0.2); }
-    }
-  }
-  // 修正项 ±3 封顶（保证刑冲合会不喧宾夺主）
-  const cap = 3;
-  if (correctScore > cap)  correctScore = cap;
-  if (correctScore < -cap) correctScore = -cap;
-  otherSumRaw = correctScore;
-  if (correctScore > 0) plusSumRaw  += correctScore;
-  if (correctScore < 0) minusSumRaw += correctScore;
-  if (Math.abs(correctScore) > 0.1) {
-    score += correctScore;
-    summary.push(`${compressFmt(correctScore)} 气机扰动修正（刑冲合会仅作微调，不单独决定吉凶）`);
-    summary.push(...correctSum);
-  }
+  // -------- D. 刑冲合会：不参与评分（用户定标：非天之易逐字判定依据） --------
+  // 刑冲合害的取象描述仍由象法「干支作用」模块呈现，但不对岁运分数做任何加减；
+  // 逐字资料库中以冲/合为依据的字（如辰月戌「冲辰开库」=用、未「合木转喜」=待定）
+  // 其吉凶已由 A/B 段承接，无需重复计分。otherSumRaw 恒为 0（保留字段兼容 UI 明细行）。
+  otherSumRaw = 0;
 
   // 按绝对分数从大到小排序，取前 5 条给 description/hint 展示
   summary.sort((a, b) => {
@@ -3638,7 +3585,7 @@ export function analyzeDaYunLiuNian(
     rawScore: number;     // 原始分（供内部序列加成使用）
     plusSumRaw: number;   // 原始分加分合计（用忌+自洽正+刑冲正）
     minusSumRaw: number;  // 原始分扣分合计（用忌+自洽负+刑冲负，负数）
-    otherSumRaw: number;  // 原始分刑冲合会修正合计（±3封顶）
+    otherSumRaw: number;  // 恒为 0（刑冲合会不参与评分）
     topReasons: string[];
     description: string;
     // 新：趋势相关 & 档位

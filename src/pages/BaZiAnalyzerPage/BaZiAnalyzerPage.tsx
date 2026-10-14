@@ -805,7 +805,7 @@ function computeTaiJiDbReferences(
 }
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.6.2';
+const APP_VERSION = '2.6.3';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -2464,6 +2464,10 @@ export default function BaZiAnalyzerPage() {
                   <span className="label-mono hidden text-muted-foreground md:inline">十年大运 · 岁运引动</span>
                 </div>
                 <CardContent className="space-y-4 p-4 md:p-8">
+                  {/* 评分方法论（透明权重 · 不重复计分 · 置信降权；刑冲合会不参与评分） */}
+                  <p className="text-[10px] font-bold leading-relaxed text-muted-foreground">
+                    岁运记分卡：A 月令逐字喜忌×干支一体落实（干±3/支±10，≈50%；截脚作废干分、盖头减半支分、布气减半干分，如庚午=庚之用被午火否定）· B 寒暖补偏（仅待定字启用，≈30%）· C 干支相生流通（±3，≈20%）。刑冲合会不参与评分（非逐字资料库判定依据，其取象由干支作用模块描述）；待定字不做强判，两局未定之月（申月）修正分量按 30% 置信降权。各项 ±X 与综合分同口径（÷3.6），可手动加总复核。
+                  </p>
                   {(() => {
                     // ===== 大运/流年 新九档字母等级视觉映射（S+ > S > A+ > A > B+ > B- > C > C- > D）=====
                     const LETTER_META: Record<string, { bg: string; border: string; text: string; ring: string; labelColor: string; dot: string }> = {
@@ -2819,7 +2823,7 @@ export default function BaZiAnalyzerPage() {
                           : '—'}
                       </div>
                       <div className="mt-1 text-[10px] font-bold" style={{ color: '#2E7654' }}>
-                        {yongJi.usefulElements.length > 0 ? '助平衡为吉' : '待细查'}
+                        {yongJi.usefulElements.length > 0 ? '月气大方向 · 助平衡为吉' : '待细查'}
                       </div>
                     </div>
 
@@ -3142,6 +3146,11 @@ export default function BaZiAnalyzerPage() {
                       <div className="mt-2 text-[10px] font-bold" style={{ color: '#B0141F' }}>破坏阴阳平衡，助之则凶</div>
                     </div>
                   </div>
+
+                  {/* 元素二分恒为月气大方向；逐字取舍以资料库为准，条件字显示问号（中性不增减） */}
+                  <p className="text-[10px] font-bold text-muted-foreground">
+                    五行用忌示月气阴阳大方向；个别干支的条件取舍（两局反转、救应、土双面）以「逐字喜忌表」为准——表中标 <span className="font-black" style={{ color: '#E31C29' }}>?</span> 待定者，四柱徽章同示问号，打分按中性不增减。
+                  </p>
 
                   {/* 干支级取用例外：五行标记为月令大方向，个别干支有无条件定论 */}
                   {yongJi.overrideNotes.length > 0 && (
