@@ -805,7 +805,7 @@ function computeTaiJiDbReferences(
 }
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.6.3';
+const APP_VERSION = '2.6.4';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -2642,7 +2642,7 @@ export default function BaZiAnalyzerPage() {
                                         </TableRow>
                                         {isOpen && (
                                           <TableRow className="hover:bg-inherit">
-                                            <TableCell colSpan={6} className="border-t border-dashed border-border px-2 py-4 sm:px-6">
+                                            <TableCell colSpan={6} className="whitespace-normal border-t border-dashed border-border px-2 py-4 sm:px-6">
                                               <div className="mb-2 flex items-center justify-between">
                                                 <div className="text-xs font-semibold" style={{ color: '#31669B' }}>
                                                   {dy.stem}
