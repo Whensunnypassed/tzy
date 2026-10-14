@@ -2700,29 +2700,60 @@ export function letterFromScore(rawScore: number): { level: LetterLevel; band: s
 
 /**
  * 大运/流年九档分级：按「岁运调整分」定档（= 综合分 − 命盘基准，即岁运对命盘的净增益）
- * 评级只与命盘基准自身比较，不受先天盘高低影响，保证同一盘内严格形成梯度：
- *   S+: > +3.0
- *   S : +2.0 ~ +3.0
- *   A+: +1.0 ~ +2.0
- *   A : +0.3 ~ +1.0
- *   B+: -0.3 ~ +0.3（仅气机真正持平者）
- *   B-: -1.0 ~ -0.3
- *   C : -2.0 ~ -1.0
- *   C-: -3.0 ~ -2.0
- *   D : < -3.0
+ * 评级只与命盘基准自身比较，不受先天盘高低影响，保证同一盘内严格形成梯度。
+ * 阈值按压缩分实际满量程（干支双用满配 ≈ +4.4，双忌满配 ≈ −3.9）对称收紧，
+ * S+/D 仅留给接近满配的极端年岁：
+ *   S+: > +3.8（须干支双用落实或单柱近乎满配）
+ *   S : +2.6 ~ +3.8
+ *   A+: +1.4 ~ +2.6
+ *   A : +0.4 ~ +1.4
+ *   B+: -0.4 ~ +0.4（仅气机真正持平者）
+ *   B-: -1.4 ~ -0.4
+ *   C : -2.6 ~ -1.4
+ *   C-: -3.8 ~ -2.6
+ *   D : < -3.8
+ * 注意：大运的 S+ 在上述阈值之外还要通过 certifyDaYunSPLUS 的硬认证（干支双用、
+ * 十年不拖后腿、同盘唯一），见 analyzeDaYunLiuNian 叠加循环。
  */
 export function letterFromCombined(adjustDisplayScore: number): { level: LetterLevel; band: string } {
   let level: LetterLevel;
-  if      (adjustDisplayScore > 3.0)  level = 'S+';
-  else if (adjustDisplayScore > 2.0)  level = 'S';
-  else if (adjustDisplayScore > 1.0)  level = 'A+';
-  else if (adjustDisplayScore > 0.3)  level = 'A';
-  else if (adjustDisplayScore >= -0.3) level = 'B+';
-  else if (adjustDisplayScore >= -1.0) level = 'B-';
-  else if (adjustDisplayScore >= -2.0) level = 'C';
-  else if (adjustDisplayScore >= -3.0) level = 'C-';
+  if      (adjustDisplayScore > 3.8)  level = 'S+';
+  else if (adjustDisplayScore > 2.6)  level = 'S';
+  else if (adjustDisplayScore > 1.4)  level = 'A+';
+  else if (adjustDisplayScore > 0.4)  level = 'A';
+  else if (adjustDisplayScore >= -0.4) level = 'B+';
+  else if (adjustDisplayScore >= -1.4) level = 'B-';
+  else if (adjustDisplayScore >= -2.6) level = 'C';
+  else if (adjustDisplayScore >= -3.8) level = 'C-';
   else                         level = 'D';
   return { level, band: LETTER_BAND[level] };
+}
+
+/**
+ * 大运 S+ 顶级运硬认证（在 letterFromCombined 阈值之上加码）：
+ * 命理语义——S+ 是「用神干支同时到位、一体落实无破损、十年内无大破败」的一生罕见之运。
+ * 四个条件必须同时满足：
+ *   1. 大运本身分（不含流年平均）≥ 3.6 压缩分（raw ≥ 12.96 ≈ 支用+10 全额 + 干用+3 全额）：
+ *      即地支用神不被盖头减半、天干用神不被截脚作废/布气减半——干支双用且落实无损；
+ *      B 段待定字补偏凑不出 S+。
+ *   2. 下辖十年流年平均调整分 ≥ 0：十年整体不拖大运后腿。
+ *   3. 十年中差年（流年评级 C/C-/D）≤ 3 个。
+ *   4. 岁运调整分 ≥ 3.8（与 letterFromCombined 的 S+ 线一致）。
+ * 通过认证只代表「有资格」；同盘八步至多保留 1 个 S+（唯一配额，在调用处实施）。
+ */
+export function certifyDaYunSPLUS(args: {
+  selfCompress: number;
+  liuNianAvgAdjust: number;
+  badYearCount: number;
+  adjustScore: number;
+}): boolean {
+  const { selfCompress, liuNianAvgAdjust, badYearCount, adjustScore } = args;
+  return (
+    selfCompress >= 3.6 &&
+    liuNianAvgAdjust >= 0 &&
+    badYearCount <= 3 &&
+    adjustScore >= 3.8
+  );
 }
 
 // ====== 兼容旧 WuDangLevel 的临时包装（UI 切换 LetterLevel 后删除）======
@@ -3717,6 +3748,8 @@ export function analyzeDaYunLiuNian(
       downgradeAlert: false,
       liuNian10,
       baseCompress: Math.round(finalCompress * 10) / 10,  // 趋势加成前的基础压缩分（大运本身+十年平均，无趋势bonus）
+      selfCompress: dyCompress,            // 大运本身压缩分（仅本柱干支作用，S+ 硬认证用）
+      liuNianAvgCompress,                  // 下辖十年流年平均压缩分（S+ 硬认证用）
     };
   });
 
@@ -3739,6 +3772,8 @@ export function analyzeDaYunLiuNian(
     description: dy.description,
     liuNian10: dy.liuNian10,
     baseCompress: dy.baseCompress,  // 保留：趋势加成前的基础压缩分
+    selfCompress: dy.selfCompress,  // 保留：大运本身压缩分（S+ 硬认证用）
+    liuNianAvgCompress: dy.liuNianAvgCompress,  // 保留：十年流年平均压缩分（S+ 硬认证用）
   })));
   // 把 trended 上的 level/displayScore 同步回 fortune/score 字段（UI 用的是 fortune 和 score），同时保留升级信息
   const daYunWithFortune = daYunTrended.map(tr => {
@@ -3855,7 +3890,7 @@ export function analyzeDaYunLiuNian(
 
   // —— 命盘基准联动：展示综合分 = 命盘基准分 + 岁运调整分；
   //    九档评级只按「岁运调整分」（combined − 命盘基准）定档，与先天盘高低无关，
-  //    保证同一盘内好坏严格拉开梯度（letterFromCombined 阈值 ±3 尺度） ——
+  //    保证同一盘内好坏严格拉开梯度（letterFromCombined 阈值 ±3.8 满量程） ——
   for (const dy of daYunWithFortune as any[]) {
     const dyAdjust = dy.displayScore || 0; // 叠加命盘基准前的岁运调整压缩分
     const dyCombined = mingPanCompress + dyAdjust;
@@ -3864,11 +3899,13 @@ export function analyzeDaYunLiuNian(
     dy.displayScore = Math.round(dyCombined * 10) / 10;
     dy.score = dy.displayScore;
     dy.adjustScore = Math.round(dyAdjust * 10) / 10;  // 岁运调整分（评级依据）
-    dy.letterLevel = dyLetter.level;  // 新九档字母等级
+    dy.letterLevel = dyLetter.level;  // 新九档字母等级（初算，S+ 稍后经硬认证+唯一配额复核）
     dy.level = dyMap.level;
     dy.fortune = dyMap.level;
     dy.band = dyLetter.band;
     dy.mingPanBase = mingPanCompress;
+    let badYearCount = 0;       // 下辖十年中差年（C/C-/D）数量
+    let liuNianAdjustSum = 0;   // 十年调整分之和（认证条件：均值≥0）
     for (const ln of (dy.liuNian10 || [])) {
       const lnAdjust = ln.displayScore || 0;
       const lnCombined = mingPanCompress + lnAdjust;
@@ -3884,6 +3921,38 @@ export function analyzeDaYunLiuNian(
       ln.mingPanBase = mingPanCompress;
       // hint 与最终评级同源：综合分 + 岁运调整分 + 九档字母
       ln.hint = `${ln.year}${ln.ganzhi}（综合 ${ln.displayScore >= 0 ? '+' : ''}${ln.displayScore}，岁运调整 ${ln.adjustScore >= 0 ? '+' : ''}${ln.adjustScore}，${lnLetter.level}）：${lnLetter.band}。关键阴阳作用：${(ln.topReasons || []).slice(0, 2).join('；')}。`;
+      liuNianAdjustSum += lnAdjust;
+      if (['C', 'C-', 'D'].includes(lnLetter.level)) badYearCount += 1;
+    }
+    // —— 大运 S+ 顶级运硬认证：干支双用落实 + 十年不拖后腿 + 差年≤3 + 调整分≥3.8 ——
+    const liuNianAvgAdjust = (dy.liuNian10 || []).length > 0
+      ? liuNianAdjustSum / dy.liuNian10.length
+      : 0;
+    dy.sPlusCertified = certifyDaYunSPLUS({
+      selfCompress: dy.selfCompress ?? 0,
+      liuNianAvgAdjust,
+      badYearCount,
+      adjustScore: dyAdjust,
+    });
+    dy.badYearCount = badYearCount;
+  }
+  // —— 大运 S+ 同盘唯一配额：八步至多 1 个 S+（顶级运一生罕见）——
+  // 通过硬认证者按调整分排序，仅最高分者保留 S+，其余一律降为 S；
+  // 未通过硬认证却越过 3.8 线者（如单支用+流通凑分）同样降为 S。
+  const sPlusCandidates = (daYunWithFortune as any[])
+    .filter((dy) => dy.letterLevel === 'S+' && dy.sPlusCertified)
+    // 调整分最高者得；并列时本柱分（干支双用落实纯度）高者得；再并列取前一步运
+    .sort((a, b) =>
+      (b.adjustScore ?? 0) - (a.adjustScore ?? 0) ||
+      (b.selfCompress ?? 0) - (a.selfCompress ?? 0) ||
+      (a.index ?? 0) - (b.index ?? 0),
+    );
+  const sPlusWinner = sPlusCandidates[0];
+  for (const dy of daYunWithFortune as any[]) {
+    if (dy.letterLevel === 'S+' && dy !== sPlusWinner) {
+      dy.letterLevel = 'S';
+      dy.band = LETTER_BAND['S'];
+      // 五档映射 S+/S 同为「夯」，level/fortune 无需变动
     }
   }
   for (const ln of recentLiuNian as any[]) {

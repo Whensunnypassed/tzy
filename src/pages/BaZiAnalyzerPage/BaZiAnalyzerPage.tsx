@@ -805,7 +805,7 @@ function computeTaiJiDbReferences(
 }
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.6.6';
+const APP_VERSION = '2.6.7';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -2534,7 +2534,7 @@ export default function BaZiAnalyzerPage() {
                             </div>
                             <div
                               className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] font-black"
-                              title={'评级按「岁运调整分」（综合分 − 命盘基准）定档，与先天盘高低无关：S+ > +3.0 ｜ S: +2.0~+3.0 ｜ A+: +1.0~+2.0 ｜ A: +0.3~+1.0 ｜ B+: -0.3~+0.3 ｜ B-: -1.0~-0.3 ｜ C: -2.0~-1.0 ｜ C-: -3.0~-2.0 ｜ D < -3.0'}
+                              title={'评级按「岁运调整分」（综合分 − 命盘基准）定档，与先天盘高低无关：S+ > +3.8 ｜ S: +2.6~+3.8 ｜ A+: +1.4~+2.6 ｜ A: +0.4~+1.4 ｜ B+: -0.4~+0.4 ｜ B-: -1.4~-0.4 ｜ C: -2.6~-1.4 ｜ C-: -3.8~-2.6 ｜ D < -3.8。大运 S+ 另须硬认证：干支双用、一体落实无破损、下辖十年无大破败，且同盘八步至多 1 个 S+。'}
                             >
                               {(['S+','S','A+','A','B+','B-','C','C-','D'] as const).map(lv => (
                                 <span key={lv} className="inline-flex items-center gap-1">
