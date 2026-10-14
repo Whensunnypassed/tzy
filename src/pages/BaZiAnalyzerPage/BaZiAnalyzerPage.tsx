@@ -802,7 +802,7 @@ function computeTaiJiDbReferences(
 }
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.5.0';
+const APP_VERSION = '2.5.1';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -938,6 +938,7 @@ export default function BaZiAnalyzerPage() {
     if (!text) { toast.error('报告尚未生成'); return; }
     try {
       await navigator.clipboard.writeText(text);
+    yongJi.overrideNotes.forEach((note) => lines.push(`例外：${note}`));
       toast.success('报告摘要已复制到剪贴板');
     } catch {
       toast.error('复制失败，请手动选择文本');
@@ -3166,6 +3167,20 @@ export default function BaZiAnalyzerPage() {
                         {yongJi.usefulElements.map((el) => (
                           <span key={el} className="rounded-sm px-3 py-1 text-sm font-black" style={{ background: 'hsl(172 76% 47%)', color: 'hsl(222 26% 6%)' }}>
                             {ELEMENT_NAMES[el]}
+                  {/* 干支级取用例外：五行标记为月令大方向，个别干支有无条件定论 */}
+                  {yongJi.overrideNotes.length > 0 && (
+                    <div className="rounded-sm border border-border bg-muted/40 p-3.5">
+                      <div className="flex items-center gap-2 text-[11px] font-black tracking-wider text-foreground">
+                        <span>⚑ 干支级取用例外</span>
+                        <span className="label-mono text-muted-foreground">OVERRIDE</span>
+                      </div>
+                      {yongJi.overrideNotes.map((note, i) => (
+                        <p key={i} className="mt-1.5 text-xs font-bold leading-relaxed text-foreground/80">{note}</p>
+                      ))}
+                      <p className="mt-1.5 text-[10px] font-bold text-muted-foreground">五行用忌标记示月令大方向；干支落实的条件取舍以「月气真机」论为准。</p>
+                    </div>
+                  )}
+
                           </span>
                         ))}
                       </div>

@@ -312,11 +312,29 @@ export function analyzeMonthQi(monthBranchIndex: number): MonthQiResult {
 
 // 用神忌神判断
 // 阳气旺→用阴气（金水）平衡；阴气旺→用阳气（火土）平衡
+export type XiJiMark = 'useful' | 'taboo' | 'neutral';
+
+// 月令对元素级二分规则的「无条件」覆盖（干支同效）。
+// 只录入《十二月份取用》中不依赖柱中组合即成立的定论；
+// 须视落实态势的条件取舍（午月木救水、卯月金、申酉余热局等）仍由月气文案承载，待条件模型实现。
+const MONTH_ELEMENT_XIJI_OVERRIDES: Record<string, Partial<Record<string, XiJiMark>>> = {
+  // 午月壬癸水「慎用」：丑戌晦火得富的同时克水、水伤失贵，须庚辛金通关方无虑——非一概为用
+  午: { water: 'neutral' },
+};
+
+// 月令天干粒度覆盖（只及指定天干，不扩及同五行他干与地支藏干）
+const MONTH_STEM_XIJI_OVERRIDES: Record<string, Record<string, XiJiMark>> = {
+  // 辰月体阴用阳、首在救癸水：甲木疏土救水为第一救应（乙木力弱不预，仍按忌论）
+  辰: { 甲: 'useful' },
+};
+
 export interface YongJiResult {
   usefulElements: string[];
   tabooElements: string[];
-  stemMarks: Record<string, 'useful' | 'taboo' | 'neutral'>;
-  branchMarks: Record<string, 'useful' | 'taboo' | 'neutral'>;
+  stemMarks: Record<string, XiJiMark>;
+  branchMarks: Record<string, XiJiMark>;
+  // 干支级取用例外说明（仅覆盖生效的月令有内容），供 UI 展示与报告引用
+  overrideNotes: string[];
   description: string;
 }
 
@@ -339,8 +357,18 @@ export function analyzeYongJi(chart: BaZiChart, monthQi: MonthQiResult): YongJiR
   const pillars: Pillar[] = [chart.year, chart.month, chart.day, chart.hour];
   const pillarNames = ['年', '月', '日', '时'];
 
-  const markElement = (el: string, ganzhi: string): 'useful' | 'taboo' | 'neutral' => {
+  const markElement = (el: string, ganzhi: string, isStem: boolean): XiJiMark => {
+    // ① 天干粒度覆盖优先（辰月甲木）
+    if (isStem) {
+      const stemOverride = MONTH_STEM_XIJI_OVERRIDES[chart.month.branch]?.[ganzhi];
+      if (stemOverride) return stemOverride;
+    }
+    // ② 土独立判定
     if (el === 'earth') return judgeEarthXiJi(ganzhi, chart);
+    // ③ 元素级月令覆盖（午月水慎用）
+    const elOverride = MONTH_ELEMENT_XIJI_OVERRIDES[chart.month.branch]?.[el];
+    if (elOverride) return elOverride;
+    // ④ 月令大方向二分
     if (usefulElements.includes(el)) return 'useful';
     if (tabooElements.includes(el)) return 'taboo';
     return 'neutral';
@@ -348,11 +376,20 @@ export function analyzeYongJi(chart: BaZiChart, monthQi: MonthQiResult): YongJiR
 
   pillars.forEach((pillar, idx) => {
     const key = `${pillarNames[idx]}干`;
-    stemMarks[key] = markElement(pillar.stemElement, pillar.stem);
+    stemMarks[key] = markElement(pillar.stemElement, pillar.stem, true);
 
     const bKey = `${pillarNames[idx]}支`;
-    branchMarks[bKey] = markElement(pillar.branchElement, pillar.branch);
+    branchMarks[bKey] = markElement(pillar.branchElement, pillar.branch, false);
   });
+
+  // 覆盖生效时的干支级取用例外说明
+  const overrideNotes: string[] = [];
+  if (chart.month.branch === '辰') {
+    overrideNotes.push('辰月用阴大方向下，甲木疏土救癸水为第一救应，见甲不作忌神论（乙木力弱不预）；癸水为正官，忌土重埋光。');
+  }
+  if (chart.month.branch === '午') {
+    overrideNotes.push('午月以庚金为首用；壬癸水慎用——丑戌晦火得富亦克水失贵，须庚辛金通关方无虑，土克水态势明确时反取木（水生木、木克土）救水。');
+  }
 
   const direction = monthQi.usageDirection === 'yin' ? '阴气（金水）' : '阳气（火土）';
   const fsMeta = FOUR_SYMBOL_META[monthQi.fourSymbol];
@@ -363,6 +400,7 @@ export function analyzeYongJi(chart: BaZiChart, monthQi: MonthQiResult): YongJiR
     tabooElements,
     stemMarks,
     branchMarks,
+    overrideNotes,
     description,
   };
 }
