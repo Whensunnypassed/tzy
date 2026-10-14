@@ -805,7 +805,7 @@ function computeTaiJiDbReferences(
 }
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.6.1';
+const APP_VERSION = '2.6.2';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -1340,16 +1340,34 @@ export default function BaZiAnalyzerPage() {
   const analyzedBoolean = analyzed && chart && monthQi && yongJi && elementPower && yinYangPct && coldHotPct && pattern && wealthNobility && daYunAnalysis && specialTips;
 
   // 角标统一不透明白底 + 实色描边彩字：无论压在描边天干块还是实心地支块上，视觉完全一致
-  const renderMarkBadge = (mark: 'useful' | 'taboo' | 'neutral') => {
+  // dai=月令逐字资料库中的「待定」（双面/两局/条件救应）：灰边 + 红色问号，区别于真中性
+  type PillarMark = 'useful' | 'taboo' | 'neutral' | 'dai';
+  const renderMarkBadge = (mark: PillarMark) => {
     const base = "rounded-none px-1.5 py-0.5 text-[10px] font-black tracking-wide";
     if (mark === 'useful') return <Badge className={base} style={{ background: '#FFFFFF', color: '#2E7654', border: '1.5px solid #2E7654', boxShadow: 'none' }}>用</Badge>;
     if (mark === 'taboo') return <Badge className={base} style={{ background: '#FFFFFF', color: '#E31C29', border: '1.5px solid #E31C29', boxShadow: 'none' }}>忌</Badge>;
+    if (mark === 'dai') return <Badge className={base} title="月令逐字待定：双面/两局/须条件救应，悬停逐字表查看" style={{ background: '#FFFFFF', color: '#E31C29', border: '1.5px solid #94A3B8', boxShadow: 'none' }}>?</Badge>;
     return <Badge className={base} style={{ background: '#FFFFFF', color: '#64748B', border: '1.5px solid #94A3B8', boxShadow: 'none' }}>中</Badge>;
+  };
+  // 四柱徽章取值：优先月令逐字资料库（保留 dai 待定态），缺字回退引擎用忌 marks
+  const pillarStemMark = (c: string, fallback: 'useful' | 'taboo' | 'neutral'): PillarMark => {
+    const z = zhuZiXiJi?.stems.find((r) => r.char === c)?.mark;
+    if (z === 'xi') return 'useful';
+    if (z === 'ji') return 'taboo';
+    if (z === 'dai') return 'dai';
+    return (fallback as PillarMark) ?? 'neutral';
+  };
+  const pillarBranchMark = (c: string, fallback: 'useful' | 'taboo' | 'neutral'): PillarMark => {
+    const z = zhuZiXiJi?.branches.find((r) => r.char === c)?.mark;
+    if (z === 'xi') return 'useful';
+    if (z === 'ji') return 'taboo';
+    if (z === 'dai') return 'dai';
+    return (fallback as PillarMark) ?? 'neutral';
   };
 
   // ===== MVP 分数明细组件 =====
   // 展示：加分合计 / 扣分合计 / 其他修正 / 趋势加成 = 综合分
-  const ScoreBreakdown = ({ row, dense = false }: { row: any; dense?: boolean }) => {
+  const ScoreBreakdown = ({ row, dense = false, stacked = false }: { row: any; dense?: boolean; stacked?: boolean }) => {
     const toC = (raw: number) => Math.round((raw / 3.6) * 10) / 10;
     const displayScore: number =
       typeof row.displayScore === 'number' ? row.displayScore :
@@ -1370,6 +1388,42 @@ export default function BaZiAnalyzerPage() {
     }
 
     if (!hasDetail) return null;
+
+    // stacked：十年流年/近年流年小卡使用——每项固定行高、缺值透明占位，
+    // 保证十列的加分/扣分/其他/命盘/综合行严格水平对齐，不再因可选项缺行上下错位
+    if (stacked) {
+      const line = (label: string, val: number, color: string, visible: boolean) => (
+        <div
+          key={label}
+          className="mt-1 flex h-[19px] items-center justify-between rounded-none border px-1.5 text-[10px] font-black tabular-nums"
+          style={visible
+            ? { borderColor: `${color}33`, background: `${color}10`, color }
+            : { borderColor: 'transparent', background: 'transparent', color: 'transparent' }}
+        >
+          <span className="opacity-70">{label}</span>
+          <span>{val >= 0 ? '+' : ''}{val.toFixed(1)}</span>
+        </div>
+      );
+      return (
+        <div>
+          {line('加分', plusC, '#2E7654', true)}
+          {line('扣分', minusC, '#9A3412', true)}
+          {line('其他', otherC, '#3A4450', Math.abs(otherC) >= 0.05)}
+          {line('命盘', mingPanBase, '#31669B', Math.abs(mingPanBase) >= 0.05)}
+          <div
+            className="mt-1 flex h-[21px] items-center justify-between rounded-none border px-1.5 text-[10px] font-black tabular-nums"
+            style={{
+              borderColor: displayScore >= 0 ? 'rgba(46,118,84,0.45)' : 'rgba(227,28,41,0.45)',
+              background: displayScore >= 0 ? 'rgba(46,118,84,0.08)' : 'rgba(227,28,41,0.07)',
+              color: displayScore >= 0 ? '#2E7654' : '#E31C29',
+            }}
+          >
+            <span className="opacity-70">综合</span>
+            <span>{displayScore >= 0 ? '+' : ''}{displayScore.toFixed(1)}</span>
+          </div>
+        </div>
+      );
+    }
 
     const pill = (label: string, val: number, color: string) => (
       <span
@@ -2094,15 +2148,17 @@ export default function BaZiAnalyzerPage() {
                           {(() => {
                             // 日主（日柱天干 = idx 2）不纳入用神 / 非用神显示，保持中性视觉
                             const isRiZhu = idx === 2;
-                            const stemMark = isRiZhu
+                            const stemMark: PillarMark = isRiZhu
                               ? 'neutral'
-                              : yongJi.stemMarks[`${['年', '月', '日', '时'][idx]}干`];
+                              : pillarStemMark(pillar.stem, yongJi.stemMarks[`${['年', '月', '日', '时'][idx]}干`]);
                             const stemStyle: React.CSSProperties =
                               !isRiZhu && stemMark === 'useful'
                                 ? { background: 'rgba(46,118,84,0.07)', color: '#2E7654', border: '2px solid #2E7654', borderRadius: 0 }
                                 : !isRiZhu && stemMark === 'taboo'
                                   ? { background: 'rgba(227,28,41,0.06)', color: '#E31C29', border: '2px solid #E31C29', borderRadius: 0 }
-                                  : { background: 'white', color: 'var(--foreground)', border: '2px solid var(--border)', borderRadius: 0 };
+                                  : !isRiZhu && stemMark === 'dai'
+                                    ? { background: '#F1F5F9', color: '#788491', border: '2px dashed #94A3B8', borderRadius: 0 }
+                                    : { background: 'white', color: 'var(--foreground)', border: '2px solid var(--border)', borderRadius: 0 };
                             return (
                               <>
                                 <div
@@ -2143,13 +2199,18 @@ export default function BaZiAnalyzerPage() {
                         {/* 地支 */}
                         <div className="relative">
                           {(() => {
-                            const branchMark = yongJi.branchMarks[`${['年', '月', '日', '时'][idx]}支`];
+                            const branchMark: PillarMark = pillarBranchMark(
+                              pillar.branch,
+                              yongJi.branchMarks[`${['年', '月', '日', '时'][idx]}支`],
+                            );
                             const branchStyle: React.CSSProperties =
                               branchMark === 'useful'
                                 ? { background: '#2E7654', color: '#FFFFFF', border: '2px solid #2E7654', borderRadius: 0 }
                                 : branchMark === 'taboo'
                                   ? { background: '#E31C29', color: '#FFFFFF', border: '2px solid #E31C29', borderRadius: 0 }
-                                  : { background: 'white', color: 'var(--foreground)', border: '2px solid var(--border)', borderRadius: 0 };
+                                  : branchMark === 'dai'
+                                    ? { background: '#F1F5F9', color: '#788491', border: '2px dashed #94A3B8', borderRadius: 0 }
+                                    : { background: 'white', color: 'var(--foreground)', border: '2px solid var(--border)', borderRadius: 0 };
                             return (
                               <>
                                 <div
@@ -2172,20 +2233,23 @@ export default function BaZiAnalyzerPage() {
                           <div className="label-mono text-[8.5px] text-muted-foreground">藏干 HIDDEN</div>
                           <div className="mt-1 flex flex-wrap justify-center gap-1">
                             {pillar.hiddenStems.map((s, i) => {
-                              // 与天干/地支同一套干支级判定（含月令覆盖表），不再用阴阳奇偶代理逻辑
-                              const hsMark = yongJi?.allStemMarks?.[s] ?? 'neutral';
+                              // 与天干/地支同源：优先月令逐字资料库（保留待定 dai），回退干支级判定
+                              const hsMark: PillarMark = pillarStemMark(s, yongJi?.allStemMarks?.[s] ?? 'neutral');
                               const isUseful = hsMark === 'useful';
                               const isTaboo = hsMark === 'taboo';
+                              const isDai = hsMark === 'dai';
+                              const zzNote = zhuZiXiJi?.stems.find((r) => r.char === s)?.note ?? '';
+                              const tagText = isUseful ? '喜用（吉）' : isTaboo ? '忌神（凶）' : isDai ? '待定（双面/须条件）' : '中性';
                               return (
                                 <span
                                   key={i}
-                                  title={`${s}：月令干支级判定${isUseful ? '用神（吉）' : isTaboo ? '忌神（凶）' : '中性'}`}
+                                  title={`${s}：月令逐字${tagText}${zzNote ? `——${zzNote}` : ''}`}
                                   className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold"
                                   style={{
                                     fontFamily: 'var(--font-mono)',
                                     background: isUseful ? 'rgba(46,118,84,0.08)' : isTaboo ? 'rgba(227,28,41,0.06)' : '#F1F5F9',
                                     color: isUseful ? '#2E7654' : isTaboo ? '#E31C29' : '#64748B',
-                                    border: `1px solid ${isUseful ? '#2E7654' : isTaboo ? '#E31C29' : '#E2E8F0'}`,
+                                    border: `1px ${isDai ? 'dashed' : 'solid'} ${isUseful ? '#2E7654' : isTaboo ? '#E31C29' : '#E2E8F0'}`,
                                     borderRadius: 0,
                                   }}
                                 >
@@ -2204,6 +2268,14 @@ export default function BaZiAnalyzerPage() {
                                       style={{ background: '#E31C29', color: '#FFFFFF', borderRadius: 0 }}
                                     >
                                       凶
+                                    </span>
+                                  )}
+                                  {isDai && (
+                                    <span
+                                      className="ml-0.5 inline-flex size-3 items-center justify-center text-[9px] font-black leading-none"
+                                      style={{ color: '#E31C29', borderRadius: 0 }}
+                                    >
+                                      ?
                                     </span>
                                   )}
                                 </span>
@@ -2227,6 +2299,10 @@ export default function BaZiAnalyzerPage() {
                     <span className="flex items-center gap-2">
                       <span className="inline-block size-3 border-2 border-border bg-white" />
                       中性 · 无直接助损
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <span className="inline-flex size-3 items-center justify-center border-2 border-dashed border-[#94A3B8] bg-[#F1F5F9] text-[9px] font-black leading-none text-[#E31C29]">?</span>
+                      待定 · 双面/须条件（见逐字喜忌表）
                     </span>
                   </div>
                 </CardContent>
@@ -2615,7 +2691,7 @@ export default function BaZiAnalyzerPage() {
                                                           {ln.score}
                                                         </div>
                                                       </div>
-                                                      <ScoreBreakdown row={ln} dense />
+                                                      <ScoreBreakdown row={ln} stacked />
                                                       <div className="mt-1 line-clamp-2 text-[10px] leading-snug text-muted-foreground/90">
                                                         {ln.hint}
                                                       </div>
@@ -2664,7 +2740,7 @@ export default function BaZiAnalyzerPage() {
                                       ({ln.score >= 0 ? '+' : ''}{ln.score})
                                     </span>
                                   </div>
-                                  <ScoreBreakdown row={ln} dense />
+                                  <ScoreBreakdown row={ln} stacked />
                                   <div className="mt-1 line-clamp-3 text-[10px] leading-snug font-bold text-muted-foreground">{ln.hint}</div>
                                 </div>
                               );
