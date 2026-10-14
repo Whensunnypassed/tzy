@@ -65,7 +65,7 @@ import {
   getSolarTermThemeByBirthDate,
   type SolarTermTheme,
 } from '@/data/solarTermsTheme';
-import { JIAZI_PILLARS_BY_XUN, MONTH_QI_EXPANDED, ULTIMATE_SUMMARY, type IXunGroup } from '@/data/bazidata';
+import { JIAZI_PILLARS_BY_XUN, MONTH_QI_EXPANDED, ULTIMATE_SUMMARY, type IXunGroup } from '@/data/baziData';
 
 const ELEMENT_NAMES: Record<string, string> = {
   wood: '木',
@@ -802,7 +802,7 @@ function computeTaiJiDbReferences(
 }
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.4.3';
+const APP_VERSION = '2.5.0';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');

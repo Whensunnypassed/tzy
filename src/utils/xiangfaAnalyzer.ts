@@ -506,7 +506,7 @@ export function analyzeEducationVerdict(
 // ============================================================
 // 五（扩展）、具体年份的恋爱/结婚强度评分（用于按可能性从高到低排序具体 YYYY 年）
 // 条件权重严格依据《象法》数据书·感情篇与 evaluateRomanceForGZ 的判断逻辑；
-// 所有评分仅服务外显年份列表，不改变核心 baziAnalyzer / bazidata 任何逻辑。
+// 所有评分仅服务外显年份列表，不改变核心 baziAnalyzer / baziData 任何逻辑。
 // ============================================================
 export interface YearRomanceScore {
   loveScore: number;

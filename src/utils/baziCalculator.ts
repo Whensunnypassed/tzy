@@ -7,7 +7,7 @@ import {
   MOCK_EARTHLY_BRANCHES,
   type IHeavenlyStem,
   type IEarthlyBranch,
-} from '@/data/bazidata';
+} from '@/data/baziData';
 import {
   getMonthBranchByExactTime,
   isBeforeLiChun,
