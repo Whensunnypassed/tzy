@@ -377,19 +377,21 @@ export function analyzeYongJi(chart: BaZiChart, monthQi: MonthQiResult): YongJiR
     return 'neutral';
   };
 
+  // 干支级标记唯一来源：月令逐字资料库 ZHUZI_XIJI_REF（喜=用/忌=忌/待定=中）；
+  // markElement 四级判定仅作资料库缺字时的兜底
   pillars.forEach((pillar, idx) => {
     const key = `${pillarNames[idx]}干`;
-    stemMarks[key] = markElement(pillar.stemElement, pillar.stem, true);
+    stemMarks[key] = monthCharMark(chart.month.branch, pillar.stem, true, markElement(pillar.stemElement, pillar.stem, true));
 
     const bKey = `${pillarNames[idx]}支`;
-    branchMarks[bKey] = markElement(pillar.branchElement, pillar.branch, false);
+    branchMarks[bKey] = monthCharMark(chart.month.branch, pillar.branch, false, markElement(pillar.branchElement, pillar.branch, false));
   });
 
-  // 全部十天干 / 十二地支在本月令下的干支级判定（与四柱 marks 同一套四级规则，藏干标记直接调取）
+  // 全部十天干 / 十二地支在本月令下的干支级判定（四柱 marks、藏干、大运流年打分同源）
   const allStemMarks: Record<string, XiJiMark> = {};
-  STEMS_ORDER.forEach((s) => { allStemMarks[s] = markElement(STEM_ELEMENTS[s], s, true); });
+  STEMS_ORDER.forEach((s) => { allStemMarks[s] = monthCharMark(chart.month.branch, s, true, markElement(STEM_ELEMENTS[s], s, true)); });
   const allBranchMarks: Record<string, XiJiMark> = {};
-  BRANCHES_ORDER.forEach((b) => { allBranchMarks[b] = markElement(BRANCH_ELEMENTS[b], b, false); });
+  BRANCHES_ORDER.forEach((b) => { allBranchMarks[b] = monthCharMark(chart.month.branch, b, false, markElement(BRANCH_ELEMENTS[b], b, false)); });
 
   // 覆盖生效时的干支级取用例外说明
   const overrideNotes: string[] = [];
@@ -579,7 +581,7 @@ const ZHUZI_XIJI_REF: Record<string, ZhuZiMonthRef> = {
       辰: ['ji', '本气戊土，晦火克水'],
       巳: ['dai', '火土同宫，须辨阴阳明暗'],
       午: ['ji', '按大方向补：火旺助土克水，须柱中木水救应'],
-      未: ['dai', '木库燥土，救水之力不明'],
+      未: ['dai', '双面：本气己土助辰土克水为忌向，藏乙木疏土存阴为喜向；亥卯未合木局则克土救水转喜，须视合化'],
       申: ['xi', '庚金之地，泄土生水'],
       酉: ['xi', '按大方向补：辰酉合金有生水之象，唯易被辰土所埋，难起大用'],
       戌: ['xi', '用戌冲辰开水库，借辛金成气平衡乙木温气；救水之力不及甲庚'],
@@ -884,6 +886,25 @@ export function analyzeZhuZiXiJi(monthBranch: string, monthQi: MonthQiResult): Z
   };
 }
 
+// ============================================================
+// 月令逐字资料库 → 引擎用忌标记 的唯一映射
+// 喜(xi)=用神、忌(ji)=忌神、待定(dai)=中性（无法判断不加减分）
+// 四柱徽章、藏干、大运流年打分、吉凶分析均以此为准，保证「资料库逐字喜忌」与各处标记同源
+// ============================================================
+const ZHUZI_TO_XIJI: Record<ZhuZiMark, XiJiMark> = { xi: 'useful', ji: 'taboo', dai: 'neutral' };
+
+export function monthCharMark(
+  monthBranch: string,
+  char: string,
+  isStem: boolean,
+  fallback: XiJiMark = 'neutral',
+): XiJiMark {
+  const ref = ZHUZI_XIJI_REF[monthBranch];
+  if (!ref) return fallback;
+  const row = isStem ? ref.stems[char] : ref.branches[char];
+  return row ? ZHUZI_TO_XIJI[row[0]] : fallback;
+}
+
 // 十二长生 → 气机强弱分（长生/临官/帝旺/冠带=有力，沐浴/养/衰/病/胎=中平，死/墓/绝=无力）
 const CHANG_SHENG_POWER: Record<string, number> = {
   长生: 20, 临官: 22, 帝旺: 24, 冠带: 18,
@@ -929,28 +950,33 @@ export function analyzeNianYueTaiJi(
   const yearStemMark = yongJi.stemMarks['年干'];
   const yearEl = elementName(STEM_ELEMENTS[chart.year.stem]);
   const yearStemFactors: string[] = [];
-  if (chart.year.stem === taijiDef.yangYi || chart.year.stem === taijiDef.yinYi) {
+  // 命中两仪只表明「身份」，不直接定吉凶：当令已盛之一仪再见反为忌
+  // （如夏月丙为阳仪却忌火、寅月癸为阴仪而余寒不可增、冬月壬为阴仪当令而忌水旺），
+  // 吉凶一律以月令逐字喜忌（资料库 monthCharMark）为准。
+  const yearHitsYi = chart.year.stem === taijiDef.yangYi ? `阳仪「${taijiDef.yangYi}」`
+    : chart.year.stem === taijiDef.yinYi ? `阴仪「${taijiDef.yinYi}」` : '';
+  const yiFactor = yearHitsYi
+    ? `仪神身份：年干${chart.year.stem}即${taijiDef.name}${yearHitsYi}（${yearHitsYi.startsWith('阳') ? taijiDef.yangYiMeaning : taijiDef.yinYiMeaning}）；然仪神须为月令所需方吉`
+    : '';
+  if (yearStemMark === 'useful') {
     yearStemJiXiong = '先天年吉';
-    yearStemReason = `年干${chart.year.stem}（${yearEl}）直接命中${monthQi.monthName}${taijiDef.name}的两仪核心（${taijiDef.yangYi}${taijiDef.yinYi}），为月令所需的平衡因子，先天年吉，此根基永久存在。年干落月令十二长生「${yearStemChangSheng}」，${CHANG_SHENG_POWER[yearStemChangSheng] >= 0 ? '气机有力，先天根基扎实' : '气机偏弱，先天根基稍薄'}。`;
-    yearStemFactors.push(`命中两仪：年干${chart.year.stem}即${taijiDef.name}太极核心（${taijiDef.yangYi}／${taijiDef.yinYi}）之一，为月令所需平衡因子`);
+    yearStemReason = `年干${chart.year.stem}（${yearEl}）为${monthQi.monthName}月令所需的平衡因子${yearHitsYi ? `，正命中${yearHitsYi}` : ''}，先天年吉，此根基永久存在。年干落月令十二长生「${yearStemChangSheng}」，${CHANG_SHENG_POWER[yearStemChangSheng] >= 0 ? '气机有力，先天根基扎实' : '气机偏弱，先天根基稍薄'}。`;
+    if (yiFactor) yearStemFactors.push(yiFactor + '，月令正需此仪，喜忌与仪神身份一致');
+    yearStemFactors.push(`月令喜用：年干${chart.year.stem}（${yearEl}）属${monthQi.monthName}逐字喜用（${monthQi.usageDirection === 'yin' ? '用阴·金水调阳' : '用阳·木火衡阳'}大方向下的干支定论）`);
     yearStemFactors.push(`十二长生：年干落月令为「${yearStemChangSheng}」，${CHANG_SHENG_POWER[yearStemChangSheng] >= 0 ? '气机有力，根基扎实' : '气机偏弱，根基稍薄'}`);
     yearStemFactors.push('定论：先天年吉，年上吉气永久存在，为命局最根本的依托');
-  } else if (yearStemMark === 'useful') {
-    yearStemJiXiong = '先天年吉';
-    yearStemReason = `年干${chart.year.stem}（${yearEl}）属${monthQi.monthName}月令用神（平衡方向），为月令所需的平衡因子，先天年吉，此根基永久存在。年干落月令十二长生「${yearStemChangSheng}」。`;
-    yearStemFactors.push(`用神方向：年干${chart.year.stem}（${yearEl}）属${monthQi.monthName}月令用神（${monthQi.usageDirection === 'yin' ? '金水' : '木火'}平衡方向）`);
-    yearStemFactors.push(`十二长生：年干落月令为「${yearStemChangSheng}」，${CHANG_SHENG_POWER[yearStemChangSheng] >= 0 ? '气机有力' : '气机偏弱'}`);
-    yearStemFactors.push('定论：先天年吉，根基永久存在');
   } else if (yearStemMark === 'taboo') {
     yearStemJiXiong = '先天年忌';
-    yearStemReason = `年干${chart.year.stem}（${yearEl}）属${monthQi.monthName}月令忌神方向，违背月令规制，先天年忌——凶性底色存在，需年月日时制衡方能转圜。年干落月令十二长生「${yearStemChangSheng}」。`;
-    yearStemFactors.push(`忌神方向：年干${chart.year.stem}（${yearEl}）属${monthQi.monthName}月令忌神，违背月令规制`);
+    yearStemReason = `年干${chart.year.stem}（${yearEl}）${yearHitsYi ? `虽为${taijiDef.name}${yearHitsYi}，然仪神非「见则吉」——${monthQi.monthName}月令不取此仪（当令一方已足、或逆势助旺），再见反破坏平衡，` : ''}属月令忌神方向，违背月令规制，先天年忌——凶性底色存在，需年月日时制衡方能转圜。年干落月令十二长生「${yearStemChangSheng}」。`;
+    if (yiFactor) yearStemFactors.push(yiFactor + `，但${monthQi.monthName}此仪已盛/逆势，再见反成忌神——非「见仪即吉」`);
+    yearStemFactors.push(`月令所忌：年干${chart.year.stem}（${yearEl}）属${monthQi.monthName}逐字忌神，违背月令规制`);
     yearStemFactors.push(`十二长生：年干落月令为「${yearStemChangSheng}」，${CHANG_SHENG_POWER[yearStemChangSheng] >= 0 ? '气机有力，忌神愈盛' : '气机偏弱，凶性稍减'}`);
     yearStemFactors.push('定论：先天年忌，凶性底色存在，须柱中制衡方得转圜');
   } else {
     yearStemJiXiong = '先天年平';
-    yearStemReason = `年干${chart.year.stem}（${yearEl}）不直接命中月令两仪，亦不在月令核心喜忌之上，先天年平——根基平常，吉凶全凭岁运引动。年干落月令十二长生「${yearStemChangSheng}」。`;
-    yearStemFactors.push(`中性：年干${chart.year.stem}（${yearEl}）不命中两仪，亦不在月令核心喜忌之上`);
+    yearStemReason = `年干${chart.year.stem}（${yearEl}）${yearHitsYi ? `为${taijiDef.name}${yearHitsYi}，但月令逐字喜忌存疑/有条件（须视柱中态势、两局），` : ''}先天年平——根基平常，吉凶全凭岁运引动与柱中组合。年干落月令十二长生「${yearStemChangSheng}」。`;
+    if (yiFactor) yearStemFactors.push(yiFactor + '，唯此字取用有条件（两局/救应），暂不作吉凶定论');
+    else yearStemFactors.push(`中性：年干${chart.year.stem}（${yearEl}）不在月令核心喜忌之上`);
     yearStemFactors.push(`十二长生：年干落月令为「${yearStemChangSheng}」`);
     yearStemFactors.push('定论：先天年平，根基平常，吉凶全凭岁运引动');
   }
@@ -964,51 +990,70 @@ export function analyzeNianYueTaiJi(
   const yearStemEl = chart.year.stemElement;
   const yangYiEl = STEM_ELEMENTS[taijiDef.yangYi];   // 阳仪元素（富气）
   const yinYiEl = STEM_ELEMENTS[taijiDef.yinYi];     // 阴仪元素（贵气）
-  const branchShangYin = KE_MAP[yearBranchEl] === yinYiEl           // 年支克阴仪（如辰土克癸水）
-    || (yinYiEl === 'water' && yearBranchEl === 'fire')             // 火旺蒸干水（如午火蒸癸水）
-    || (yinYiEl === 'fire' && yearBranchEl === 'earth');            // 土晦火（如戌土晦丁火）
-  const branchFuYin = yearBranchEl === yinYiEl || SHENG_MAP[yearBranchEl] === yinYiEl;  // 同气/生阴仪（如子水落实癸水）
-  const branchFuYang = yearBranchEl === yangYiEl || SHENG_MAP[yearBranchEl] === yangYiEl; // 稳固阳仪（如寅木助丙火）
+  // 月令反转：亥子丑水旺当令、戌月壬喜土制——火土克水是「制衡寒水」扶助阳仪，非伤阴；
+  //           巳午未阳仪丙火已极——木火同气/生火是「助旺燥热」（熔金之患），非稳固阳仪。
+  const waterStrongMonth = ['亥月', '子月', '丑月', '戌月'].includes(monthQi.monthName);
+  const yangFullMonth = ['巳月', '午月', '未月'].includes(monthQi.monthName);
+  const zhiHengHanShui = waterStrongMonth && yinYiEl === 'water'
+    && (yearBranchEl === 'earth' || yearBranchEl === 'fire');
+  const branchShangYin = !zhiHengHanShui && (
+      KE_MAP[yearBranchEl] === yinYiEl                               // 年支克阴仪（如辰土克癸水）
+      || (yinYiEl === 'water' && yearBranchEl === 'fire')            // 火旺蒸干水（如午火蒸癸水，冬月除外）
+      || (yinYiEl === 'fire' && yearBranchEl === 'earth')            // 土晦火（如戌土晦丁火）
+    );
+  const branchFuYin = !waterStrongMonth
+    && (yearBranchEl === yinYiEl || SHENG_MAP[yearBranchEl] === yinYiEl);  // 同气/生阴仪（如寅月子水落实癸；冬月助寒不算）
+  const branchFuYang = !yangFullMonth
+    && (yearBranchEl === yangYiEl || SHENG_MAP[yearBranchEl] === yangYiEl); // 稳固阳仪（如寅木助丙火；夏月助旺不算）
+  const branchZhuWangYang = yangFullMonth
+    && (yearBranchEl === yangYiEl || SHENG_MAP[yearBranchEl] === yangYiEl); // 夏月木火助旺阳仪（凶向）
   let yearBranchAction: NianYueTaiJiResult['yearBranchAction'];
   let yearBranchReason: string;
   const yearBranchFactors: string[] = [];
-  const branchKeStem = KE_MAP[yearBranchEl] === yearStemEl; // 年支克年干
-  const branchRelationDesc = branchKeStem ? `克年干${chart.year.stem}`
-    : branchShangYin ? `克伤阴仪「${taijiDef.yinYi}」（贵气所在）`
-    : branchFuYin ? `落实阴仪「${taijiDef.yinYi}」（贵气得根）`
-    : branchFuYang ? `稳固阳仪「${taijiDef.yangYi}」（富气得基）`
-    : yongJi.usefulElements.includes(yearBranchEl) ? '属月令用神方向'
-    : yongJi.tabooElements.includes(yearBranchEl) ? '属月令忌神方向'
-    : '对两仪无显著生克';
-  yearBranchFactors.push(`年支${chart.year.branch}（${elementName(yearBranchEl)}）${branchRelationDesc}`);
+  const branchKeStem = KE_MAP[yearBranchEl] === yearStemEl; // 年支克年干（五行关系层，仅作参考因素）
+  // 年支作用的第一依据是月令逐字资料库（与四柱徽章、日时应验同源）；
+  // 泛化五行生克（如「土克水」）不能翻转干支级定论——辰月戌土冲辰开水库反为喜、未为木库双面待定。
+  const yearBranchMark: XiJiMark = yongJi.branchMarks['年支'] ?? 'neutral';
+  const zzBranchNote = ZHUZI_XIJI_REF[chart.month.branch]?.branches[chart.year.branch]?.[1] ?? '';
+  const markLabel = yearBranchMark === 'useful' ? '月令逐字喜用'
+    : yearBranchMark === 'taboo' ? '月令逐字所忌' : '月令逐字待定/中性';
+  // 五行关系描述（参考因素，不单独决定吉凶）
+  const gxRel = branchKeStem ? `五行关系上克年干${chart.year.stem}，`
+    : branchShangYin ? `五行关系上克伤阴仪「${taijiDef.yinYi}」，`
+    : zhiHengHanShui ? '火土制寒暖局，'
+    : branchZhuWangYang ? '木火助旺当令阳仪，'
+    : branchFuYin ? `同气/生扶阴仪「${taijiDef.yinYi}」，`
+    : branchFuYang ? `同气/稳固阳仪「${taijiDef.yangYi}」，` : '';
+  yearBranchFactors.push(`年支${chart.year.branch}（${elementName(yearBranchEl)}）：${markLabel}${zzBranchNote ? `——${zzBranchNote}` : ''}`);
+  if (gxRel) yearBranchFactors.push(`参考因素：${gxRel}然须让位于月令干支定论`);
   if (yearStemJiXiong === '先天年吉') {
-    if (branchKeStem || branchShangYin) {
+    if (yearBranchMark === 'taboo') {
       yearBranchAction = '阻碍否定';
-      yearBranchReason = `年干得吉，但年支${chart.year.branch}（${elementName(yearBranchEl)}）${branchShangYin ? `克伤阴仪「${taijiDef.yinYi}」（贵气所在）` : `克年干${chart.year.stem}`}，予以否定：先天契机极佳，但现实落地阻碍重重，人生跌宕起伏。`;
-      yearBranchFactors.push('定论：年支否定年干吉气——契机虽佳，落地多阻，一生起伏跌宕');
-    } else if (branchFuYin || branchFuYang) {
+      yearBranchReason = `年干得吉，但年支${chart.year.branch}为${monthQi.monthName}逐字所忌${zzBranchNote ? `（${zzBranchNote}）` : ''}，予以否定：先天契机佳，现实落地阻碍重重，人生跌宕起伏。`;
+      yearBranchFactors.push('定论：年支为月令忌神，否定年干吉气——契机虽佳，落地多阻');
+    } else if (yearBranchMark === 'useful') {
       yearBranchAction = '落实兑现';
-      yearBranchReason = `年干得吉，年支${chart.year.branch}（${elementName(yearBranchEl)}）${branchFuYin ? `落实阴仪「${taijiDef.yinYi}」（贵气得根）` : `稳固阳仪「${taijiDef.yangYi}」（富气得基）`}，先天年吉落地成形、兑现有力，若日时无破坏则完整兑现。`;
-      yearBranchFactors.push('定论：在天成象、在地成形——年吉落地兑现有力，若日时无破坏则完整兑现');
+      yearBranchReason = `年干得吉，年支${chart.year.branch}为${monthQi.monthName}逐字喜用${zzBranchNote ? `（${zzBranchNote}）` : ''}，先天年吉落地成形、兑现有力，若日时无破坏则完整兑现。`;
+      yearBranchFactors.push('定论：在天成象、在地成形——年支为月令喜用，年吉落地兑现有力');
     } else {
       yearBranchAction = '中平';
-      yearBranchReason = `年干得吉，年支${chart.year.branch}（${elementName(yearBranchEl)}）对两仪无显著生克，先天年吉落地平稳，视日时岁运引动而定。`;
-      yearBranchFactors.push('定论：年吉落地平稳，兑现程度视日时岁运引动');
+      yearBranchReason = `年干得吉，年支${chart.year.branch}在${monthQi.monthName}取用有条件/双面${zzBranchNote ? `（${zzBranchNote}）` : ''}，不构成确定否定，先天年吉落地中性，须视日时、岁运合局引动（如三合三会、冲刑）而定。`;
+      yearBranchFactors.push('定论：年支双面待定，非确定否定——合化向喜则助、向忌则阻，吉凶视岁运引动');
     }
   } else if (yearStemJiXiong === '先天年忌') {
-    if (branchKeStem || yongJi.usefulElements.includes(yearBranchEl) || branchFuYin) {
+    if (yearBranchMark === 'useful') {
       yearBranchAction = '制衡借利';
-      yearBranchReason = `年干为忌，年支${chart.year.branch}（${elementName(yearBranchEl)}）${branchKeStem ? `制衡克耗年干${chart.year.stem}` : '属月令用神方向'}：可借忌神得阶段性利好，但凶性底色不变，逢气机引动之时必应凶。`;
-      yearBranchFactors.push('定论：年支制衡年干之忌——可借忌神得阶段性利好，凶性底色不变，逢引动应凶');
+      yearBranchReason = `年干为忌，年支${chart.year.branch}为${monthQi.monthName}逐字喜用${zzBranchNote ? `（${zzBranchNote}）` : ''}，制衡年干之忌：可借之得阶段性利好，但凶性底色不变，逢气机引动之时必应凶。`;
+      yearBranchFactors.push('定论：年支为月令喜用、制衡年忌——可借阶段性利好，凶性底色不变');
     } else {
       yearBranchAction = '中平';
-      yearBranchReason = `年干为忌，年支${chart.year.branch}（${elementName(yearBranchEl)}）未形成有效制衡，凶性无从化解，全凭日时岁运引动。`;
-      yearBranchFactors.push('定论：年支未能制衡年忌，凶性无从化解，全凭日时岁运引动');
+      yearBranchReason = `年干为忌，年支${chart.year.branch}${yearBranchMark === 'taboo' ? '亦为月令所忌，凶性无制' : `取用有条件/双面${zzBranchNote ? `（${zzBranchNote}）` : ''}`}，全凭日时、岁运引动。`;
+      yearBranchFactors.push(yearBranchMark === 'taboo' ? '定论：年支同为忌神，凶性无从化解' : '定论：年支双面待定，制衡与否视岁运合局');
     }
   } else {
     yearBranchAction = '中平';
-    yearBranchReason = `年干先天年平，年支${chart.year.branch}（${elementName(yearBranchEl)}）${branchFuYin ? '落实阴仪，落地略助吉' : branchShangYin ? '克伤阴仪，落地略添阻' : branchFuYang ? '稳固阳仪，落地略助吉' : yongJi.usefulElements.includes(yearBranchEl) ? '属月令用神方向，落地略助吉' : yongJi.tabooElements.includes(yearBranchEl) ? '属月令忌神方向，落地略添阻' : '无显著扶抑'}。`;
-    yearBranchFactors.push('定论：年干年平、年支无显著扶抑，落地平常，吉凶视岁运引动');
+    yearBranchReason = `年干先天年平，年支${chart.year.branch}为${monthQi.monthName}${markLabel}${zzBranchNote ? `（${zzBranchNote}）` : ''}，落地平常，吉凶视岁运引动。`;
+    yearBranchFactors.push('定论：年干年平、年支无确定扶抑，落地平常，吉凶视岁运引动');
   }
   evidence.push(`年支作用：${yearBranchReason}`);
 
@@ -1070,49 +1115,33 @@ export function analyzeNianYueTaiJi(
   }
   evidence.push(`年月太极三态：${state}。${stateDesc}`);
 
-  // ⑦ 日时动态应验（日时为年月太极的动态应验环节：维护或破坏两仪）
+  // ⑦ 日时动态应验（日时为年月太极的动态应验环节：月令喜用到位=维护，月令所忌到位=破坏）
   // 术语「宜年」：日时干支对年干起吉作用——生扶年干所需（如年干癸受伤，日时动庚辛金、壬癸水），
-  // 或克制对年干不吉的因素，即为「宜年」；反之破坏两仪、助忌伤年则不宜。
-  const riShi: Array<{ char: string; el: string }> = [
-    { char: chart.day.stem, el: chart.day.stemElement },
-    { char: chart.day.branch, el: chart.day.branchElement },
-    { char: chart.hour.stem, el: chart.hour.stemElement },
-    { char: chart.hour.branch, el: chart.hour.branchElement },
+  // 或克制对年干不吉的因素，即为「宜年」；反之助忌伤年则不宜。
+  // 判定一律以月令逐字资料库为准（不能只看对两仪元素的生克：夏月水克阳仪火反为救应、冬月土克阴仪水是止寒）。
+  const riShi: Array<{ char: string; el: string; isStem: boolean }> = [
+    { char: chart.day.stem, el: chart.day.stemElement, isStem: true },
+    { char: chart.day.branch, el: chart.day.branchElement, isStem: false },
+    { char: chart.hour.stem, el: chart.hour.stemElement, isStem: true },
+    { char: chart.hour.branch, el: chart.hour.branchElement, isStem: false },
   ];
-  const yiEls: string[] = [STEM_ELEMENTS[taijiDef.yangYi], STEM_ELEMENTS[taijiDef.yinYi]];
-  const hurtRiShi = riShi.filter((r) => yiEls.some((y) => KE_MAP[r.el] === y));
-  const helpRiShi = riShi.filter((r) => yiEls.includes(r.el) || yiEls.some((y) => SHENG_MAP[r.el] === y));
-  let riShiEffect: NianYueTaiJiResult['riShiEffect'];
-  let riShiReason: string;
-  if (hurtRiShi.length > 0 && hurtRiShi.length >= helpRiShi.length) {
-    riShiEffect = '破坏';
-    riShiReason = `日时${hurtRiShi.map((r) => r.char).join('、')}克损两仪（${yiEls.map(elementName).join('、')}），先天年月吉气落地受阻——先天契机佳，但现实落地阻碍重重，人生得失起伏明显。`;
-  } else if (helpRiShi.length > 0) {
-    riShiEffect = '维护';
-    riShiReason = `日时${helpRiShi.map((r) => r.char).join('、')}生扶两仪（${yiEls.map(elementName).join('、')}），先天年月吉气得日时动态维护，可落地兑现。`;
-  } else {
-    riShiEffect = '中平';
-    riShiReason = '日时干支对两仪无显著生克，先天年月吉凶应验视岁运引动而定。';
-  }
-  evidence.push(`日时动态应验：${riShiReason}`);
-
-  // 逐字明细：每个日时干支对两仪与年干的生克关系（yearStemEl 复用年支段声明）
+  const zzRefMonth = ZHUZI_XIJI_REF[chart.month.branch];
   const hurtsYearEl = (Object.keys(KE_MAP) as string[]).find((k) => KE_MAP[k] === yearStemEl) ?? '';
   const riShiPillars = ['日干', '日支', '时干', '时支'];
   const riShiItems = riShi.map((r, i) => {
-    const hurtYi = yiEls.filter((y) => KE_MAP[r.el] === y);
-    const helpYi = yiEls.filter((y) => r.el === y || SHENG_MAP[r.el] === y);
+    const mark = r.isStem ? yongJi.allStemMarks[r.char] : yongJi.allBranchMarks[r.char];
+    const note = zzRefMonth ? (r.isStem ? zzRefMonth.stems[r.char]?.[1] : zzRefMonth.branches[r.char]?.[1]) ?? '' : '';
     let effect: '维护' | '破坏' | '中平';
     let why: string;
-    if (hurtYi.length > 0) {
-      effect = '破坏';
-      why = `克损${hurtYi.map(elementName).join('、')}（两仪之气），年月吉气落地受阻`;
-    } else if (helpYi.length > 0) {
+    if (mark === 'useful') {
       effect = '维护';
-      why = helpYi.map((y) => (r.el === y ? `同气于${elementName(y)}，加固两仪` : `生助${elementName(y)}，资养两仪`)).join('；');
+      why = `月令逐字喜用：${note || `${r.char}为${monthQi.monthName}喜用`}，维护年月太极`;
+    } else if (mark === 'taboo') {
+      effect = '破坏';
+      why = `月令逐字所忌：${note || `${r.char}为${monthQi.monthName}忌神`}，破坏月令平衡`;
     } else {
       effect = '中平';
-      why = '与两仪无显著生克，应验视岁运引动';
+      why = note && note.startsWith('？') ? `取用有条件、暂不判吉凶：${note}` : (note || '非月令核心喜忌，应验视岁运引动');
     }
     // 年干关系附加说明（宜年判定的论据）
     if (r.el === yearStemEl || SHENG_MAP[r.el] === yearStemEl) why += `；并生扶年干${chart.year.stem}`;
@@ -1120,6 +1149,21 @@ export function analyzeNianYueTaiJi(
     else if (hurtsYearEl && KE_MAP[r.el] === hurtsYearEl) why += `；克制伤年干之${elementName(hurtsYearEl)}，解救年干`;
     return { char: r.char, pillar: riShiPillars[i], effect, why };
   });
+  const hurtCount = riShiItems.filter((x) => x.effect === '破坏').length;
+  const helpCount = riShiItems.filter((x) => x.effect === '维护').length;
+  let riShiEffect: NianYueTaiJiResult['riShiEffect'];
+  let riShiReason: string;
+  if (hurtCount > 0 && hurtCount >= helpCount) {
+    riShiEffect = '破坏';
+    riShiReason = `日时${riShiItems.filter((x) => x.effect === '破坏').map((x) => x.char).join('、')}为月令逐字所忌，破坏年月太极——先天年月吉气落地受阻，人生得失起伏明显。`;
+  } else if (helpCount > 0) {
+    riShiEffect = '维护';
+    riShiReason = `日时${riShiItems.filter((x) => x.effect === '维护').map((x) => x.char).join('、')}为月令逐字喜用，年月太极得日时动态维护，先天吉气可落地兑现。`;
+  } else {
+    riShiEffect = '中平';
+    riShiReason = '日时干支无月令明确喜忌（中性或取用有条件），先天年月吉凶应验视岁运引动与柱中组合而定。';
+  }
+  evidence.push(`日时动态应验：${riShiReason}`);
 
   // 宜年：日时干支对年干起吉作用——年干为吉时生扶之或克制伤年因素；年干为忌时制衡之
   let riShiYiNian = false;
@@ -2814,16 +2858,10 @@ export function scoreGanZhiImpact(
   const isUsefulEl = (el: string) => yongJi.usefulElements.includes(el);
   const isTabooEl  = (el: string) => yongJi.tabooElements.includes(el);
 
-  const markStem = (s: string): 'useful' | 'taboo' | 'neutral' => {
-    const el = STEM_ELEMENTS[s];
-    if (el === 'earth') return judgeEarthXiJi(s, chart, yinYangPct);
-    return isUsefulEl(el) ? 'useful' : isTabooEl(el) ? 'taboo' : 'neutral';
-  };
-  const markBranch = (b: string): 'useful' | 'taboo' | 'neutral' => {
-    const el = BRANCH_ELEMENTS[b];
-    if (el === 'earth') return judgeEarthXiJi(b, chart, yinYangPct);
-    return isUsefulEl(el) ? 'useful' : isTabooEl(el) ? 'taboo' : 'neutral';
-  };
+  // 用忌标记唯一来源：月令逐字资料库（analyzeYongJi 的 allStemMarks/allBranchMarks）
+  // 含天干粒度覆盖（辰月甲=用）、土支逐字定论（辰月戌冲辰=用、夏月丑戌晦火=用）、两局/条件字=中性
+  const markStem = (s: string): 'useful' | 'taboo' | 'neutral' => yongJi.allStemMarks[s] ?? 'neutral';
+  const markBranch = (b: string): 'useful' | 'taboo' | 'neutral' => yongJi.allBranchMarks[b] ?? 'neutral';
 
   // —— MVP 口径对齐：最终"综合分 displayScore" = compressScore(score) = score / 3.6
   //    因此 topReasons 里展示给用户看的每一项"±X"也要同步除以 3.6，保证用户能手动加起来等于综合分
@@ -2844,19 +2882,21 @@ export function scoreGanZhiImpact(
     summary.push(`${compressFmt(s)} ${msg}`);
   };
 
-  // -------- A. 月令阴阳喜用方向（主分量A，大运重地支：地支权重 >> 天干） --------
-  // 文献：天干主象、地支主实；天干生克需地支呼应（落地）方可应验，故地支为主、天干为辅
-  const needYin = monthQi.usageDirection === 'yin'; // 盘需制阳（补阴）：金水（阴）吉、木火（阳）不吉
-  const needYang = !needYin;                        // 盘需制阴（补阳）：木火（阳）吉、金水（阴）不吉
+  // -------- A. 月令逐字喜忌（主分量A，大运重地支：地支权重 >> 天干） --------
+  // 文献：天干主象、地支主实；天干生克需地支呼应（落地）方可应验，故地支为主、天干为辅。
+  //       喜/忌/待定直接取自月令逐字资料库，用阴用阳大方向已含于标记内。
   const stemEl = STEM_ELEMENTS[stem];
   const branchEl = BRANCH_ELEMENTS[branch];
   const stemMark = markStem(stem);
   const branchMark = markBranch(branch);
-  const stemYY = STEM_YINYANG[stem];   // 'yang'|'yin'（戊=阳土、己=阴土，与燥湿规则一致）
-  // 地支阴阳：土支用燥湿规则（未戌燥土=阳、丑辰湿土=阴），其余用传统地支阴阳
-  const branchYY = branchEl === 'earth'
-    ? (['未', '戌'].includes(branch) ? 'yang' : 'yin')
-    : BRANCH_YINYANG[branch];
+  // 补偏用「用阴阳」（寒暖之象）：木火=阳、金水=阴；土干戊阳己阴、土支未戌燥=阳/丑辰湿=阴。
+  // 注意不能用干支奇偶「体阴阳」（壬阳干而气寒、子阳支而象老阴），否则补阴气会错奖阳体寒字。
+  const stemYY = stemEl === 'wood' || stemEl === 'fire' ? 'yang'
+    : stemEl === 'metal' || stemEl === 'water' ? 'yin'
+    : STEM_YINYANG[stem];
+  const branchYY = branchEl === 'wood' || branchEl === 'fire' ? 'yang'
+    : branchEl === 'metal' || branchEl === 'water' ? 'yin'
+    : (['未', '戌'].includes(branch) ? 'yang' : 'yin');
 
   // 天干五行（占比少：天干为表象）
   if (stemMark === 'useful')       { score += 3; pushSum(`天干${stem}属月令用神（${elementName(stemEl)}）`, +3); }
@@ -2864,18 +2904,11 @@ export function scoreGanZhiImpact(
   // 地支五行（大运重地支：地支为实质，权重加大）
   if (branchMark === 'useful')     { score += 10; pushSum(`地支${branch}属月令用神（${elementName(branchEl)}）`, +10); }
   else if (branchMark === 'taboo') { score -= 10; pushSum(`地支${branch}属月令忌神（${elementName(branchEl)}）`, -10); }
-  // 天干阴阳属性是否契合制阴/制阳大方向
-  if (needYang && stemYY === 'yang') { score += 1.5; pushSum(`天干${stem}为阳干，契合制阴（补阳）方向`, +1.5); }
-  if (needYin  && stemYY === 'yin')  { score += 1.5; pushSum(`天干${stem}为阴干，契合制阳（补阴）方向`, +1.5); }
-  if (needYang && stemYY === 'yin')  { score -= 1; pushSum(`天干${stem}为阴干，逆制阴（补阳）方向`, -1); }
-  if (needYin  && stemYY === 'yang') { score -= 1; pushSum(`天干${stem}为阳干，逆制阳（补阴）方向`, -1); }
-  // 地支阴阳属性
-  if (needYang && branchYY === 'yang') { score += 4; pushSum(`地支${branch}为阳支，契合制阴（补阳）方向`, +4); }
-  if (needYin  && branchYY === 'yin')  { score += 4; pushSum(`地支${branch}为阴支，契合制阳（补阴）方向`, +4); }
-  if (needYang && branchYY === 'yin')  { score -= 3; pushSum(`地支${branch}为阴支，逆制阴（补阳）方向`, -3); }
-  if (needYin  && branchYY === 'yang') { score -= 3; pushSum(`地支${branch}为阳支，逆制阳（补阴）方向`, -3); }
+  // 说明：月令用阴/用阳大方向（含辰月甲救水、夏月丑戌晦火等干支级例外）已完整体现在
+  //       stemMark/branchMark 的 ±3/±10 中，不再按干支奇偶「体阴阳」重复加减，
+  //       避免同一字既加分又扣分（如庚为首用却因阳干被扣）的矛盾展示。
 
-  // -------- B. 原局偏枯弥合度（主分量B，满分 ±18） --------
+  // -------- B. 原局偏枯弥合度（主分量B，满分 ±18，按寒暖「用阴阳」补偏） --------
   const yangShort = yinYangPct.yang < 40; // 命局偏阴，阳气不够
   const yinShort  = yinYangPct.yin  < 40; // 命局偏阳，阴气不够
   const balanced  = !yangShort && !yinShort; // 二气均衡，弥合权重减半（避免拉向单边）
@@ -2883,27 +2916,27 @@ export function scoreGanZhiImpact(
 
   // 补阳气（命局阳气不足时）—— 地支权重 >> 天干
   if (yangShort) {
-    if (stemYY   === 'yang') { const s = +2.5*half; score += s; pushSum(`天干${stem}为阳干，补原局阳气不足`, +s); }
-    if (stemYY   === 'yin')  { const s = -1.5*half; score += s; pushSum(`天干${stem}为阴干，再增阴气→偏`,  s); }
-    if (branchYY === 'yang') { const s = +5.5*half; score += s; pushSum(`地支${branch}为阳支，补原局阳气不足`, +s); }
-    if (branchYY === 'yin')  { const s = -3*half;   score += s; pushSum(`地支${branch}为阴支，再增阴气→偏`,  s); }
+    if (stemYY   === 'yang') { const s = +2.5*half; score += s; pushSum(`天干${stem}气暖（木火/燥土），补原局阳气不足`, +s); }
+    if (stemYY   === 'yin')  { const s = -1.5*half; score += s; pushSum(`天干${stem}气寒（金水/湿土），再增阴气→偏`,  s); }
+    if (branchYY === 'yang') { const s = +5.5*half; score += s; pushSum(`地支${branch}气暖（木火/燥土），补原局阳气不足`, +s); }
+    if (branchYY === 'yin')  { const s = -3*half;   score += s; pushSum(`地支${branch}气寒（金水/湿土），再增阴气→偏`,  s); }
   }
   // 补阴气
   if (yinShort) {
-    if (stemYY   === 'yin')  { const s = +2.5*half; score += s; pushSum(`天干${stem}为阴干，补原局阴气不足`, +s); }
-    if (stemYY   === 'yang') { const s = -1.5*half; score += s; pushSum(`天干${stem}为阳干，再增阳气→偏`,  s); }
-    if (branchYY === 'yin')  { const s = +5.5*half; score += s; pushSum(`地支${branch}为阴支，补原局阴气不足`, +s); }
-    if (branchYY === 'yang') { const s = -3*half;   score += s; pushSum(`地支${branch}为阳支，再增阳气→偏`,  s); }
+    if (stemYY   === 'yin')  { const s = +2.5*half; score += s; pushSum(`天干${stem}气寒（金水/湿土），补原局阴气不足`, +s); }
+    if (stemYY   === 'yang') { const s = -1.5*half; score += s; pushSum(`天干${stem}气暖（木火/燥土），再增阳气→偏`,  s); }
+    if (branchYY === 'yin')  { const s = +5.5*half; score += s; pushSum(`地支${branch}气寒（金水/湿土），补原局阴气不足`, +s); }
+    if (branchYY === 'yang') { const s = -3*half;   score += s; pushSum(`地支${branch}气暖（木火/燥土），再增阳气→偏`,  s); }
   }
   // 命局本就平衡，不再做单边偏向（不加分、只扣那些"继续助强一边"的）
   if (balanced) {
     const yangDominantYuanju = yinYangPct.yang > yinYangPct.yin;
     if (yangDominantYuanju) {
-      if (stemYY   === 'yang') { score -= 1; pushSum(`原局阳气略多，${stem}再为阳干易失衡`, -1); }
-      if (branchYY === 'yang') { score -= 2; pushSum(`原局阳气略多，${branch}再为阳支易失衡`, -2); }
+      if (stemYY   === 'yang') { score -= 1; pushSum(`原局阳气略多，${stem}再气暖易失衡`, -1); }
+      if (branchYY === 'yang') { score -= 2; pushSum(`原局阳气略多，${branch}再气暖易失衡`, -2); }
     } else {
-      if (stemYY   === 'yin') { score -= 1; pushSum(`原局阴气略多，${stem}再为阴干易失衡`, -1); }
-      if (branchYY === 'yin') { score -= 2; pushSum(`原局阴气略多，${branch}再为阴支易失衡`, -2); }
+      if (stemYY   === 'yin') { score -= 1; pushSum(`原局阴气略多，${stem}再气寒易失衡`, -1); }
+      if (branchYY === 'yin') { score -= 2; pushSum(`原局阴气略多，${branch}再气寒易失衡`, -2); }
     }
   }
 
