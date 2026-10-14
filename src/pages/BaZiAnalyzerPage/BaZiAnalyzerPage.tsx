@@ -805,7 +805,7 @@ function computeTaiJiDbReferences(
 }
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.6.4';
+const APP_VERSION = '2.6.5';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -1395,13 +1395,13 @@ export default function BaZiAnalyzerPage() {
       const line = (label: string, val: number, color: string, visible: boolean) => (
         <div
           key={label}
-          className="mt-1 flex h-[19px] items-center justify-between rounded-none border px-1.5 text-[10px] font-black tabular-nums"
+          className="mt-1 flex h-[19px] items-center justify-between overflow-hidden whitespace-nowrap rounded-none border px-1.5 text-[10px] font-black tabular-nums"
           style={visible
             ? { borderColor: `${color}33`, background: `${color}10`, color }
             : { borderColor: 'transparent', background: 'transparent', color: 'transparent' }}
         >
-          <span className="opacity-70">{label}</span>
-          <span>{val >= 0 ? '+' : ''}{val.toFixed(1)}</span>
+          <span className="shrink-0 opacity-70">{label}</span>
+          <span className="shrink-0">{val >= 0 ? '+' : ''}{val.toFixed(1)}</span>
         </div>
       );
       return (
@@ -1411,15 +1411,15 @@ export default function BaZiAnalyzerPage() {
           {line('其他', otherC, '#3A4450', Math.abs(otherC) >= 0.05)}
           {line('命盘', mingPanBase, '#31669B', Math.abs(mingPanBase) >= 0.05)}
           <div
-            className="mt-1 flex h-[21px] items-center justify-between rounded-none border px-1.5 text-[10px] font-black tabular-nums"
+            className="mt-1 flex h-[21px] items-center justify-between overflow-hidden whitespace-nowrap rounded-none border px-1.5 text-[10px] font-black tabular-nums"
             style={{
               borderColor: displayScore >= 0 ? 'rgba(46,118,84,0.45)' : 'rgba(227,28,41,0.45)',
               background: displayScore >= 0 ? 'rgba(46,118,84,0.08)' : 'rgba(227,28,41,0.07)',
               color: displayScore >= 0 ? '#2E7654' : '#E31C29',
             }}
           >
-            <span className="opacity-70">综合</span>
-            <span>{displayScore >= 0 ? '+' : ''}{displayScore.toFixed(1)}</span>
+            <span className="shrink-0 opacity-70">综合</span>
+            <span className="shrink-0">{displayScore >= 0 ? '+' : ''}{displayScore.toFixed(1)}</span>
           </div>
         </div>
       );
@@ -2652,7 +2652,8 @@ export default function BaZiAnalyzerPage() {
                                                   {dy.startAge} 岁起 · {dy.startYear}-{dy.endYear}
                                                 </div>
                                               </div>
-                                              <div className="grid gap-2 sm:grid-cols-5 md:grid-cols-5 lg:grid-cols-10">
+                                              {/* 按容器实际宽度自适应列数（卡最小 96px），避免窄主内容列下强制 10 列把卡片压到文字竖排 */}
+                                              <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))' }}>
                                                 {dy.liuNian10.map((ln: any) => {
                                                   const lmeta = m(ln);
                                                   return (
