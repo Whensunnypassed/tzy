@@ -1,4 +1,4 @@
-﻿import React, { Fragment, useState, useMemo, useEffect, useRef } from 'react';
+import React, { Fragment, useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -804,6 +804,17 @@ function computeTaiJiDbReferences(
   });
 }
 
+// 分数明细组件的数据形状（大运行 / 流年行共用的可选数值字段，压缩分尺度见 baziAnalyzer 的 /3.6 说明）
+type ScoreBreakdownRow = {
+  displayScore?: number | string;
+  score?: number;
+  plusSumRaw?: number;
+  minusSumRaw?: number;
+  otherSumRaw?: number;
+  mingPanBase?: number;
+  rawScore?: number;
+};
+
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
 const APP_VERSION = '2.6.7';
 
@@ -866,7 +877,17 @@ export default function BaZiAnalyzerPage() {
   useEffect(() => {
     try {
       const raw = localStorage.getItem('__app_tianzhiyi_history');
-      if (raw) setHistory(JSON.parse(raw));
+      if (raw) {
+        const parsed: unknown = JSON.parse(raw);
+        // 只接受形状正确的记录数组：非数组或混入脏数据时按空历史处理，避免渲染期崩溃
+        if (Array.isArray(parsed)) {
+          const records = parsed.filter(
+            (r): r is HistoryRecord =>
+              !!r && typeof r === 'object' && typeof (r as HistoryRecord).summary === 'string',
+          );
+          setHistory(records);
+        }
+      }
     } catch { /* ignore parse errors */ }
   }, []);
 
@@ -1365,7 +1386,10 @@ export default function BaZiAnalyzerPage() {
 
   // ===== MVP 分数明细组件 =====
   // 展示：加分合计 / 扣分合计 / 其他修正 / 趋势加成 = 综合分
-  const ScoreBreakdown = ({ row, dense = false, stacked = false }: { row: any; dense?: boolean; stacked?: boolean }) => {
+  // 用 useCallback 固定组件类型（该组件只依赖 props、不闭包任何页面状态）：
+  // 否则每次父组件渲染都会生成新的函数引用，React 视作新组件类型，导致表格里最多近百个
+  // 分数明细实例被整体卸载重挂（展开态/焦点丢失且白做一遍 DOM 工作）。
+  const ScoreBreakdown = useCallback(({ row, dense = false, stacked = false }: { row: ScoreBreakdownRow; dense?: boolean; stacked?: boolean }) => {
     const toC = (raw: number) => Math.round((raw / 3.6) * 10) / 10;
     const displayScore: number =
       typeof row.displayScore === 'number' ? row.displayScore :
@@ -1462,7 +1486,7 @@ export default function BaZiAnalyzerPage() {
         </span>
       </div>
     );
-  };
+  }, []);
 
   const pillarNames = ['年柱', '月柱', '日柱', '时柱'];
   const pillarLabels = ['祖上', '父母', '自己', '子女'];
@@ -1684,33 +1708,6 @@ export default function BaZiAnalyzerPage() {
                   </div>
                   <div className="ml-2 flex-1 border-t" style={{ borderColor: 'var(--border)' }} />
                 </div>
-              );
-
-              const ChipButton = ({
-                active,
-                onClick,
-                children,
-                title,
-              }: {
-                active?: boolean;
-                onClick: () => void;
-                children: React.ReactNode;
-                title?: string;
-              }) => (
-                <button
-                  type="button"
-                  onClick={onClick}
-                  title={title}
-                  className="inline-flex items-center justify-center rounded-sm px-3 py-1.5 text-[12px] font-medium transition-colors"
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    background: active ? 'var(--primary)' : 'transparent',
-                    color: active ? '#FFFFFF' : 'var(--foreground)',
-                    border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
-                  }}
-                >
-                  {children}
-                </button>
               );
 
               return (
@@ -2571,6 +2568,15 @@ export default function BaZiAnalyzerPage() {
                                   return (
                                     <Fragment key={dy.index}>
                                         <TableRow
+                                          role="button"
+                                          tabIndex={0}
+                                          aria-expanded={isOpen}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                              e.preventDefault();
+                                              setExpandedDY(isOpen ? null : dy.index);
+                                            }
+                                          }}
                                           onClick={() => setExpandedDY(isOpen ? null : dy.index)}
                                           className={`cursor-pointer select-none transition-colors hover:bg-primary/5 ${isCurrent ? 'bg-primary/10' : ''}`}
                                         >
