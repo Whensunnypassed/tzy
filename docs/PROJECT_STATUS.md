@@ -52,7 +52,7 @@
 改代码 → npm.cmd run build:pages（构建验证必须通过）
 → 改版本号（package.json + BaZiAnalyzerPage.tsx 的 APP_VERSION，两处保持一致）
 → git add 具体文件（不要 git add -A / 通配）
-→ git commit --no-verify -m "..." （必须 --no-verify，见下方说明）
+→ git commit -m "..." （pre-commit 会自动执行 typecheck + eslint）
 → git push （同步源码到 main）
 → 【用户明确要求部署时】npx.cmd gh-pages -d dist（更新线上 gh-pages 分支）
 ```
@@ -62,7 +62,7 @@
 ### 关键坑点（务必注意）
 
 1. **`git push` ≠ 上线**：线上站点由 `gh-pages` 分支驱动，源码推到 main 后必须**额外**执行 `npx gh-pages -d dist` 才会更新线上。
-2. **提交必须 `--no-verify`**：项目模板遗留的 `src/components/ui/calendar.tsx`、`resizable.tsx` 类型错误及 `eslint.config.mjs` 导出问题，会导致 precommit 的 `npm run lint` 失败（与本项目业务代码无关）。`vite build` 通过即可放心提交。
+2. **提交无需 `--no-verify`**：模板遗留的两个类型错误组件已删除、`eslint.config.mjs` 已重写为自包含配置，`npm run precommit`（typecheck + eslint）现可正常通过，`core.hooksPath` 已指向 `.githooks`，按常规 `git commit` 提交即可。
 3. **版本号两处同步**：`package.json` 的 `"version"` 与 `BaZiAnalyzerPage.tsx` 的 `const APP_VERSION` 必须一致，否则网页页脚版本号失真。
 4. **一次完成再同步**：一次改动完成后统一提交推送，不边改边推（避免零碎提交）。
 5. **部署按需执行**：第 5 步（gh-pages 部署）仅在用户明确说"部署到线上站点"时执行，默认只推源码。
