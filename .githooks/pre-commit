@@ -3,7 +3,19 @@
 # 注册（core.hooksPath=.githooks）由 package.json 的 prepare 脚本在 npm install 时完成，
 # fullstack upgrade 的 activateGitHooks 作为兜底（覆盖 install 早于 git init 的时序）。
 [ "$SKIP_GIT_HOOKS" = "1" ] && exit 0
-if ! npm run precommit; then
+
+# Git for Windows 的 sh 只能解析 PATH 中无扩展名的 npm，而部分 Node.js 安装只提供 npm.cmd；
+# 两者都找不到时给出提示并放行，避免在没有 Node.js 的终端里把提交彻底卡死。
+if command -v npm >/dev/null 2>&1; then
+  NPM=npm
+elif command -v npm.cmd >/dev/null 2>&1; then
+  NPM=npm.cmd
+else
+  echo "⚠ pre-commit: PATH 中找不到 npm（Node.js 未安装或本终端未继承其路径），本次跳过校验。装好 Node.js 后会自动恢复强制校验。" >&2
+  exit 0
+fi
+
+if ! $NPM run precommit; then
   echo "✗ pre-commit: 校验未通过，已阻断提交（绕过：git commit --no-verify 或 SKIP_GIT_HOOKS=1）" >&2
   exit 1
 fi
