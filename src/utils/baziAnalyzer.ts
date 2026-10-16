@@ -3608,6 +3608,63 @@ export function analyzeHealth(
   return { weakElements, healthRisks, bodyParts, shouYuanHint };
 }
 
+/**
+ * 大运/流年 吉凶条目（流年侧）：analyzeDaYunLiuNian 的对外契约。
+ * 带 ? 的字段在「叠加命盘基准 / S+ 硬认证」阶段回填。
+ */
+export interface LiuNianFortuneEntry {
+  year: number;
+  ganzhi: string;
+  fortune: WuDangLevel;
+  score: number;
+  rawScore: number;
+  plusSumRaw: number;
+  minusSumRaw: number;
+  otherSumRaw: number;
+  displayScore: number;
+  topReasons: string[];
+  hint: string;
+  level: WuDangLevel;
+  band: string;
+  upgradeBonusApplied: boolean;
+  downgradeAlert: boolean;
+  letterLevel?: LetterLevel;
+  adjustScore?: number;
+  mingPanBase?: number;
+}
+
+/** 大运条目（含下辖十年流年 liuNian10） */
+export interface DaYunFortuneEntry {
+  index: number;
+  stem: string;
+  branch: string;
+  startAge: number;
+  startYear: number;
+  endYear: number;
+  fortune: WuDangLevel;
+  score: number;
+  rawScore: number;
+  plusSumRaw: number;
+  minusSumRaw: number;
+  otherSumRaw: number;
+  topReasons: string[];
+  description: string;
+  level: WuDangLevel;
+  band: string;
+  displayScore: number;
+  upgradeBonusApplied: boolean;
+  downgradeAlert: boolean;
+  liuNian10: LiuNianFortuneEntry[];
+  baseCompress?: number;
+  selfCompress?: number;
+  liuNianAvgCompress?: number;
+  letterLevel?: LetterLevel;
+  adjustScore?: number;
+  mingPanBase?: number;
+  sPlusCertified?: boolean;
+  badYearCount?: number;
+}
+
 // 大运流年吉凶分析（阴阳气喜用关系为核心判断）
 export function analyzeDaYunLiuNian(
   chart: BaZiChart,
@@ -3616,68 +3673,14 @@ export function analyzeDaYunLiuNian(
   elementPower: { wood: number; fire: number; earth: number; metal: number; water: number },
   currentYear: number,
 ): {
-  daYunWithFortune: Array<{
-    index: number;
-    stem: string;
-    branch: string;
-    startAge: number;
-    startYear: number;
-    endYear: number;
-    fortune: WuDangLevel;
-    score: number;        // 压缩分 displayScore（用于表格展示"综合分"）
-    rawScore: number;     // 原始分（供内部序列加成使用）
-    plusSumRaw: number;   // 原始分加分合计（用忌+自洽正+刑冲正）
-    minusSumRaw: number;  // 原始分扣分合计（用忌+自洽负+刑冲负，负数）
-    otherSumRaw: number;  // 恒为 0（刑冲合会不参与评分）
-    topReasons: string[];
-    description: string;
-    // 新：趋势相关 & 档位
-    level: WuDangLevel;
-    band: string;
-    displayScore: number;
-    upgradeBonusApplied: boolean;
-    downgradeAlert: boolean;
-    liuNian10: Array<{
-      year: number;
-      ganzhi: string;
-      fortune: WuDangLevel;
-      score: number;
-      rawScore: number;
-      plusSumRaw: number;
-      minusSumRaw: number;
-      otherSumRaw: number;
-      displayScore: number;
-      topReasons: string[];
-      hint: string;
-      level: WuDangLevel;
-      band: string;
-      upgradeBonusApplied: boolean;
-      downgradeAlert: boolean;
-    }>;
-  }>;
+  daYunWithFortune: DaYunFortuneEntry[];
   currentDaYunIndex: number;
   currentDaYunDetail: string; // 保留类型兼容，UI 上不再使用（改为画函数曲线）
   currentDaYunCurve: {
     label: string; // 如：甲子大运 31-40岁（2024-2033）
     items: Array<{ year: number; ganzhi: string; displayScore: number; level: WuDangLevel }>;
   };
-  recentLiuNian: Array<{
-    year: number;
-    ganzhi: string;
-    fortune: WuDangLevel;
-    score: number;
-    rawScore: number;
-    plusSumRaw: number;
-    minusSumRaw: number;
-    otherSumRaw: number;
-    displayScore: number;
-    topReasons: string[];
-    hint: string;
-    level: WuDangLevel;
-    band: string;
-    upgradeBonusApplied: boolean;
-    downgradeAlert: boolean;
-  }>;
+  recentLiuNian: LiuNianFortuneEntry[];
 } {
   const yinYangPct = calculateYinYangBalance(chart);
   // 命盘基准分（新机制）：先天层次，作为大运/流年联动的基准
@@ -3776,8 +3779,8 @@ export function analyzeDaYunLiuNian(
     liuNianAvgCompress: dy.liuNianAvgCompress,  // 保留：十年流年平均压缩分（S+ 硬认证用）
   })));
   // 把 trended 上的 level/displayScore 同步回 fortune/score 字段（UI 用的是 fortune 和 score），同时保留升级信息
-  const daYunWithFortune = daYunTrended.map(tr => {
-    const liuNian10Trended = applyForwardTrend((tr as any).liuNian10.map((ln: any) => ({
+  const daYunWithFortune: DaYunFortuneEntry[] = daYunTrended.map(tr => {
+    const liuNian10Trended = applyForwardTrend(tr.liuNian10.map((ln) => ({
       rawScore: ln.rawScore,
       plusSumRaw: ln.plusSumRaw,
       minusSumRaw: ln.minusSumRaw,
@@ -3788,13 +3791,13 @@ export function analyzeDaYunLiuNian(
       topReasons: ln.topReasons,
       hint: ln.hint,
     }))).map((lnTr, i) => {
-      const orig = (tr as any).liuNian10[i];
+      const orig = tr.liuNian10[i];
       return {
         ...orig,
         // 保留 MVP 加减分明细字段：
-        plusSumRaw: (lnTr as any).plusSumRaw,
-        minusSumRaw: (lnTr as any).minusSumRaw,
-        otherSumRaw: (lnTr as any).otherSumRaw,
+        plusSumRaw: lnTr.plusSumRaw,
+        minusSumRaw: lnTr.minusSumRaw,
+        otherSumRaw: lnTr.otherSumRaw,
         // 新字段（覆盖/追加）：压缩分、档位、警告
         score: lnTr.displayScore,                 // UI 上目前的 'score' 展示为压缩分
         fortune: lnTr.level,                       // 兼容旧字段（liuen.fortune）
@@ -3814,9 +3817,9 @@ export function analyzeDaYunLiuNian(
       score: tr.displayScore,
       fortune: tr.level,
       liuNian10: liuNian10Trended,
-      baseCompress: (tr as any).baseCompress,  // 保留：趋势加成前的基础压缩分
+      baseCompress: tr.baseCompress,  // 保留：趋势加成前的基础压缩分
     };
-  }) as any;
+  });
 
   const currentDaYunIndex = getCurrentDaYunIndex(chart, currentYear);
   const currentDY = daYunWithFortune[currentDaYunIndex];
@@ -3831,7 +3834,7 @@ export function analyzeDaYunLiuNian(
   };
   const currentDaYunCurve = {
     label: `${(currentDY && currentDY.stem) || ''}${(currentDY && currentDY.branch) || ''}大运 · ${(currentDY && currentDY.startAge) || 0}-${((currentDY && currentDY.startAge) || 0) + 9}岁（${(currentDY && currentDY.startYear) || 0}-${(currentDY && currentDY.endYear) || 0}年）`,
-    items: safeLiuNian10.map((ln: any) => ({
+    items: safeLiuNian10.map((ln) => ({
       year: Number(ln.year) || 0,
       ganzhi: String(ln.ganzhi || ''),
       displayScore: clampScore(ln.displayScore),
@@ -3842,8 +3845,8 @@ export function analyzeDaYunLiuNian(
   // —— 修复 Bug1-2：大运 topReasons 追加「趋势加成」说明（避免综合分有加分但看不到来源的遗漏） ——
   for (const dy of daYunWithFortune) {
     if (dy.upgradeBonusApplied) {
-      const baseVal = (dy as any).baseCompress ?? Math.round((wuDangFromScore((dy as any).rawScore).displayScore) * 10) / 10;
-      const bonusVal = (dy as any).upgradeBonusApplied && Array.isArray(dy.topReasons) ?
+      const baseVal = dy.baseCompress ?? Math.round((wuDangFromScore(dy.rawScore).displayScore) * 10) / 10;
+      const bonusVal = dy.upgradeBonusApplied && Array.isArray(dy.topReasons) ?
         (Math.round(((dy.displayScore as number) - baseVal) * 10) / 10) : 0;
       if (bonusVal > 0) {
         dy.topReasons = [...(dy.topReasons || []), `【趋势加成】前运走低（拉），此运翻身反弹，额外加分 +${bonusVal}`];
@@ -3882,7 +3885,7 @@ export function analyzeDaYunLiuNian(
     otherSumRaw: r.otherSumRaw,
     displayScore: r.displayScore,
   }));
-  const recentLiuNian = recentTrended as any;
+  const recentLiuNian: LiuNianFortuneEntry[] = recentTrended;
 
   // 注：已按用户要求移除「趋势加成」和「降档警告」分值影响
   // （即不再参考"上一个大运/流年好/坏"来改变当前条目的评分或提示）
@@ -3891,7 +3894,7 @@ export function analyzeDaYunLiuNian(
   // —— 命盘基准联动：展示综合分 = 命盘基准分 + 岁运调整分；
   //    九档评级只按「岁运调整分」（combined − 命盘基准）定档，与先天盘高低无关，
   //    保证同一盘内好坏严格拉开梯度（letterFromCombined 阈值 ±3.8 满量程） ——
-  for (const dy of daYunWithFortune as any[]) {
+  for (const dy of daYunWithFortune) {
     const dyAdjust = dy.displayScore || 0; // 叠加命盘基准前的岁运调整压缩分
     const dyCombined = mingPanCompress + dyAdjust;
     const dyLetter = letterFromCombined(dyAdjust);
@@ -3939,7 +3942,7 @@ export function analyzeDaYunLiuNian(
   // —— 大运 S+ 同盘唯一配额：八步至多 1 个 S+（顶级运一生罕见）——
   // 通过硬认证者按调整分排序，仅最高分者保留 S+，其余一律降为 S；
   // 未通过硬认证却越过 3.8 线者（如单支用+流通凑分）同样降为 S。
-  const sPlusCandidates = (daYunWithFortune as any[])
+  const sPlusCandidates = daYunWithFortune
     .filter((dy) => dy.letterLevel === 'S+' && dy.sPlusCertified)
     // 调整分最高者得；并列时本柱分（干支双用落实纯度）高者得；再并列取前一步运
     .sort((a, b) =>
@@ -3948,14 +3951,14 @@ export function analyzeDaYunLiuNian(
       (a.index ?? 0) - (b.index ?? 0),
     );
   const sPlusWinner = sPlusCandidates[0];
-  for (const dy of daYunWithFortune as any[]) {
+  for (const dy of daYunWithFortune) {
     if (dy.letterLevel === 'S+' && dy !== sPlusWinner) {
       dy.letterLevel = 'S';
       dy.band = LETTER_BAND['S'];
       // 五档映射 S+/S 同为「夯」，level/fortune 无需变动
     }
   }
-  for (const ln of recentLiuNian as any[]) {
+  for (const ln of recentLiuNian) {
     const lnAdjust = ln.displayScore || 0;
     const lnCombined = mingPanCompress + lnAdjust;
     const lnLetter = letterFromCombined(lnAdjust);
