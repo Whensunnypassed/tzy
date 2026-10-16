@@ -1231,6 +1231,17 @@ export function analyzeNianYueTaiJi(
   };
 }
 
+/**
+ * 四柱干支基础权重：年 / 月 / 日 / 时，月令最重（月支 2.5）。
+ * 五行力量、阴阳平衡、用神占比三处评分共用同一组权重，只在此处维护。
+ */
+const PILLAR_WEIGHTS: ReadonlyArray<{ stem: number; branch: number }> = [
+  { stem: 1.0, branch: 1.5 }, // 年
+  { stem: 1.2, branch: 2.5 }, // 月（月令最重）
+  { stem: 1.5, branch: 1.8 }, // 日
+  { stem: 0.8, branch: 1.2 }, // 时
+];
+
 // 五行力量计算（简化评分）
 export function calculateElementPower(chart: BaZiChart): {
   wood: number;
@@ -1241,12 +1252,7 @@ export function calculateElementPower(chart: BaZiChart): {
 } {
   const power = { wood: 0, fire: 0, earth: 0, metal: 0, water: 0 };
   const pillars: Pillar[] = [chart.year, chart.month, chart.day, chart.hour];
-  const weights = [
-    { stem: 1.0, branch: 1.5 }, // 年
-    { stem: 1.2, branch: 2.5 }, // 月（月令最重）
-    { stem: 1.5, branch: 1.8 }, // 日
-    { stem: 0.8, branch: 1.2 }, // 时
-  ];
+  const weights = PILLAR_WEIGHTS;
 
   pillars.forEach((pillar, idx) => {
     const w = weights[idx];
@@ -1279,12 +1285,7 @@ export function calculateYinYangBalance(chart: BaZiChart): { yang: number; yin: 
   let yang = 0;
   let yin = 0;
   const pillars: Pillar[] = [chart.year, chart.month, chart.day, chart.hour];
-  const weights = [
-    { stem: 1.0, branch: 1.5 }, // 年
-    { stem: 1.2, branch: 2.5 }, // 月
-    { stem: 1.5, branch: 1.8 }, // 日
-    { stem: 0.8, branch: 1.2 }, // 时
-  ];
+  const weights = PILLAR_WEIGHTS;
 
   const addYang = (v: number) => { yang += v; };
   const addYin = (v: number) => { yin += v; };
@@ -2671,8 +2672,10 @@ export const LETTER_LEVEL_META: Record<LetterLevel, { classBg: string; classText
 };
 
 /**
- * 大运/流年 9 档字母分级：按"压缩分 displayScore"映射到 S+ ~ D
- * 分值梯度刻意拉开，避免档位集中：
+ * 九档字母分级：按「压缩分 displayScore」映射到 S+ ~ D。
+ * 本函数口径是 ±26 原始分的大尺度（命盘 scoreMingPan 与大运本柱分都走这里），
+ * 因此 S+ 阈值可到 +6；「岁运调整分」叠加后的定档请用 letterFromCombined，
+ * 那里按 ±3.8 满量程另收紧。分值梯度刻意拉开，避免档位集中：
  *   S+: > +6
  *   S : +4 ~ +6 (含)
  *   A+: +2 ~ +4 (含)
@@ -2756,22 +2759,20 @@ export function certifyDaYunSPLUS(args: {
   );
 }
 
+// 九档字母等级 → 旧五档 WuDangLevel 的兼容映射（UI 全部切到 LetterLevel 后连同包装函数一起删除）
+const LETTER_TO_WUDANG: Record<LetterLevel, WuDangLevel> = {
+  'S+': '夯', 'S': '夯', 'A+': '人上人', 'A': '人上人',
+  'B+': 'npc', 'B-': 'npc', 'C': '拉', 'C-': '拉', 'D': '拉完了',
+};
+
 // ====== 兼容旧 WuDangLevel 的临时包装（UI 切换 LetterLevel 后删除）======
 export function wuDangFromScore(rawScore: number): { level: WuDangLevel; band: string; displayScore: number } {
   const { level: l, band, displayScore } = letterFromScore(rawScore);
-  const lvlMap: Record<LetterLevel, WuDangLevel> = {
-    'S+': '夯', 'S': '夯', 'A+': '人上人', 'A': '人上人',
-    'B+': 'npc', 'B-': 'npc', 'C': '拉', 'C-': '拉', 'D': '拉完了',
-  };
-  return { level: lvlMap[l], band, displayScore };
+  return { level: LETTER_TO_WUDANG[l], band, displayScore };
 }
 export function wuDangFromCombined(combinedDisplayScore: number): { level: WuDangLevel; band: string } {
   const { level: l, band } = letterFromCombined(combinedDisplayScore);
-  const lvlMap: Record<LetterLevel, WuDangLevel> = {
-    'S+': '夯', 'S': '夯', 'A+': '人上人', 'A': '人上人',
-    'B+': 'npc', 'B-': 'npc', 'C': '拉', 'C-': '拉', 'D': '拉完了',
-  };
-  return { level: lvlMap[l], band };
+  return { level: LETTER_TO_WUDANG[l], band };
 }
 
 // 命盘综合评分（新机制）：三维度——阴阳平衡度 + 用神力量 + 忌神状态
@@ -2799,12 +2800,7 @@ export function scoreMingPan(
   const balanceScore = Math.round((11 - yinYangDiff * 0.22) * 10) / 10; // 0→+11, 100→-11
 
   // —— 维度2&3：用神/忌神力量占比（基于干支级标记，含土的干支级判断）——
-  const weights = [
-    { stem: 1.0, branch: 1.5 }, // 年
-    { stem: 1.2, branch: 2.5 }, // 月
-    { stem: 1.5, branch: 1.8 }, // 日
-    { stem: 0.8, branch: 1.2 }, // 时
-  ];
+  const weights = PILLAR_WEIGHTS;
   let usefulPower = 0;
   let tabooPower = 0;
   let totalPower = 0;
@@ -2860,16 +2856,11 @@ export function applyForwardTrend<T extends { rawScore: number }>(items: T[]): A
 > {
   return items.map((it) => {
     const cur = letterFromScore(it.rawScore);
-    // 旧五档兼容映射（UI 升级后可移除）
-    const lvlMap: Record<LetterLevel, WuDangLevel> = {
-      'S+': '夯', 'S': '夯', 'A+': '人上人', 'A': '人上人',
-      'B+': 'npc', 'B-': 'npc', 'C': '拉', 'C-': '拉', 'D': '拉完了',
-    };
     return {
       ...it,
       displayScore: cur.displayScore,
       letterLevel: cur.level,
-      level: lvlMap[cur.level],
+      level: LETTER_TO_WUDANG[cur.level],
       band: cur.band,
       upgradeBonusApplied: false,
       downgradeAlert: false,
