@@ -331,3 +331,52 @@ export function getDaysToPrevTerm(
   }
   return 0;
 }
+
+// ============ 二十四节气完整表（含中气）——用于月内气候分段（初春/仲春/暮春 等） ============
+// 中气不入 SOLAR_TERMS（月柱划分只认十二「节」），此处单列，仅供分段比较使用。
+export const ALL_SOLAR_TERMS: Array<{ name: string; longitude: number; type: '节' | '气' }> = [
+  { name: '小寒', longitude: 285, type: '节' },
+  { name: '大寒', longitude: 300, type: '气' },
+  { name: '立春', longitude: 315, type: '节' },
+  { name: '雨水', longitude: 330, type: '气' },
+  { name: '惊蛰', longitude: 345, type: '节' },
+  { name: '春分', longitude: 0, type: '气' },
+  { name: '清明', longitude: 15, type: '节' },
+  { name: '谷雨', longitude: 30, type: '气' },
+  { name: '立夏', longitude: 45, type: '节' },
+  { name: '小满', longitude: 60, type: '气' },
+  { name: '芒种', longitude: 75, type: '节' },
+  { name: '夏至', longitude: 90, type: '气' },
+  { name: '小暑', longitude: 105, type: '节' },
+  { name: '大暑', longitude: 120, type: '气' },
+  { name: '立秋', longitude: 135, type: '节' },
+  { name: '处暑', longitude: 150, type: '气' },
+  { name: '白露', longitude: 165, type: '节' },
+  { name: '秋分', longitude: 180, type: '气' },
+  { name: '寒露', longitude: 195, type: '节' },
+  { name: '霜降', longitude: 210, type: '气' },
+  { name: '立冬', longitude: 225, type: '节' },
+  { name: '小雪', longitude: 240, type: '气' },
+  { name: '大雪', longitude: 255, type: '节' },
+  { name: '冬至', longitude: 270, type: '气' },
+];
+
+// 二十四节气近似月份（用于搜索区间定位）
+const TERM_APPROX_MONTH: Record<string, number> = {
+  小寒: 1, 大寒: 1, 立春: 2, 雨水: 2, 惊蛰: 3, 春分: 3, 清明: 4, 谷雨: 4,
+  立夏: 5, 小满: 5, 芒种: 6, 夏至: 6, 小暑: 7, 大暑: 7, 立秋: 8, 处暑: 8,
+  白露: 9, 秋分: 9, 寒露: 10, 霜降: 10, 立冬: 11, 小雪: 11, 大雪: 12, 冬至: 12,
+};
+
+// 获取指定节气（含中气）在某年的精确儒略日；名称不存在时返回 null
+export function getTermJulianDay(name: string, year: number): number | null {
+  const term = ALL_SOLAR_TERMS.find((t) => t.name === name);
+  if (!term) return null;
+  const approxMonth = TERM_APPROX_MONTH[name] ?? 1;
+  return findSolarTermJD(term.longitude, year, approxMonth);
+}
+
+// 获取出生时刻的儒略日（北京时间口径）
+export function getBirthJulianDay(year: number, month: number, day: number, hour: number, minute: number): number {
+  return toJulianDay(year, month, day, hour, minute);
+}

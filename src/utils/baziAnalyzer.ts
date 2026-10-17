@@ -1,4 +1,4 @@
-// 天之易八字分析引擎
+// 沛然堂八字分析引擎
 // 严格遵循：以月气为权，以阴阳平衡为吉凶，以动应为发生
 // 文案补充资料：《自然易鉴》（丁甲福）原文，融合十干/地支/月令/四象/十神/人事/健康断法
 
@@ -17,10 +17,17 @@ import {
 import {
   SHI_ER_CHANG_SHENG,
   WU_HU_DUN_MONTH_STEM,
+  WU_HU_DUN_PRINCIPLE,
+  GANZHI_YITI_RULES,
+  GANZHI_ZIHE,
+  CHUNQIU_MONTH_FACTORS,
+  CHUNQIU_SEASON_SEGMENTS,
   NIAN_YUE_TAIJI_DEFS,
   NIAN_YUE_TAIJI_CASES,
   NIAN_TAIJI_RULES,
+  type IChunQiuSegment,
 } from '../data/baziData';
+import { getBirthJulianDay, getTermJulianDay } from './solarTermsCalc';
 
 // 四象与四季月令气机真机（《自然易鉴》第七章第二节）
 export const FOUR_SYMBOL_META: Record<string, {
@@ -310,6 +317,112 @@ export function analyzeMonthQi(monthBranchIndex: number): MonthQiResult {
   };
 }
 
+// ============ 古法辑要扩展：春秋月分段因子（寅卯申酉 + 辰戌杂气月） ============
+// 依据 reference/docs/04_古法辑要·五虎遁原理·六十甲子·春秋月取用.md：
+// 春（寅卯辰）用丙癸太极、秋（申酉戌）用丁壬太极；春分初春/仲春/暮春、秋分初秋/仲秋/暮秋（整季三段）。
+// 仅作「判定因子与展示旁证」，不改写用忌 marks、不影响大运流年评分。
+export interface ChunQiuFactorResult {
+  monthName: string;
+  monthBranch: string;
+  season: 'spring' | 'autumn' | 'mixed';
+  taijiName: string;
+  yangYi: string;
+  yinYi: string;
+  general: string;
+  segment?: { name: string; solarTermRange: string; climate: string; usage: string };
+  round?: { name: string; judge: string; usage: string };
+  summary: string;
+}
+
+function parseBirthMoment(chart: BaZiChart): { year: number; month: number; day: number; hour: number; minute: number } | null {
+  const d = chart.birthInfo?.solarDate?.match(/(\d+)年(\d+)月(\d+)日/);
+  const t = chart.birthInfo?.solarTime?.match(/(\d+):(\d+)/);
+  if (!d || !t) return null;
+  return { year: +d[1], month: +d[2], day: +d[3], hour: +t[1], minute: +t[2] };
+}
+
+// 取出生时刻所在的季节分段（以该年「立春/雨水/谷雨」或「立秋/处暑/霜降」为界）
+function pickSeasonSegment(chart: BaZiChart, season: 'spring' | 'autumn'): IChunQiuSegment | undefined {
+  const list = season === 'spring' ? CHUNQIU_SEASON_SEGMENTS.spring : CHUNQIU_SEASON_SEGMENTS.autumn;
+  const birth = parseBirthMoment(chart);
+  if (!birth) return list[0];
+  const jd = getBirthJulianDay(birth.year, birth.month, birth.day, birth.hour, birth.minute);
+  let current = list[0];
+  for (const seg of list) {
+    const termJd = getTermJulianDay(seg.startTerm, birth.year);
+    if (termJd !== null && jd >= termJd) current = seg;
+  }
+  return current;
+}
+
+// 申酉月「余热 / 成凉」两局判定：年月透丙丁、或支见巳午未 → 余热局；否则 → 成凉局
+// 注：资料库判据另含「且未被湿土晦尽」的细化条件，此处先按粗判据落地，
+// 湿土晦尽（辰丑晦火）的动态取舍待方案 B（条件性取舍）一并实现。
+function detectAutumnHotRound(chart: BaZiChart): boolean {
+  const stems = [chart.year.stem, chart.month.stem];
+  const branches = [chart.year.branch, chart.month.branch];
+  if (stems.some((s) => s === '丙' || s === '丁')) return true;
+  return branches.some((b) => b === '巳' || b === '午' || b === '未');
+}
+
+export function getChunQiuMonthFactor(chart: BaZiChart): ChunQiuFactorResult | null {
+  const factor = CHUNQIU_MONTH_FACTORS.find((f) => f.monthBranch === chart.month.branch);
+  if (!factor) return null;
+
+  let segment: ChunQiuFactorResult['segment'];
+  if (factor.season === 'spring' || factor.season === 'autumn') {
+    const seg = pickSeasonSegment(chart, factor.season);
+    if (seg) segment = { name: seg.name, solarTermRange: seg.solarTermRange, climate: seg.climate, usage: seg.usage };
+  }
+
+  let round: ChunQiuFactorResult['round'];
+  if (factor.twoRounds) {
+    const isHot = detectAutumnHotRound(chart);
+    const r = isHot ? factor.twoRounds.hot : factor.twoRounds.cool;
+    round = { name: r.name, judge: `${factor.twoRounds.judge}本盘判为「${r.name}」——${r.judge}`, usage: r.usage };
+  }
+
+  const parts: string[] = [factor.general];
+  if (segment) parts.push(`【节气分段】${segment.name}（${segment.solarTermRange}，${segment.climate}）：${segment.usage}`);
+  if (round) parts.push(`【两局判定】${round.name}：${round.judge}；取用：${round.usage}`);
+
+  return { ...factor, segment, round, summary: parts.join('　') };
+}
+
+// ============ 古法辑要扩展：干支自合检测（柱内天干与地支藏干构成天干五合，共九柱） ============
+export interface GanZhiZiHeHit {
+  position: string;      // 年柱 / 月柱 / 日柱 / 时柱
+  ganzhi: string;
+  he: string;
+  description: string;
+  openCondition?: string;
+}
+
+export function detectGanZhiZiHe(chart: BaZiChart): GanZhiZiHeHit[] {
+  const pillars: Array<[string, Pillar]> = [
+    ['年柱', chart.year],
+    ['月柱', chart.month],
+    ['日柱', chart.day],
+    ['时柱', chart.hour],
+  ];
+  const hits: GanZhiZiHeHit[] = [];
+  for (const [position, p] of pillars) {
+    const gz = `${p.stem}${p.branch}`;
+    const found = GANZHI_ZIHE.find((z) => z.ganzhi === gz);
+    if (found) {
+      hits.push({ position, ganzhi: gz, he: found.he, description: found.description, openCondition: found.openCondition });
+    }
+  }
+  return hits;
+}
+
+// 五虎遁原理说明（供年月太极模块展示：为什么年干能定月干）
+export function getWuHuDunPrinciple(yearStem: string): string {
+  const row = WU_HU_DUN_PRINCIPLE.monthRule.find((r) => r.yearStems.includes(yearStem));
+  if (!row) return `${WU_HU_DUN_PRINCIPLE.classic}（${WU_HU_DUN_PRINCIPLE.source}）`;
+  return `${WU_HU_DUN_PRINCIPLE.classic}——年干${yearStem}与${row.yearStems.find((s) => s !== yearStem) ?? ''}五合化${row.huaQi}，取化气之母「${row.motherElement}」，故${row.firstMonthStem}寅月起（${WU_HU_DUN_PRINCIPLE.source}）。`;
+}
+
 // 用神忌神判断
 // 阳气旺→用阴气（金水）平衡；阴气旺→用阳气（火土）平衡
 export type XiJiMark = 'useful' | 'taboo' | 'neutral';
@@ -381,17 +494,17 @@ export function analyzeYongJi(chart: BaZiChart, monthQi: MonthQiResult): YongJiR
   // markElement 四级判定仅作资料库缺字时的兜底
   pillars.forEach((pillar, idx) => {
     const key = `${pillarNames[idx]}干`;
-    stemMarks[key] = monthCharMark(chart.month.branch, pillar.stem, true, markElement(pillar.stemElement, pillar.stem, true));
+    stemMarks[key] = monthCharMark(chart.month.branch, pillar.stem, true, markElement(pillar.stemElement, pillar.stem, true), chart);
 
     const bKey = `${pillarNames[idx]}支`;
-    branchMarks[bKey] = monthCharMark(chart.month.branch, pillar.branch, false, markElement(pillar.branchElement, pillar.branch, false));
+    branchMarks[bKey] = monthCharMark(chart.month.branch, pillar.branch, false, markElement(pillar.branchElement, pillar.branch, false), chart);
   });
 
   // 全部十天干 / 十二地支在本月令下的干支级判定（四柱 marks、藏干、大运流年打分同源）
   const allStemMarks: Record<string, XiJiMark> = {};
-  STEMS_ORDER.forEach((s) => { allStemMarks[s] = monthCharMark(chart.month.branch, s, true, markElement(STEM_ELEMENTS[s], s, true)); });
+  STEMS_ORDER.forEach((s) => { allStemMarks[s] = monthCharMark(chart.month.branch, s, true, markElement(STEM_ELEMENTS[s], s, true), chart); });
   const allBranchMarks: Record<string, XiJiMark> = {};
-  BRANCHES_ORDER.forEach((b) => { allBranchMarks[b] = monthCharMark(chart.month.branch, b, false, markElement(BRANCH_ELEMENTS[b], b, false)); });
+  BRANCHES_ORDER.forEach((b) => { allBranchMarks[b] = monthCharMark(chart.month.branch, b, false, markElement(BRANCH_ELEMENTS[b], b, false), chart); });
 
   // 覆盖生效时的干支级取用例外说明
   const overrideNotes: string[] = [];
@@ -402,16 +515,16 @@ export function analyzeYongJi(chart: BaZiChart, monthQi: MonthQiResult): YongJiR
     overrideNotes.push('午月以庚金为首用；壬癸水慎用——丑戌晦火得富亦克水失贵，须庚辛金通关方无虑，土克水态势明确时反取木（水生木、木克土）救水。');
   }
   if (chart.month.branch === '巳') {
-    overrideNotes.push('巳月以庚金为首用；水木须齐见——孤水被旺土所克、孤木生火助土皆败，壬癸水、甲乙木单见不作确定用神论，逐字标「？」者即此条件取舍。');
+    overrideNotes.push('巳月以庚金为首用；水木须齐见——孤水被旺土所克、孤木生火助土皆败，壬癸水、甲乙木单见不作确定用神论，此类条件字须视柱中水木是否齐见。');
   }
   if (chart.month.branch === '未') {
     overrideNotes.push('未月取用同巳午：庚金首用；壬癸水须庚金引水藏根、水木齐见方用，孤见皆败；丑戌阴土晦火藏金可成富基，土过则伤水。');
   }
   if (chart.month.branch === '申') {
-    overrideNotes.push('申月须先定局：余热局（火土旺）用水木克土、金泄土，忌木火克金、土旺埋金；成凉局（金气得布）用木火扶阳炼金，忌金水再旺。两局取用相反，定局之前逐字一律待定（显示问号），引擎按中性不增减分。');
+    overrideNotes.push('申月先定两局：余热局（火土旺）喜金水泄土、忌木火助势；成凉局（金气得布）喜木火扶阳炼金、忌金水再旺。系统按年月的火土/金气态势判局并据此逐字落定用忌；戊己癸及辰未戌亥子丑等土类、水根未定之字仍按条件说明，中性不增减分。');
   }
   if (chart.month.branch === '酉') {
-    overrideNotes.push('酉月多数按成凉论（用木火、忌金水）；若土得火烘成余热局则喜忌反转。土性双面（制水取贵、晦火失富）独立判定，逐字标「？」者须视柱中态势。');
+    overrideNotes.push('酉月多数按成凉论（用木火、忌金水）；若土得火烘成余热局则喜忌反转。土性双面（制水取贵、晦火失富）独立判定，此类条件字须视柱中土得火与否。');
   }
 
   const direction = monthQi.usageDirection === 'yin' ? '阴气（金水）' : '阳气（火土）';
@@ -502,6 +615,7 @@ export interface ZhuZiXiJiResult {
   monthBranch: string;
   directionLabel: string;   // 月令大方向（与四柱总览一致）
   patternNote: string;      // 本月取用总纲（含两局等特殊口径）
+  roundName?: string;       // 申月两局落定后的实际局名（余热局/成凉局）；未定局为 undefined
   stems: ZhuZiEntry[];      // 十天干逐字
   branches: ZhuZiEntry[];   // 十二地支逐字
   source: string;
@@ -865,7 +979,28 @@ const ZHUZI_XIJI_REF: Record<string, ZhuZiMonthRef> = {
   },
 };
 
-export function analyzeZhuZiXiJi(monthBranch: string, monthQi: MonthQiResult): ZhuZiXiJiResult {
+// 申月「余热 / 成凉」两局落定表：hot=余热局、cool=成凉局。
+// 依据逐字资料库中「成凉局…为喜／余热局…为忌」的明确表述逐个落定，
+// 资料未给方向者（戊己癸辰未戌亥子丑，土双面或须看态势）不入表，保留 dai 以条件说明呈现。
+const ZHUZI_ROUND_MARKS: Record<string, Record<string, { hot: ZhuZiMark; cool: ZhuZiMark }>> = {
+  申: {
+    甲: { hot: 'ji', cool: 'xi' }, 乙: { hot: 'ji', cool: 'xi' },
+    丙: { hot: 'ji', cool: 'xi' }, 丁: { hot: 'ji', cool: 'xi' },
+    庚: { hot: 'xi', cool: 'ji' }, 辛: { hot: 'xi', cool: 'ji' },
+    壬: { hot: 'xi', cool: 'ji' },
+    寅: { hot: 'ji', cool: 'xi' }, 卯: { hot: 'ji', cool: 'xi' },
+    巳: { hot: 'ji', cool: 'xi' }, 午: { hot: 'ji', cool: 'xi' },
+    申: { hot: 'xi', cool: 'ji' }, 酉: { hot: 'xi', cool: 'ji' },
+  },
+};
+
+// 申月两局判定（余热/成凉）→ 'hot' | 'cool'；非申月返回 null
+function autumnRoundKey(chart: BaZiChart, monthBranch: string): 'hot' | 'cool' | null {
+  if (monthBranch !== '申') return null;
+  return detectAutumnHotRound(chart) ? 'hot' : 'cool';
+}
+
+export function analyzeZhuZiXiJi(monthBranch: string, monthQi: MonthQiResult, chart?: BaZiChart): ZhuZiXiJiResult {
   const ref = ZHUZI_XIJI_REF[monthBranch];
   const directionLabel = monthQi.usageDirection === 'yin' ? '用阴 · 金水' : '用阳 · 木火';
   if (!ref) {
@@ -882,17 +1017,34 @@ export function analyzeZhuZiXiJi(monthBranch: string, monthQi: MonthQiResult): Z
       source: '《十二月份取用》（资料缺月，按大方向推导）',
     };
   }
+  // 申月：按已算出的局（余热/成凉）把有明确方向者落定为用/忌，其余保留条件说明
+  const roundKey = chart ? autumnRoundKey(chart, monthBranch) : null;
+  const roundMap = roundKey ? ZHUZI_ROUND_MARKS[monthBranch] : undefined;
+  const applyRound = (char: string, row: ZhuZiRefRow): ZhuZiRefRow => {
+    const rm = roundMap?.[char];
+    if (rm) return [roundKey === 'hot' ? rm.hot : rm.cool, row[1]];
+    return row;
+  };
+  const roundName = roundMap
+    ? (roundKey === 'hot'
+      ? '余热局（火土旺：喜金水泄土克火，忌木火助势）'
+      : '成凉局（金气得布：喜木火扶阳炼金，忌金水再旺）')
+    : undefined;
+
   return {
     monthBranch,
     directionLabel,
-    patternNote: ref.patternNote,
+    patternNote: roundMap && chart
+      ? `${ref.patternNote}　【本盘已定局】${roundName}——下表据此逐字落定；未入定局者另参逐字依据。`
+      : ref.patternNote,
+    roundName,
     stems: STEMS_ORDER.map((s) => {
-      const row = ref.stems[s] ?? ['dai', '参考资料无定论，须视柱中态势'];
-      return { char: s, element: STEM_ELEMENTS[s], mark: row[0], note: row[1] };
+      const [m, n] = applyRound(s, ref.stems[s] ?? ['dai', '参考资料无定论，须视柱中态势']);
+      return { char: s, element: STEM_ELEMENTS[s], mark: m, note: n };
     }),
     branches: BRANCHES_ORDER.map((b) => {
-      const row = ref.branches[b] ?? ['dai', '参考资料无定论，须视柱中态势'];
-      return { char: b, element: BRANCH_ELEMENTS[b], mark: row[0], note: row[1] };
+      const [m, n] = applyRound(b, ref.branches[b] ?? ['dai', '参考资料无定论，须视柱中态势']);
+      return { char: b, element: BRANCH_ELEMENTS[b], mark: m, note: n };
     }),
     source: '《十二月份取用》',
   };
@@ -910,11 +1062,17 @@ export function monthCharMark(
   char: string,
   isStem: boolean,
   fallback: XiJiMark = 'neutral',
+  chart?: BaZiChart,
 ): XiJiMark {
   const ref = ZHUZI_XIJI_REF[monthBranch];
   if (!ref) return fallback;
   const row = isStem ? ref.stems[char] : ref.branches[char];
-  return row ? ZHUZI_TO_XIJI[row[0]] : fallback;
+  if (!row) return fallback;
+  // 申月已定局者按局落定（与 analyzeZhuZiXiJi 同源），保证四柱徽章/藏干/大运流年打分与逐字表一致
+  const roundKey = chart ? autumnRoundKey(chart, monthBranch) : null;
+  const rm = roundKey ? ZHUZI_ROUND_MARKS[monthBranch]?.[char] : undefined;
+  if (rm) return ZHUZI_TO_XIJI[roundKey === 'hot' ? rm.hot : rm.cool];
+  return ZHUZI_TO_XIJI[row[0]];
 }
 
 // 十二长生 → 气机强弱分（长生/临官/帝旺/冠带=有力，沐浴/养/衰/病/胎=中平，死/墓/绝=无力）
@@ -948,8 +1106,17 @@ export function analyzeNianYueTaiJi(
   const firstIdx = STEMS_ORDER.indexOf(firstMonthStem);
   const expectedMonthStem = STEMS_ORDER[(firstIdx + chart.monthBranchIndex) % 10];
   const wuHuDunValid = expectedMonthStem === chart.month.stem;
-  const wuHuDunDesc = `依五虎遁，${chart.year.stem}年自${firstMonthStem}寅月起顺推至${monthQi.monthName}得${expectedMonthStem}干${chart.month.branch}，与排盘${wuHuDunValid ? '一致（年月太极框架成立）' : '不一致（按交节时刻修正所致）'}。年干定月干，确立命局基础太极框架；月令具备全局规制权，统一定局中所有天干旺衰状态。`;
+  const wuHuDunDesc = `依五虎遁，${chart.year.stem}年自${firstMonthStem}寅月起顺推至${monthQi.monthName}得${expectedMonthStem}干${chart.month.branch}，与排盘${wuHuDunValid ? '一致（年月太极框架成立）' : '不一致（按交节时刻修正所致）'}。年干定月干，确立命局基础太极框架；月令具备全局规制权，统一定局中所有天干旺衰状态。原理：${getWuHuDunPrinciple(chart.year.stem)}`;
   evidence.push(wuHuDunDesc);
+
+  // ①-补 干支一体：干为施动、支为落实（干君主臣，干可克支、支不反克干）
+  {
+    const ziHeHits = detectGanZhiZiHe(chart);
+    const ziHeText = ziHeHits.length
+      ? `本盘自合柱：${ziHeHits.map((h) => `${h.position}${h.ganzhi}（${h.he}）`).join('、')}。`
+      : '';
+    evidence.push(`干支一体：${GANZHI_YITI_RULES.principle}${ziHeText}`);
+  }
 
   // ② 月令两仪（当月固有太极：阳仪、阴仪核心干支）
   const taijiDef = NIAN_YUE_TAIJI_DEFS.find((t) => t.months.includes(monthQi.monthName))
@@ -3041,7 +3208,7 @@ export function scoreGanZhiImpact(
     else                             { pushSum(`支生干（${branch}生${stem}），干为月令待定→气机之益存疑（不增减）`, 0); }
   }
 
-  // -------- D. 刑冲合会：不参与评分（用户定标：非天之易逐字判定依据） --------
+  // -------- D. 刑冲合会：不参与评分（用户定标：非本体系逐字判定依据） --------
   // 刑冲合害的取象描述仍由象法「干支作用」模块呈现，但不对岁运分数做任何加减；
   // 逐字资料库中以冲/合为依据的字（如辰月戌「冲辰开库」=用、未「合木转喜」=待定）
   // 其吉凶已由 A/B 段承接，无需重复计分。otherSumRaw 恒为 0（保留字段兼容 UI 明细行）。

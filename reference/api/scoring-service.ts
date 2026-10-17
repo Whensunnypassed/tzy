@@ -15,8 +15,8 @@
 
 import { calculateBaZi, type BaZiChart } from '@/utils/baziCalculator';
 import {
-  analyzeTianZhiYi,
-  type ITianZhiYiReport,
+  analyzeBaZiReport,
+  type IBaZiReport,
 } from '@/utils/baziAnalyzer';
 
 export interface BirthInput {
@@ -35,8 +35,8 @@ export interface BirthInput {
 export interface BaZiFullReport {
   /** 基础排盘信息（四柱、藏干、十神等） */
   chart: BaZiChart;
-  /** 天易分析报告（月气、用神、命局模式、大运/流年、太极…） */
-  tianZhiYi: ITianZhiYiReport;
+  /** 八字分析报告（月气、用神、命局模式、大运/流年、太极…） */
+  baziReport: IBaZiReport;
   /** 本次排盘请求的唯一标识（可用于缓存） */
   requestId: string;
   /** 生成时间 ISO string */
@@ -64,7 +64,7 @@ function birthKey(p: BirthInput): string {
  *     year: 1969, month: 11, day: 7, hour: 22, minute: 10, gender: '男',
  *   });
  *   console.log('月柱：', report.chart.monthPillar.stem + report.chart.monthPillar.branch);
- *   console.log('当前大运五档：', report.tianZhiYi.currentDaYunDetail);
+ *   console.log('当前大运五档：', report.baziReport.currentDaYunDetail);
  */
 export async function analyzeFull(input: BirthInput): Promise<BaZiFullReport> {
   const key = birthKey(input);
@@ -85,12 +85,12 @@ export async function analyzeFull(input: BirthInput): Promise<BaZiFullReport> {
     trueSolar,
   } as any);
 
-  // ② 天易分析（含大运/流年评分、用神、太极、月气……）
-  const tianZhiYi: ITianZhiYiReport = analyzeTianZhiYi(chart, new Date().getFullYear());
+  // ② 八字分析（含大运/流年评分、用神、太极、月气……）
+  const baziReport: IBaZiReport = analyzeBaZiReport(chart, new Date().getFullYear());
 
   const report: BaZiFullReport = {
     chart,
-    tianZhiYi,
+    baziReport,
     requestId: `${key}-${Date.now().toString(36)}`,
     generatedAt: new Date().toISOString(),
   };
@@ -108,7 +108,7 @@ export function getDaYunCurveByIndex(
   prevReport: BaZiFullReport,
   daYunIndex: number,
 ) {
-  const daYunList = prevReport.tianZhiYi.daYun || [];
+  const daYunList = prevReport.baziReport.daYun || [];
   const target = daYunList[daYunIndex];
   if (!target) return null;
   return {

@@ -3,11 +3,14 @@
 //          INianYueTaiJiDef, INianYueCase,
 //          MOCK_HEAVENLY_STEMS, MOCK_EARTHLY_BRANCHES, MOCK_MONTH_QI, MOCK_SHIGAN_XIJI,
 //          JIAZI_PILLARS_BY_XUN, MONTH_QI_EXPANDED, CORE_MINGLI_RULES, CLASSIC_MINGLI_CASES, ULTIMATE_SUMMARY,
-//          SHI_ER_CHANG_SHENG, WU_HU_DUN_MONTH_STEM, NIAN_YUE_TAIJI_DEFS, NIAN_YUE_TAIJI_CASES, NIAN_TAIJI_RULES
+//          SHI_ER_CHANG_SHENG, WU_HU_DUN_MONTH_STEM, NIAN_YUE_TAIJI_DEFS, NIAN_YUE_TAIJI_CASES, NIAN_TAIJI_RULES,
+//          WU_HU_DUN_PRINCIPLE, GANZHI_YITI_RULES, GANZHI_ZIHE, CHUNQIU_SEASON_SEGMENTS, CHUNQIU_MONTH_FACTORS, WUXING_SIJI_YIJI,
+//          IDunYueRow, IDunShiRow, IGanZhiState, IGanZhiZiHe, IChunQiuSegment, IChunQiuRound, IChunQiuMonthFactor, IWuXingSiJi
 // 资料来源：《自然易鉴》（丁甲福） + 八字阴阳命理体系补充资料（reference/docs/03_八字阴阳命理·精炼整理.md）
 //          + reference/docs/太极阴阳法·年月分析核心基础.md（年月太极：五虎遁/年干先天吉/年支三类作用/月令两仪/十二长生量化）
 //          + reference/docs/六十甲子.md（六旬 60 柱干支一体状态释义）
 //          + reference/docs/十二月份取用.md（十二月令逐干取用、体用论断、富贵贫贱与健康取象）
+//          + reference/docs/04_古法辑要·五虎遁原理·六十甲子·春秋月取用.md（五虎遁原理/干支一体/干支自合九柱/春秋月节气三段/五行四季宜忌）
 
 export interface IHeavenlyStem {
   char: string
@@ -1022,5 +1025,225 @@ export const MOCK_SHIGAN_XIJI: IShiGanXiJi[] = [
     features: '癸水得用谋划周全；过寒悲观体弱',
     deYong: '癸水得用：心思缜密、谋划周全、低调聚财、智慧过人、一生平稳有福',
     shiYong: '癸水失用：消极多疑、悲观自卑、体弱多疾、运势低迷',
+  },
+]
+
+// ============ 古法辑要：五虎遁原理 / 干支一体 / 干支自合 / 春秋月分段 / 五行四季宜忌 ============
+// 资料来源：reference/docs/04_古法辑要·五虎遁原理·六十甲子·春秋月取用.md
+// （《三命通会·卷二·论遁月时第二十二》《穷通宝鉴》《造化元钥》《滴天髓》 + 盲派干支一体总结）
+
+// ① 五虎遁（年上起月）原理：遁月从年 → 五合化气 → 取化气之母（月取生）；五鼠遁取化气之克我者（时取克）
+export interface IDunYueRow {
+  yearStems: string[]      // 年干组（五合）
+  huaQi: string            // 五合化气
+  motherElement: string    // 化气之母（生我者）
+  firstMonthStem: string   // 正月（寅）天干
+  firstMonthGZ: string     // 正月干支
+}
+
+export interface IDunShiRow {
+  dayStems: string[]       // 日干组（五合）
+  huaQi: string            // 五合化气
+  keElement: string        // 化气之克我者
+  firstHourStem: string    // 子时天干
+  firstHourGZ: string      // 子时干支
+}
+
+export const WU_HU_DUN_PRINCIPLE = {
+  source: '《三命通会·卷二·论遁月时第二十二》',
+  classic: '遁月从年，遁时从日。月则取生，时则取克。',
+  note: '五虎遁非硬记口诀：先由年干推出「天干五合化气」，再取该化气之母（生我者）对应天干，得正月建干；月起寅为岁首，其后逐月顺推。五鼠遁同理而「取克」——取化气之克我者对应天干，得子时建干，时起子为一昼夜之首。',
+  erratum: '《三命通会》五鼠遁段「水克土故，时起甲子」，「水」当为「木」之讹：甲属木、木克土，校正后与「甲己还加甲」及「时则取克」完全吻合。',
+  monthRule: [
+    { yearStems: ['甲', '己'], huaQi: '土', motherElement: '火', firstMonthStem: '丙', firstMonthGZ: '丙寅' },
+    { yearStems: ['乙', '庚'], huaQi: '金', motherElement: '土', firstMonthStem: '戊', firstMonthGZ: '戊寅' },
+    { yearStems: ['丙', '辛'], huaQi: '水', motherElement: '金', firstMonthStem: '庚', firstMonthGZ: '庚寅' },
+    { yearStems: ['丁', '壬'], huaQi: '木', motherElement: '水', firstMonthStem: '壬', firstMonthGZ: '壬寅' },
+    { yearStems: ['戊', '癸'], huaQi: '火', motherElement: '木', firstMonthStem: '甲', firstMonthGZ: '甲寅' },
+  ] as IDunYueRow[],
+  hourRule: [
+    { dayStems: ['甲', '己'], huaQi: '土', keElement: '木', firstHourStem: '甲', firstHourGZ: '甲子' },
+    { dayStems: ['乙', '庚'], huaQi: '金', keElement: '火', firstHourStem: '丙', firstHourGZ: '丙子' },
+    { dayStems: ['丙', '辛'], huaQi: '水', keElement: '土', firstHourStem: '戊', firstHourGZ: '戊子' },
+    { dayStems: ['丁', '壬'], huaQi: '木', keElement: '金', firstHourStem: '庚', firstHourGZ: '庚子' },
+    { dayStems: ['戊', '癸'], huaQi: '火', keElement: '水', firstHourStem: '壬', firstHourGZ: '壬子' },
+  ] as IDunShiRow[],
+}
+
+// ② 干支一体规则：干为施动/外显（发生象），支为承载/落实（结果象）；干君主臣，干可克支、支不反克干
+export interface IGanZhiState {
+  key: 'jiejiao' | 'gaitou' | 'buqi' | 'dedi'
+  name: string
+  condition: string
+  effect: string
+  examples: string
+  scoreRule: string
+}
+
+export const GANZHI_YITI_RULES = {
+  principle: '干支是天干作用到地支之后的结果——干为施动、外显（发生象），支为承载、落实（结果象）。看一柱须看「干→支」作用线走完后的落地状态；年为本、月为苗，岁运干先发动、结果落支应验。',
+  subRules: [
+    '干君主臣：天干主动、地支主静；干可克支，支不反克干（盲派口径，与本项目同向；与新派「支作用干」相反）。',
+    '生气对生气、成气对成气：同性质之气相互肯定或否定，须辨气之虚实以定能否兑现。',
+  ],
+  states: [
+    { key: 'jiejiao', name: '截脚', condition: '支克干（地支五行克天干五行）', effect: '天干功能被否定，干之象难以兑现，本柱「干之功作废」', examples: '甲申、乙酉、丙子、丁亥', scoreRule: '截脚作废（天干分值不计）' },
+    { key: 'gaitou', name: '盖头', condition: '干克支（天干五行克地支五行）', effect: '地支力减半，支之藏气受压制', examples: '甲戌、乙丑、丙申', scoreRule: '盖头减半（地支分值 ×0.5）' },
+    { key: 'buqi', name: '布气', condition: '干生支（天干五行生地地支五行）', effect: '干耗于支，天干功能减半，支得气而实', examples: '甲午、乙巳、丙辰', scoreRule: '布气减半（天干分值 ×0.5）' },
+    { key: 'dedi', name: '得地·通根', condition: '干支同气或相生流通（含自合）', effect: '本柱气机畅达，功能可全额兑现', examples: '甲寅、丙午、庚申', scoreRule: '全额计分' },
+  ] as IGanZhiState[],
+}
+
+// ③ 干支自合（柱内天干与地支藏干构成天干五合）——权威口径共九柱
+export interface IGanZhiZiHe {
+  ganzhi: string
+  he: string
+  description: string
+  openCondition?: string
+}
+
+export const GANZHI_ZIHE: IGanZhiZiHe[] = [
+  { ganzhi: '戊子', he: '戊合子中癸', description: '天干戊土与子中癸水五合，土克水与合意并存，合而不化，水火之气同柱互牵。' },
+  { ganzhi: '壬午', he: '壬合午中丁', description: '丁壬太极干支自合——余热（丁）与布凉（壬）在同一柱内互锁，寒温须视柱中态势分主次。' },
+  { ganzhi: '丁亥', he: '丁合亥中壬', description: '丁壬太极自合，亥为壬临官之地，自合最实；丁火余热与亥水之凉相互锁定。' },
+  { ganzhi: '辛巳', he: '辛合巳中丙', description: '燥湿互制：巳中丙火与辛金相合，巳中庚金受辛金引动，金气得显。' },
+  { ganzhi: '癸巳', he: '癸合巳中戊', description: '水火既济之象：土晦火、水制土，热气与阴气相济。' },
+  { ganzhi: '己亥', he: '己合亥中甲', description: '湿土合甲木，土培木根，木气得养。' },
+  { ganzhi: '甲午', he: '甲合午中己', description: '「阳过之木」典型：甲木所布乙木与午中丁火落实热气相联，木不去克土，源源生助阳气。' },
+  { ganzhi: '丙戌', he: '丙合戌中辛', description: '戌燥土藏丁，丙火得地自根，库气得藏；须冲刑引动方开库。', openCondition: '逢辰冲（辰戌冲）或丑未刑引动，库气方开。' },
+  { ganzhi: '壬戌', he: '壬合戌中丁', description: '寒水落戌，得戌中丁火与戊土之根，寒势敛而不狂，为玄武贵格之象。', openCondition: '逢辰冲戌，库火透出则暖局有成。' },
+]
+
+// ④ 春秋月取用因子（寅卯申酉为阴阳法派公认最难判之四月；辰戌为杂气月）
+// 分段依据《穷通宝鉴/造化元钥》论木——春分初春/仲春/暮春，秋分初秋/仲秋/暮秋；
+// 古法是「春（寅卯辰）三段、秋（申酉戌）三段」整季划分，而非逐月划分，故分段挂在季节层级上。
+export interface IChunQiuSegment {
+  name: string
+  startTerm: string       // 起始节气名（初春=立春、仲春=雨水、暮春=谷雨；初秋=立秋、仲秋=处暑、暮秋=霜降）
+  solarTermRange: string
+  climate: string
+  usage: string
+}
+
+export interface IChunQiuRound {
+  name: string
+  judge: string
+  usage: string
+}
+
+export interface IChunQiuMonthFactor {
+  monthName: string
+  monthBranch: string
+  season: 'spring' | 'autumn' | 'mixed'
+  taijiName: string
+  yangYi: string
+  yinYi: string
+  general: string
+  twoRounds?: { judge: string; hot: IChunQiuRound; cool: IChunQiuRound }
+}
+
+// 季节层级分段（春：立春→立夏；秋：立秋→立冬）
+export const CHUNQIU_SEASON_SEGMENTS: { spring: IChunQiuSegment[]; autumn: IChunQiuSegment[] } = {
+  spring: [
+    { name: '初春', startTerm: '立春', solarTermRange: '立春后—雨水前', climate: '阴浓湿重、余寒犹存', usage: '专以丙火为用：喜火温暖而敷畅，忌水盛（阴浓则根损枝枯）；用火可以缺水。' },
+    { name: '仲春', startTerm: '雨水', solarTermRange: '雨水后—谷雨前（再分春分前后）', climate: '阳气渐壮，春分前尚带寒', usage: '水火并用：用火不能无水，丙丁同功（生木得火而秀）；春分前偏丙火，春分后水（癸）渐重。' },
+    { name: '暮春', startTerm: '谷雨', solarTermRange: '谷雨后—立夏前', climate: '阳壮木渴、气进五阳', usage: '非水（癸）不可：无水则根槁枝干，即使支会木局亦须癸资扶方能取贵。' },
+  ],
+  autumn: [
+    { name: '初秋', startTerm: '立秋', solarTermRange: '立秋后—处暑前', climate: '火气未除', usage: '尤喜水土相滋：水至申宫其气已绝，秋水性寒滋木不秀，必得土栽培，木之根基方固，故水土相资为用。' },
+    { name: '仲秋', startTerm: '处暑', solarTermRange: '处暑后—霜降前', climate: '生气内敛、外象凋残', usage: '死木得金而造，庚辛必利：水滋不生、火炎自焚，惟得金方成大梁栋之材（须有火制金方不为伤）。' },
+    { name: '暮秋', startTerm: '霜降', solarTermRange: '霜降后—立冬前', climate: '秋气已深、水旺进气', usage: '霜降后不宜水盛（水盛木漂）；寒露后又喜火炎（火炎则木实），用水用土皆宜火为配合。' },
+  ],
+}
+
+export const CHUNQIU_MONTH_FACTORS: IChunQiuMonthFactor[] = [
+  {
+    monthName: '寅月', monthBranch: '寅', season: 'spring',
+    taijiName: '春月丙癸太极', yangYi: '丙', yinYi: '癸',
+    general: '春为「余寒未退与阳气渐布」的拉锯，二气丙（阳仪·温）、癸（阴仪·寒）无伤为富贵基础；丙无伤则富、癸无伤则贵。《滴天髓》「五阳皆阳丙为最，五阴皆阴癸为至」为其理论根据。丙癸二气存缺平衡是唯一判据，不必先贴「用阴/用阳」标签。',
+  },
+  {
+    monthName: '卯月', monthBranch: '卯', season: 'spring',
+    taijiName: '春月丙癸太极', yangYi: '丙', yinYi: '癸',
+    general: '延续春月丙癸太极，以「成温」为标准。癸水在卯长生，余寒为最大变数：见水多即作体阴用阳论；金须落实于年支方以破温论，未落实之金仅作辅用。吉凶取决于温气是否被余寒否定。',
+  },
+  {
+    monthName: '申月', monthBranch: '申', season: 'autumn',
+    taijiName: '秋月丁壬太极', yangYi: '丁', yinYi: '壬',
+    general: '秋为「夏之余热未尽与秋凉渐生」的拉锯，二气丁（阳仪·余热）、壬（阴仪·布凉）。申宫金水同行、煞印相资为绝处逢生，但秋水性寒滋木不秀，必得土培根。',
+    twoRounds: {
+      judge: '年月透丙丁、或支见巳午未（且未被湿土晦尽）→ 余热局；年月火不显、金气当权 → 成凉局。两局取用完全相反，须先辨局再取用。',
+      hot: { name: '余热局', judge: '夏气未退、火土仍显', usage: '按夏月思路，以「存阴」为主：庚金立足、凉土晦火、通水发贵；忌再助火（丙丁透干熔金）。' },
+      cool: { name: '成凉局', judge: '秋凉已成、申酉金气当权', usage: '以「布凉」为主：壬水有制为贵；忌金水太盛（寒重），用得火暖土为佐。' },
+    },
+  },
+  {
+    monthName: '酉月', monthBranch: '酉', season: 'autumn',
+    taijiName: '秋月丁壬太极', yangYi: '丁', yinYi: '壬',
+    general: '酉月金气纯粹当权，丁壬二气定格局。白露后、秋分前桂蕊未开，重癸水滋根；秋分后桂蕊已开，喜向阳而宜用丙。',
+    twoRounds: {
+      judge: '同申月：年月透丙丁或支见巳午未（未被湿土晦尽）→ 余热局；否则 → 成凉局。',
+      hot: { name: '余热局', judge: '火气未除、燥热尚存', usage: '存阴为主：庚金立足、通水发贵，忌火土熔金。' },
+      cool: { name: '成凉局', judge: '金水当权、肃杀偏重', usage: '布凉为主而须有制：壬水有制为贵，忌金水太盛，用得火暖土为佐。' },
+    },
+  },
+  {
+    monthName: '辰月', monthBranch: '辰', season: 'mixed',
+    taijiName: '辰月丙癸太极（明阳·救水）', yangYi: '丙', yinYi: '癸',
+    general: '辰为木之余气、水之墓库，属阳土；温重而阴阳不明（古言「辰戌无贵」）。阳仪丙火不显、阴仪癸水被戊土克困，富贵关键全在救癸水令水有气，明出火再令水气足则富贵为大。',
+  },
+  {
+    monthName: '戌月', monthBranch: '戌', season: 'mixed',
+    taijiName: '戌月丁壬太极（余温·制水）', yangYi: '丁', yinYi: '壬',
+    general: '戌为金之余气、火之墓库，属阳土；五阴剥落、阳气潜藏，性燥而不和润。甲木为第一用神（破阴辅火，称「甲贵」）；阴仪壬水喜土制——透而有制为贵、无制则助寒。',
+  },
+]
+
+// ⑤ 五行分论四季宜忌（《穷通宝鉴/造化元钥·五行分论》辑要）
+// 作月气判定与日干支动应的旁证底色，不直接改写用忌 marks。
+export interface IWuXingSiJi {
+  element: 'wood' | 'fire' | 'earth' | 'metal' | 'water'
+  elementName: string
+  spring: string
+  summer: string
+  autumn: string
+  winter: string
+}
+
+export const WUXING_SIJI_YIJI: IWuXingSiJi[] = [
+  {
+    element: 'wood', elementName: '木',
+    spring: '余寒犹存：喜火温暖、藉水资扶；初春不宜水盛（阴浓根损），阳燥无水则叶槁根干——水火既济方佳。土多损力、土薄财丰；忌金重伤残克伐，木旺得金则良。',
+    summer: '根干叶燥：欲得水盛滋润，切忌火旺焚化（得火自焚）；土宜薄不可厚重；恶金在多而不可缺（缺则水涸无源）；重重见木徒以成林，叠叠逢华终无结果。',
+    autumn: '气渐凄凉、形渐凋败：初秋火气未除，尤喜水土相滋；仲秋得刚金修削；霜降后不宜水盛（水盛木漂），寒露后又喜火炎（火炎木实）。木多有多材之美，土厚无自任之能。',
+    winter: '盘屈在地：欲土多培养，恶水盛忘形；金纵多不能克伐（金气泄于水）；火得见温暖有功。归根复命之时，忌死绝之地，只宜生旺之方。',
+  },
+  {
+    element: 'fire', elementName: '火',
+    spring: '母旺子相、势力并行：喜木生扶不宜过旺（旺则火炎），欲水既济不宜过盛（盛则辜恩）；土盛则蹇塞晦光；见金可以施功（重见用财尤逐）。春忌见木（恶其焚）。',
+    summer: '秉令乘权：逢水制则免自焚之咎，见木助必招夭折之患；遇金必作良工，得土遂成稼穑——金土虽美，无水则金燥土焦，再加木助则倾危。',
+    autumn: '性息体休：得木生则有复明之庆，遇水克难免殒灭之灾；土重掩息其光，金多损伤其势；火见火以光辉，纵叠见而必利。秋忌见金。',
+    winter: '体绝形亡：喜木生而有救，遇水克以为殃；欲土制为荣，爱火比为利；见庚辛为难任财、反遭其害。过冬至一阳来复，火有复燃之机。',
+  },
+  {
+    element: 'earth', elementName: '土',
+    spring: '其势虚浮：喜火生扶，恶木太过（衰土遇旺木必遭倾陷），忌水泛滥，喜土比助；得金制木为祥，金太多仍盗土气。',
+    summer: '其势燥烈：得盛水滋润成功，忌旺火煅炼焦坼；木助火炎、水克无碍，金生水泛、妻财有益；见比肩蹇滞不通，如太过又宜木克。',
+    autumn: '子旺母衰：金多耗窃其气，木盛制伏纯良，火重重而厌（土性虚寒得火则实），水泛泛而不祥；得比肩则能助力，至霜降不比无妨。',
+    winter: '惟喜火温：水旺才丰，金多子秀，火盛有荣，水多无咎；再加比肩协助为佳，更喜身主康强足寿。寒冻之土得火温暖方有生机。',
+  },
+  {
+    element: 'metal', elementName: '金',
+    spring: '余寒未尽、性柔体弱：贵乎火气为荣，欲得厚土辅助；水盛增寒，难施锋锐之势；木旺损力，有剉钝之厄。',
+    summer: '尤为柔弱、形质未具，尤嫌死绝：火多不畏（火旺金熔反成器），水盛呈祥；见木而助鬼伤身，遇金而扶持精壮；土薄而最旺，土厚而埋藏无光。',
+    autumn: '当权得令：火来煅炼遂成钟鼎之材；土复资生反有顽浊之气；见水则精神越秀，逢木则琢削施威。',
+    winter: '形寒性冷：木多则难施琢削之功，水盛而未免沉潜之患；土能制水、金体不寒，火来助土、子母成功。',
+  },
+  {
+    element: 'water', elementName: '水',
+    spring: '性滥滔淫：再逢水助必有崩堤之势，若加土盛则无泛涨之忧；喜金生扶不宜金盛，欲火既济不要火多；见木而可施功，无土仍愁散漫。',
+    summer: '执性归源、时当涸际：欲得比肩；喜金生而助体，忌火旺而炽炎；木盛则盗其气，土盛则制其流。',
+    autumn: '母旺子相、表里晶莹：得金助则清澄，逢土旺而混浊；火多而财盛，木盛则子荣——秋水以澄澈为贵。',
+    winter: '司令当权：遇火则增暖除寒，见土则形藏归化；金多而反助其寒，木盛而始通其气。',
   },
 ]
