@@ -165,7 +165,7 @@ export default function MemorialMaoPage() {
     },
     {
       year: '1976', ganzhi: '丙辰', title: '与世长辞', level: 45,
-      desc: '9月9日零时10分，毛泽东同志在北京逝世，享年83岁。他的功绩是第一位的，错误是第二位的，他仍然受到中国人民的崇敬。',
+      desc: '歌未竟东方白',
       poem: null,
     },
   ], []);
