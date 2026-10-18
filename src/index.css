@@ -57,6 +57,16 @@ body {
   color: var(--muted-foreground);
 }
 
+/*
+ * 保留大小写：label-mono 为未分层（unlayered）类，优先级高于 Tailwind utilities，
+ * 故 Tailwind 的 normal-case 无法覆盖其 uppercase。公式与符号（f₀、δ、字段名、版本号等）
+ * 需按原样显示时，在 label-mono 之外追加本类。
+ * 必须声明在 .label-mono 之后：同为 (0,1,0) 特异性，靠源码顺序取胜。
+ */
+.case-preserve {
+  text-transform: none;
+}
+
 /* 版块编号：大号 grotesque 数字 */
 .section-num {
   font-family: var(--font-mono);

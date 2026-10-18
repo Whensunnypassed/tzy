@@ -33,7 +33,17 @@ import {
   YI_MA_TABLE,
   SI_LING_RI_YONG,
   SHENG_KE_QUAN_RULE,
+  SI_ZHU_XIAN_DUAN,
+  GEN_BEN_JI_XIONG,
+  LIU_QIN_HUAN_TAI_JI,
+  SHI_ER_CHANG_SHENG_CYCLE,
+  WU_XING_QU_XIANG,
+  TAI_JI_QI_PAIRS,
+  TAI_JI_MODEL_PARAMS,
+  YONG_JI_MODE,
   type IChunQiuSegment,
+  type IWuXingQuXiang,
+  type ITaiJiQiPair,
 } from '../data/baziData';
 import { getBirthJulianDay, getTermJulianDay } from './solarTermsCalc';
 
@@ -310,6 +320,8 @@ export interface YongJiResult {
   allBranchMarks: Record<string, XiJiMark>;
   // 干支级取用例外说明（仅覆盖生效的月令有内容），供 UI 展示与报告引用
   overrideNotes: string[];
+  // 大方向判据来源（方案 B）：'taiji'=按太极二气配比定方向；'binary'=沿用逐月固化 usageDirection
+  directionSource: 'taiji' | 'binary';
   description: string;
 }
 
@@ -318,7 +330,19 @@ export function analyzeYongJi(chart: BaZiChart, monthQi: MonthQiResult): YongJiR
   let tabooElements: string[] = [];
 
   // 木火金水的元素级用忌（木火属阳、金水属阴）；土单独走干支级 judgeEarthXiJi（不再把土整类归为用神/忌神/中性）
-  if (monthQi.usageDirection === 'yin') {
+  // 方案 B：大方向判据来源由 YONG_JI_MODE 逐月开关控制——
+  //   'taiji'  → 以 computeTaiJiQi 的太极二气配比定方向（阳过用阴、阴过用阳；均衡则回退本月固有口径）；
+  //   'binary' → 沿用逐月固化的 usageDirection 二分（旧口径，一键回退）。
+  // 两种来源最终仍只产出 metal/water 与 wood/fire 两组元素（形状不变）；逐字用忌一律以月令逐字资料库（monthCharMark）为唯一真源。
+  const directionSource: 'taiji' | 'binary' = resolveYongJiMode(chart.month.branch);
+  let direction: 'yang' | 'yin';
+  if (directionSource === 'taiji') {
+    const tq = computeTaiJiQi(chart, monthQi);
+    direction = tq.recommendedDirection === 'balanced' ? monthQi.usageDirection : tq.recommendedDirection;
+  } else {
+    direction = monthQi.usageDirection;
+  }
+  if (direction === 'yin') {
     usefulElements = ['metal', 'water'];
     tabooElements = ['wood', 'fire'];
   } else {
@@ -386,9 +410,9 @@ export function analyzeYongJi(chart: BaZiChart, monthQi: MonthQiResult): YongJiR
     overrideNotes.push('酉月多数按成凉论（用木火、忌金水）；若土得火烘成余热局则喜忌反转。土性双面（制水取贵、晦火失富）独立判定，此类条件字须视柱中土得火与否。');
   }
 
-  const direction = monthQi.usageDirection === 'yin' ? '阴气（金水）' : '阳气（火土）';
+  const directionText = direction === 'yin' ? '阴气（金水）' : '阳气（火土）';
   const fsMeta = FOUR_SYMBOL_META[monthQi.fourSymbol];
-  const description = `${monthQi.fourSymbol}${fsMeta.qiNature}。月气${monthQi.yangState === 'strong' ? '阳气盛旺' : '阴气强盛'}，以${direction}为用神，平衡阴阳。四时气机真机：${fsMeta.coreXiJi}。助用神则得吉，助忌神则得凶；制用神则得凶，制忌神则得吉（制忌得喜）。`;
+  const description = `${monthQi.fourSymbol}${fsMeta.qiNature}。月气${monthQi.yangState === 'strong' ? '阳气盛旺' : '阴气强盛'}，以${directionText}为用神，平衡阴阳。四时气机真机：${fsMeta.coreXiJi}。助用神则得吉，助忌神则得凶；制用神则得凶，制忌神则得吉（制忌得喜）。`;
 
   return {
     usefulElements,
@@ -398,6 +422,7 @@ export function analyzeYongJi(chart: BaZiChart, monthQi: MonthQiResult): YongJiR
     allStemMarks,
     allBranchMarks,
     overrideNotes,
+    directionSource,
     description,
   };
 }
@@ -934,12 +959,16 @@ export function monthCharMark(
   return ZHUZI_TO_XIJI[row[0]];
 }
 
-// 十二长生 → 气机强弱分（长生/临官/帝旺/冠带=有力，沐浴/养/衰/病/胎=中平，死/墓/绝=无力）
-const CHANG_SHENG_POWER: Record<string, number> = {
-  长生: 20, 临官: 22, 帝旺: 24, 冠带: 18,
-  沐浴: 8, 养: 6, 衰: 4, 病: 2, 胎: 2,
-  死: -18, 墓: -12, 绝: -20,
-};
+// 十二长生 → 气机强弱分：由「绝为起点」环序 CFG 派生（唯一真源见 baziData.SHI_ER_CHANG_SHENG_CYCLE）
+const CHANG_SHENG_POWER: Record<string, number> = Object.fromEntries(
+  SHI_ER_CHANG_SHENG_CYCLE.stages.map((s) => [s.stage, s.power]),
+) as Record<string, number>;
+const CHANG_SHENG_PHASE: Record<string, string> = Object.fromEntries(
+  SHI_ER_CHANG_SHENG_CYCLE.stages.map((s) => [s.stage, s.phase]),
+) as Record<string, string>;
+const CHANG_SHENG_RING_INDEX: Record<string, number> = Object.fromEntries(
+  SHI_ER_CHANG_SHENG_CYCLE.stages.map((s) => [s.stage, s.ringIndex]),
+) as Record<string, number>;
 
 const HIDDEN_STEM_MAP: Record<string, string[]> = {
   子: ['癸'], 丑: ['己', '辛', '癸'], 寅: ['甲', '丙', '戊'], 卯: ['乙'],
@@ -1261,12 +1290,672 @@ export function analyzeNianYueTaiJi(
  * 四柱干支基础权重：年 / 月 / 日 / 时，月令最重（月支 2.5）。
  * 五行力量、阴阳平衡、用神占比三处评分共用同一组权重，只在此处维护。
  */
-const PILLAR_WEIGHTS: ReadonlyArray<{ stem: number; branch: number }> = [
+export const PILLAR_WEIGHTS: ReadonlyArray<{ stem: number; branch: number }> = [
   { stem: 1.0, branch: 1.5 }, // 年
   { stem: 1.2, branch: 2.5 }, // 月（月令最重）
   { stem: 1.5, branch: 1.8 }, // 日
   { stem: 0.8, branch: 1.2 }, // 时
 ];
+
+// ============================================================
+// 四柱限段（「限」）· 判定内核增量 v1.0.0
+// 理论：《阴阳法基础·八字结构》——年为根本(0–16)、月令为权(16–32)、日为动应(32–48)、时为结果(48+)；
+//       「天地五行流动不居，早年寄居于年，青年寄居在月，中年在日，晚年为归宿寄居于时」。
+// 实现：以月令逐字喜忌（yongJi.stemMarks / branchMarks，与四柱徽章、大运流年同源）判定每一限柱干支用忌，
+//       再按柱位权重 PILLAR_WEIGHTS 合成倾向分 → 顺（吉）/ 平 / 逆（凶）。
+// 可进化：口径集中于 baziData.SI_ZHU_XIAN_DUAN（带 version），本函数只消费该常量 + 既有 marks；
+//         升级限段划分/权重口径时仅需改常量或本函数，不影响其余评分链路。
+// ============================================================
+export interface XianDuanEntry {
+  position: string;
+  ganzhi: string;
+  ageStart: number;
+  ageEnd: number | null;
+  ageRange: string;
+  theme: string;
+  keyPoint: string;
+  stemMark: XiJiMark;
+  branchMark: XiJiMark;
+  score: number;
+  tendency: '顺' | '平' | '逆';
+  tendencyLabel: '吉' | '中平' | '凶';
+  reason: string;
+  isCurrent: boolean;
+}
+
+export interface XianDuanResult {
+  version: string;
+  source: string;
+  currentAge: number;
+  currentPosition: string;
+  currentSegment: string;
+  entries: XianDuanEntry[];
+  verdict: string;
+  principle: string;
+  supplement: string;
+}
+
+export function analyzeSiZhuXianDuan(
+  chart: BaZiChart,
+  yongJi: YongJiResult,
+  currentYear: number = new Date().getFullYear(),
+): XianDuanResult {
+  const pillars: Pillar[] = [chart.year, chart.month, chart.day, chart.hour];
+  const stemKeys = ['年干', '月干', '日干', '时干'];
+  const branchKeys = ['年支', '月支', '日支', '时支'];
+
+  // 当前年龄：以出生公历年份计，仅作限段高亮定位（非精确周岁）
+  const birthYear = Number((chart.birthInfo?.solarDate ?? '').match(/(\d{4})/)?.[1] ?? 0);
+  const currentAge = birthYear ? Math.max(0, currentYear - birthYear) : 0;
+
+  const markScore = (m: XiJiMark, weight: number) => (m === 'useful' ? weight : m === 'taboo' ? -weight : 0);
+  const markLabel = (m: XiJiMark) => (m === 'useful' ? '用' : m === 'taboo' ? '忌' : '中');
+
+  const entries: XianDuanEntry[] = SI_ZHU_XIAN_DUAN.segments.map((seg, i) => {
+    const stemMark: XiJiMark = yongJi.stemMarks[stemKeys[i]] ?? 'neutral';
+    const branchMark: XiJiMark = yongJi.branchMarks[branchKeys[i]] ?? 'neutral';
+    const w = PILLAR_WEIGHTS[i];
+    const score = markScore(stemMark, w.stem) + markScore(branchMark, w.branch);
+    const tendency: XianDuanEntry['tendency'] = score >= 1.2 ? '顺' : score <= -1.2 ? '逆' : '平';
+    const tendencyLabel = tendency === '顺' ? '吉' : tendency === '逆' ? '凶' : '中平';
+    const rangeText = seg.ageEnd === null ? `${seg.ageStart} 岁起 · 晚年` : `${seg.ageStart}–${seg.ageEnd} 岁`;
+    const isCurrent = seg.ageEnd === null
+      ? currentAge >= seg.ageStart
+      : (currentAge >= seg.ageStart && currentAge < seg.ageEnd);
+    const reason = `${seg.position}${pillars[i].stem}${pillars[i].branch}：天干${pillars[i].stem}为月令逐字「${markLabel(stemMark)}」、地支${pillars[i].branch}为月令逐字「${markLabel(branchMark)}」——${tendency === '顺' ? '干支得月令所喜，此限气机顺遂、为得力阶段' : tendency === '逆' ? '干支多逆月令所喜，此限气机受抑、宜守待时' : '干支喜忌参半或中性，此限平常，成色视岁运引动'}`;
+    return {
+      position: seg.position,
+      ganzhi: `${pillars[i].stem}${pillars[i].branch}`,
+      ageStart: seg.ageStart,
+      ageEnd: seg.ageEnd,
+      ageRange: rangeText,
+      theme: seg.theme,
+      keyPoint: seg.keyPoint,
+      stemMark,
+      branchMark,
+      score: Math.round(score * 10) / 10,
+      tendency,
+      tendencyLabel,
+      reason,
+      isCurrent,
+    };
+  });
+
+  const currentEntry = entries.find((e) => e.isCurrent) ?? entries[entries.length - 1];
+  const shun = entries.filter((e) => e.tendency === '顺').map((e) => e.position).join('、');
+  const ni = entries.filter((e) => e.tendency === '逆').map((e) => e.position).join('、');
+  const parts: string[] = [
+    `当前约 ${currentAge} 岁，行「${currentEntry.position}」限（${currentEntry.ageRange}）——${currentEntry.tendency === '顺' ? '此阶段气机顺遂，宜进取' : currentEntry.tendency === '逆' ? '此阶段气机受抑，宜守成' : '此阶段平常，随岁运引动'}`,
+  ];
+  if (shun) parts.push(`顺限：${shun}`);
+  if (ni) parts.push(`逆限：${ni}`);
+  parts.push('限段为主气归属、非时段独占，须与大运流年联动判读');
+
+  return {
+    version: SI_ZHU_XIAN_DUAN.version,
+    source: SI_ZHU_XIAN_DUAN.source,
+    currentAge,
+    currentPosition: currentEntry.position,
+    currentSegment: `${currentEntry.position} · ${currentEntry.theme}`,
+    entries,
+    verdict: parts.join('；') + '。',
+    principle: SI_ZHU_XIAN_DUAN.principle,
+    supplement: SI_ZHU_XIAN_DUAN.supplement,
+  };
+}
+
+// ============================================================
+// 根本吉 / 根本凶（年月根本模式硬化）· 判定内核增量 v1.0.0
+// 理论：《年月太极进阶内容》——年干落年支为「根本存在」、年到月为「变化状态」；
+//       「要用之因素在年月上被否定」→ 根本凶；「年干即月令平衡因素且落实有力」→ 根本吉。
+// 实现：在既有 analyzeNianYueTaiJi 结论（年干先天吉凶 + 年支三类作用 + 天地一柱）基础上硬化判据，
+//       不改动其结论字段，仅产出独立的根本模式定论，供 UI 引用与岁运复核（可进化：可随时增补判据）。
+// ============================================================
+export interface GenBenResult {
+  version: string;
+  source: string;
+  kind: '根本吉' | '根本凶' | '平常';
+  tianDiYiZhu: { hit: boolean; note: string };
+  reason: string;
+  factors: string[];
+  matchedExample: { title: string; reason: string; kind: '吉' | '凶' } | null;
+  principle: string;
+  tianDiYiZhuRule: string;
+}
+
+export function analyzeGenBenJiXiong(
+  chart: BaZiChart,
+  monthQi: MonthQiResult,
+  yongJi: YongJiResult,
+  nianYue: NianYueTaiJiResult,
+): GenBenResult {
+  const yEl = chart.year.stemElement;
+  const bEl = chart.year.branchElement;
+  const yElName = elementName(yEl);
+  const stemMark: XiJiMark = yongJi.stemMarks['年干'] ?? 'neutral';
+  const branchMark: XiJiMark = yongJi.branchMarks['年支'] ?? 'neutral';
+  const markLabel = (m: XiJiMark) => (m === 'useful' ? '喜用' : m === 'taboo' ? '所忌' : '中性');
+
+  const sameEl = yEl === bEl;
+  const tianDiYiZhu = {
+    hit: sameEl,
+    note: sameEl
+      ? `年干${chart.year.stem}与年支${chart.year.branch}同属${yElName}，干支成太极、气机叠加为「天地一柱」——在天成象、在地成形，干支气机一体相承。`
+      : `年干${chart.year.stem}（${yElName}）与年支${chart.year.branch}（${elementName(bEl)}）五行不同，年支为年干之落实载体，不构成天地一柱。`,
+  };
+
+  const yaoYongBeiFou = nianYue.yearStemJiXiong === '先天年吉' && nianYue.yearBranchAction === '阻碍否定';
+  const tianDiYiZhuJi = sameEl && stemMark === 'useful' && branchMark === 'useful';
+  const tianDiYiZhuXiong = sameEl && stemMark === 'taboo' && branchMark === 'taboo';
+
+  const factors: string[] = [];
+  factors.push(`年干定位：${nianYue.yearStemJiXiong}——年干${chart.year.stem}（${yElName}）在${monthQi.monthName}逐字为「${markLabel(stemMark)}」`);
+  factors.push(`年支作用：${nianYue.yearBranchAction}——年支${chart.year.branch}（${elementName(bEl)}）为「${markLabel(branchMark)}」`);
+  factors.push(tianDiYiZhu.note);
+  factors.push(`年月太极三态：${nianYue.state}`);
+
+  let kind: GenBenResult['kind'];
+  let reason: string;
+  if (tianDiYiZhuJi) {
+    kind = '根本吉';
+    reason = `年干${chart.year.stem}即月令所需之平衡因素（${monthQi.monthName}喜用「${yElName}」），且落实于同五行的年支${chart.year.branch}——天地一柱成立、干支气机一体，为根本吉。此吉始终存在，只要日时不去否定，即可稳定得到。`;
+    factors.push('定论：用神落实、天地一柱成立——根本吉，年上恒气永存');
+  } else if (nianYue.yearStemJiXiong === '先天年吉' && nianYue.yearBranchAction === '落实兑现') {
+    kind = '根本吉';
+    reason = `年干${chart.year.stem}为月令所需之平衡因素、年支${chart.year.branch}为月令喜用予以落实兑现，先天年吉落地有力，为根本吉。年上为恒气，只要日时不否定，即可得到这份吉。`;
+    factors.push('定论：年干得吉、年支落实——根本吉，年上恒气永存');
+  } else if (yaoYongBeiFou || tianDiYiZhuXiong) {
+    kind = '根本凶';
+    reason = tianDiYiZhuXiong
+      ? `年干${chart.year.stem}与年支${chart.year.branch}同属${yElName}，然二者皆属${monthQi.monthName}所忌——天地一柱反为「忌神一柱」，凶性叠加，为根本凶。`
+      : `年干${chart.year.stem}本为${monthQi.monthName}所需之平衡因素（要用之因素），却在年支${chart.year.branch}处被否定、落实不了——「要用之因素在年月上被否定」，谓之根本凶。须日时动应救应，方得转圜。`;
+    factors.push(tianDiYiZhuXiong ? '定论：忌神一柱、凶性叠加——根本凶' : '定论：要用之因素在年月上被否定——根本凶，须日时救应');
+  } else if (nianYue.yearStemJiXiong === '先天年忌' && nianYue.yearBranchAction !== '制衡借利') {
+    kind = '根本凶';
+    reason = `年干${chart.year.stem}本身即为${monthQi.monthName}所忌，且年支${chart.year.branch}未能制衡——凶性底色在年月上已然确立，为根本凶。凶性始终存在，逢气机引动之时必应，宜守不宜攻。`;
+    factors.push('定论：年干为忌且年支无制衡——根本凶，凶性底色永存');
+  } else {
+    kind = '平常';
+    reason = `年干${chart.year.stem}在${monthQi.monthName}为「${markLabel(stemMark)}」、年支${chart.year.branch}作用为「${nianYue.yearBranchAction}」，年月未形成确定的根本吉或根本凶模式——根本平常，吉凶全凭日时动应与岁运引动。`;
+    factors.push('定论：年月未成确定根本模式——根本平常，视日时岁运引动');
+  }
+
+  const allExamples = [
+    ...GEN_BEN_JI_XIONG.jiExamples.map((c) => ({ ...c, kind: '吉' as const })),
+    ...GEN_BEN_JI_XIONG.xiongExamples.map((c) => ({ ...c, kind: '凶' as const })),
+  ];
+  const hit = allExamples.find(
+    (c) => c.yearGZ === `${chart.year.stem}${chart.year.branch}` && c.monthBranch === chart.month.branch,
+  ) ?? null;
+
+  return {
+    version: GEN_BEN_JI_XIONG.version,
+    source: GEN_BEN_JI_XIONG.source,
+    kind,
+    tianDiYiZhu,
+    reason,
+    factors,
+    matchedExample: hit ? { title: hit.title, reason: hit.reason, kind: hit.kind } : null,
+    principle: GEN_BEN_JI_XIONG.principle,
+    tianDiYiZhuRule: GEN_BEN_JI_XIONG.tianDiYiZhuRule,
+  };
+}
+
+// ============================================================
+// 六亲换太极（亲情灾坎）· 判定内核增量 v1.0.0
+// 理论：《阴阳法基础·食伤/印绶篇》——「食伤」为命主所生、是命局的寿元星；看六亲的灾坎，
+//       须对六亲星「换太极」：以六亲星为新太极点，观察其「食伤」的状态好坏。
+//       换太极链：财星的食伤是官杀，官杀的食伤是印绶，印绶的食伤是比劫（可续推）。
+// 实现：以日主五行 + 十神定义推导每个六亲星及其「食伤」（换太极后的寿元/灾坎星）之五行，
+//       再以月令逐字喜忌（allStemMarks，与全链路同源）判该星喜忌，并结合盘中透藏给出亲缘倾向。
+//       不改动既有 marks 与评分；输出一律「倾向 + 可调」语气（guardrail）。
+// ============================================================
+export interface HuanTaiJiEntry {
+  name: string;
+  star: string;
+  anchorElement: string;
+  anchorElementName: string;
+  outputStar: string;
+  outputElement: string;
+  outputElementName: string;
+  outputMark: XiJiMark;
+  presence: string;
+  reading: string;
+}
+
+export interface HuanTaiJiResult {
+  version: string;
+  source: string;
+  gender: 'male' | 'female';
+  entries: HuanTaiJiEntry[];
+  chainNote: string;
+  usage: string;
+  principle: string;
+  guardrail: string;
+}
+
+export function analyzeLiuQinHuanTaiJi(
+  chart: BaZiChart,
+  yongJi: YongJiResult,
+): HuanTaiJiResult {
+  const dmEl = chart.day.stemElement;
+  const REP_STEM: Record<string, string> = { wood: '甲', fire: '丙', earth: '戊', metal: '庚', water: '壬' };
+  const starGroup = (star: string): string => {
+    if (star === '比肩' || star === '劫财') return '比劫';
+    if (star === '食神' || star === '伤官') return '食伤';
+    if (star === '正财' || star === '偏财') return '财星';
+    if (star === '正官' || star === '七杀') return '官杀';
+    if (star === '正印' || star === '偏印') return '印绶';
+    return star;
+  };
+  const starElement = (star: string): string => {
+    const g = starGroup(star);
+    switch (g) {
+      case '比劫': return dmEl;
+      case '食伤': return SHENG_ORDER[dmEl];
+      case '财星': return KE_ORDER[dmEl];
+      case '官杀': return (Object.keys(KE_ORDER) as string[]).find((k) => KE_ORDER[k] === dmEl) ?? dmEl;
+      case '印绶': return (Object.keys(SHENG_ORDER) as string[]).find((k) => SHENG_ORDER[k] === dmEl) ?? dmEl;
+      default: return dmEl;
+    }
+  };
+
+  const pillars: Pillar[] = [chart.year, chart.month, chart.day, chart.hour];
+  const anchors = chart.gender === 'male' ? LIU_QIN_HUAN_TAI_JI.anchors.male : LIU_QIN_HUAN_TAI_JI.anchors.female;
+  const markLabel = (m: XiJiMark) => (m === 'useful' ? '喜用' : m === 'taboo' ? '所忌' : '中性');
+
+  const entries: HuanTaiJiEntry[] = anchors.map((a) => {
+    const anchorElement = starElement(a.star);
+    const g = starGroup(a.star);
+    const outputStar = LIU_QIN_HUAN_TAI_JI.chain.find((c) => c.from === g)?.shiShang ?? '食伤';
+    const outputElement = starElement(outputStar);
+    const outputMark: XiJiMark = yongJi.allStemMarks[REP_STEM[outputElement]] ?? 'neutral';
+
+    // 盘中透藏情况
+    const touGan = pillars.filter((p) => STEM_ELEMENTS[p.stem] === outputElement);
+    const cangZhi = pillars.filter((p) => p.hiddenStems.some((s) => STEM_ELEMENTS[s] === outputElement));
+    const presence = touGan.length > 0 || cangZhi.length > 0
+      ? `该星${touGan.length > 0 ? `透干于${touGan.map((p) => p.stem).join('、')}` : ''}${touGan.length > 0 && cangZhi.length > 0 ? '，' : ''}${cangZhi.length > 0 ? `暗藏于${cangZhi.map((p) => p.branch).join('、')}` : ''}`
+      : '该星全盘不透不藏、气机较缺';
+
+    const assess = outputMark === 'useful'
+      ? `${a.name}之身心与运程倾向顺遂，可多予支持与关照`
+      : outputMark === 'taboo'
+        ? `${a.name}之身心或亲缘关系倾向易有起伏，宜多沟通、以关照调之`
+        : `${a.name}之身心与亲缘平常，成色视岁运引动`;
+
+    const reading = `以${a.name}为太极点，其十神为${a.star}（${elementName(anchorElement)}）；换太极后其「食伤」为${outputStar}（${elementName(outputElement)}），即${a.name}的寿元/灾坎星。该星在本命月令为「${markLabel(outputMark)}」，${presence}——${assess}。`;
+
+    return {
+      name: a.name,
+      star: a.star,
+      anchorElement,
+      anchorElementName: elementName(anchorElement),
+      outputStar,
+      outputElement,
+      outputElementName: elementName(outputElement),
+      outputMark,
+      presence,
+      reading,
+    };
+  });
+
+  return {
+    version: LIU_QIN_HUAN_TAI_JI.version,
+    source: LIU_QIN_HUAN_TAI_JI.source,
+    gender: chart.gender,
+    entries,
+    chainNote: LIU_QIN_HUAN_TAI_JI.chainNote,
+    usage: LIU_QIN_HUAN_TAI_JI.usage,
+    principle: LIU_QIN_HUAN_TAI_JI.principle,
+    guardrail: LIU_QIN_HUAN_TAI_JI.guardrail,
+  };
+}
+
+// ============================================================
+// 十二长生环序判定 · 判定内核增量 v1.0.0
+// 理论：《阴阳法基础·十二长生》——十二长生是看「十天干在当前月状态」的唯一气机标尺，
+//       环序以「绝为起点」，由弱到强、循环无端；甲（生气）与乙（成气）状态恒错一位。
+// 实现：逐干列出落月令的长生状态、环序位、气机强弱分与阶段，并标出原局所透之干，
+//       产出「得令 / 失令」定论。环序与分值由 CFG 单源驱动（可进化：改 CFG 即升级口径），
+//       不改动既有 marks 与评分逻辑。
+// ============================================================
+export interface ChangShengRingEntry {
+  stem: string;
+  element: string;
+  yinYang: 'yang' | 'yin';
+  stage: string;
+  ringIndex: number;
+  power: number;
+  phase: string;
+  inChart: boolean;
+}
+
+export interface ChangShengRingResult {
+  version: string;
+  source: string;
+  principle: string;
+  anchorNote: string;
+  order: string[];
+  monthBranch: string;
+  monthName: string;
+  entries: ChangShengRingEntry[];
+  verdict: string;
+}
+
+export function analyzeChangShengRing(
+  chart: BaZiChart,
+  monthQi: MonthQiResult,
+): ChangShengRingResult {
+  const rows = SHI_ER_CHANG_SHENG[chart.month.branch] ?? {};
+  const chartStems = [chart.year.stem, chart.month.stem, chart.day.stem, chart.hour.stem];
+  const allStems = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
+
+  const entries: ChangShengRingEntry[] = allStems.map((stem) => {
+    const stage = rows[stem] ?? '—';
+    const ringIndex = CHANG_SHENG_RING_INDEX[stage] ?? -1;
+    const power = CHANG_SHENG_POWER[stage] ?? 0;
+    return {
+      stem,
+      element: elementName(STEM_ELEMENTS[stem]),
+      yinYang: (STEM_YINYANG[stem] ?? 'yang') as 'yang' | 'yin',
+      stage,
+      ringIndex,
+      power,
+      phase: CHANG_SHENG_PHASE[stage] ?? '—',
+      inChart: chartStems.includes(stem),
+    };
+  });
+
+  const inChartEntries = entries.filter((e) => e.inChart);
+  const strong = inChartEntries.filter((e) => e.power >= 18).map((e) => `${e.stem}（${e.stage}）`);
+  const weak = inChartEntries.filter((e) => e.power <= -12).map((e) => `${e.stem}（${e.stage}）`);
+  const parts: string[] = [`${monthQi.monthName}月令下，十干气机以十二长生为唯一标尺（绝为起点、由弱到强、循环无端）`];
+  if (strong.length) parts.push(`原局得令有力：${strong.join('、')}`);
+  if (weak.length) parts.push(`原局失令无力：${weak.join('、')}`);
+  if (!strong.length && !weak.length) parts.push('原局所透之干落月令皆属中平之气，气机厚薄不显');
+
+  return {
+    version: SHI_ER_CHANG_SHENG_CYCLE.version,
+    source: SHI_ER_CHANG_SHENG_CYCLE.source,
+    principle: SHI_ER_CHANG_SHENG_CYCLE.principle,
+    anchorNote: SHI_ER_CHANG_SHENG_CYCLE.anchorNote,
+    order: SHI_ER_CHANG_SHENG_CYCLE.stages.map((s) => s.stage),
+    monthBranch: chart.month.branch,
+    monthName: monthQi.monthName,
+    entries,
+    verdict: parts.join('；') + '。',
+  };
+}
+
+// ============================================================
+// 太极二气配比判定（方案 B）· 判定内核增量 v1.0.0
+// 理论：《十二月份取用》——判断用阴用阳是「傻瓜式模版套用」的误区；月令真实锚点是「太极二气」
+//       （春=丙癸 / 秋=丁壬 / 夏=火与庚金 / 冬=火与水），其余元素只是扶抑这两股气的辅助。
+// 实现：按「柱位权重 × 该干支在本月令的十二长生强度（绝为起点环序归一化，区间 [−20,24]）× 土折算系数」
+//       量化本盘二气存量 → 以阈值 θ 判「阳过 / 阴过 / 均衡」；春秋两季另按原文硬条件定局（见 TAI_JI_MODEL_PARAMS）。
+// 可进化：口径集中于 baziData.TAI_JI_QI_PAIRS / TAI_JI_MODEL_PARAMS；升级配比与系数只改常量，不动本函数。
+// 边界：本函数只输出「大方向建议」，由 analyzeYongJi 经 YONG_JI_MODE 开关消费；不直接写 marks，
+//       逐字用忌仍以月令逐字资料库（monthCharMark）为唯一真源。
+// ============================================================
+export type TaiJiQiBand = '阳过' | '阴过' | '均衡';
+
+export interface TaiJiQiContribution {
+  position: string;                 // 年 / 月 / 日 / 时
+  char: string;
+  element: string;
+  kind: '干' | '支' | '藏';
+  stage: string;                    // 月令十二长生状态
+  s: number;                        // 归一化强度
+  weight: number;                   // 柱位权重
+  qi: 'yang' | 'yin';
+  value: number;                    // 二气存量贡献（正值，按 qi 归方）
+}
+
+export interface TaiJiQiResult {
+  version: string;
+  source: string;
+  principle: string;
+  monthBranch: string;
+  monthName: string;
+  mode: ITaiJiQiPair['mode'];
+  modeLabel: string;
+  yangQi: number;
+  yinQi: number;
+  balance: number;                  // 阳 − 阴
+  ratio: number;                    // (阳 − 阴) / (阳 + 阴)
+  band: TaiJiQiBand;
+  recommendedDirection: 'yang' | 'yin' | 'balanced';
+  threshold: number;
+  earthNote: string;
+  hardCondition: string;
+  contributions: TaiJiQiContribution[];
+  verdict: string;
+}
+
+// 用忌大方向判据来源：逐月灰度覆盖 > 全局开关
+export function resolveYongJiMode(monthBranch: string): 'taiji' | 'binary' {
+  return YONG_JI_MODE.months[monthBranch] ?? YONG_JI_MODE.mode;
+}
+
+const TAI_JI_MODE_LABEL: Record<ITaiJiQiPair['mode'], string> = {
+  chun: '春温局（丙癸太极·先辨成温）',
+  qiu: '秋凉局（丁壬太极·先辨余热/成凉）',
+  xia: '夏热局（火与庚金）',
+  dong: '冬寒局（火与水·止寒为要）',
+  rescueYin: '辰月·救癸水',
+  rescueYang: '戌月·扶甲木',
+};
+
+export function computeTaiJiQi(chart: BaZiChart, monthQi: MonthQiResult): TaiJiQiResult {
+  const monthBranch = chart.month.branch;
+  const pair = TAI_JI_QI_PAIRS.months[monthBranch] ?? TAI_JI_QI_PAIRS.months['寅'];
+  const params = TAI_JI_MODEL_PARAMS;
+  const [lo, hi] = params.changShengRange;
+  const sOf = (stage: string): number => {
+    const p = CHANG_SHENG_POWER[stage];
+    if (typeof p !== 'number') return 0;
+    return Math.min(1, Math.max(0, (p - lo) / (hi - lo)));
+  };
+
+  const pillars: Pillar[] = [chart.year, chart.month, chart.day, chart.hour];
+  const names = ['年', '月', '日', '时'];
+  const summer = ['巳月', '午月', '未月'].includes(monthQi.monthName);
+  const contributions: TaiJiQiContribution[] = [];
+
+  const record = (
+    pos: string, char: string, element: string, kind: TaiJiQiContribution['kind'],
+    stage: string, weight: number, anchorOne: boolean, huiHuo: boolean,
+  ) => {
+    // 元素归方：木火→阳、金水→阴（严格两仪口径）；土不整体归方——按燥湿（戊未戌偏纳阳、己丑辰偏纳阴）
+    // 并以折算系数 k 并入二气（土无阴阳偏性、纳阴纳阳）。
+    let qi: 'yang' | 'yin';
+    let k = 1;
+    if (element === 'wood' || element === 'fire') qi = 'yang';
+    else if (element === 'metal' || element === 'water') qi = 'yin';
+    else { qi = EARTH_YANG_GANZHI.has(char) ? 'yang' : 'yin'; k = params.earthK; }
+
+    const s = anchorOne ? 1 : sOf(stage);
+    let value = weight * s * k;
+    // 夏月见未 / 戌：晦火存金双面记账（削弱阳方火、增强阴方金）
+    if (huiHuo && summer) {
+      if (element === 'fire') value *= params.huiHuoStoreJin.huiHuoFireScale;
+      else if (element === 'metal') value *= 1 + params.huiHuoStoreJin.storeJinBonusScale;
+    }
+    contributions.push({ position: pos, char, element, kind, stage, s, weight, qi, value });
+  };
+
+  pillars.forEach((pillar, idx) => {
+    const w = PILLAR_WEIGHTS[idx];
+    const pos = names[idx];
+    const monthPillar = idx === 1;   // 月令为权：月柱本气所在支及其藏干强度恒取 1.0
+    const huiHuo = pillar.branch === '未' || pillar.branch === '戌';
+
+    const stStage = SHI_ER_CHANG_SHENG[monthBranch]?.[pillar.stem] ?? '—';
+    record(pos, pillar.stem, pillar.stemElement, '干', stStage, w.stem, false, huiHuo);
+
+    const mainHidden = pillar.hiddenStems[0] ?? pillar.stem;
+    const brStage = SHI_ER_CHANG_SHENG[monthBranch]?.[mainHidden] ?? '—';
+    record(pos, pillar.branch, pillar.branchElement, '支', brStage, w.branch, monthPillar, huiHuo);
+
+    pillar.hiddenStems.forEach((st, i) => {
+      const hw = w.branch * (0.5 - i * 0.15);
+      if (hw <= 0) return;
+      const hStage = SHI_ER_CHANG_SHENG[monthBranch]?.[st] ?? '—';
+      record(pos, st, STEM_ELEMENTS[st], '藏', hStage, hw, monthPillar, huiHuo);
+    });
+  });
+
+  const yangQi = contributions.filter((c) => c.qi === 'yang').reduce((a, c) => a + c.value, 0);
+  const yinQi = contributions.filter((c) => c.qi === 'yin').reduce((a, c) => a + c.value, 0);
+  const total = yangQi + yinQi;
+  const balance = yangQi - yinQi;
+  const ratio = total > 0 ? balance / total : 0;
+  const band: TaiJiQiBand = ratio >= params.theta ? '阳过' : ratio <= -params.theta ? '阴过' : '均衡';
+
+  let recommendedDirection: 'yang' | 'yin' | 'balanced' =
+    band === '阳过' ? 'yin' : band === '阴过' ? 'yang' : 'balanced';
+
+  const hasEl = (el: string) => pillars.some(
+    (p) => STEM_ELEMENTS[p.stem] === el
+      || p.branchElement === el
+      || p.hiddenStems.some((s) => STEM_ELEMENTS[s] === el));
+
+  let hardCondition = '';
+  if (pair.mode === 'chun') {
+    // 春温局：木得火肯定、且不被金水阴气否定 → 成温（体阳用阴）；否则体阴用阳（见水/见金/木火肯定不足）
+    const chengWen = hasEl('wood') && hasEl('fire') && !hasEl('water') && !hasEl('metal');
+    recommendedDirection = chengWen ? 'yin' : 'yang';
+    const reasons = [
+      hasEl('water') ? '见水（余寒未退）' : '',
+      hasEl('metal') ? '见金（否定温气）' : '',
+      (!hasEl('wood') || !hasEl('fire')) ? '木火肯定不足' : '',
+    ].filter(Boolean).join('、');
+    hardCondition = chengWen
+      ? '成温：木得火肯定、且不被金水阴气否定 → 体阳用阴（大方向用阴）。'
+      : `未成温：${reasons} → 体阴用阳（大方向用阳）。`;
+  } else if (pair.mode === 'qiu') {
+    // 秋凉局：先辨余热 / 成凉两局（判据：年月透丙丁、或支见巳午未 → 余热局）
+    const hot = detectAutumnHotRound(chart);
+    recommendedDirection = hot ? 'yin' : 'yang';
+    hardCondition = hot
+      ? '余热之局（火土旺、金难舒展）→ 用阴（金水泄土克火）。'
+      : '成凉之局（金气得布、火无着力）→ 用阳（木火炼金）。';
+  } else if (pair.mode === 'xia') {
+    hardCondition = '夏月阳极：首用庚金（阴方）平衡火势，水木须齐见辅之。';
+  } else if (pair.mode === 'dong') {
+    hardCondition = '冬月阴极：止寒为要，大方向用阳（阳土止寒、火生扶土气）。';
+  } else if (pair.mode === 'rescueYang') {
+    hardCondition = '戌月：甲木为第一用神，破阴显阳，大方向用阳。';
+  } else {
+    hardCondition = '辰月：核心在救癸水（木须得水润、庚金泄土生水），大方向视二气存量配比。';
+  }
+
+  const pct = (n: number) => `${Math.round((n / (total || 1)) * 100)}%`;
+  const directionLabel = recommendedDirection === 'yin'
+    ? '用阴（金水）'
+    : recommendedDirection === 'yang' ? '用阳（木火）' : '二气均衡（不作强判）';
+  const verdict = `${monthQi.monthName}太极二气存量：阳 ${pct(yangQi)} / 阴 ${pct(yinQi)}，配比 ${(ratio * 100).toFixed(1)}% → ${band}；大方向建议「${directionLabel}」。`;
+
+  return {
+    version: TAI_JI_QI_PAIRS.version,
+    source: TAI_JI_QI_PAIRS.source,
+    principle: TAI_JI_QI_PAIRS.principle,
+    monthBranch,
+    monthName: monthQi.monthName,
+    mode: pair.mode,
+    modeLabel: TAI_JI_MODE_LABEL[pair.mode],
+    yangQi,
+    yinQi,
+    balance,
+    ratio,
+    band,
+    recommendedDirection,
+    threshold: params.theta,
+    earthNote: `土不整体归方：戊未戌偏纳阳、己丑辰偏纳阴，并按折算系数 ${params.earthK} 并入二气（纳阴纳阳）。${params.huiHuoStoreJin.note}`,
+    hardCondition,
+    contributions,
+    verdict,
+  };
+}
+
+// ============================================================
+// 五行取象判定 · 判定内核增量 v1.0.0
+// 理论：《五行取象逻辑》——从理到象：先明五行本性（四象气机），再随月令规定推其类象；
+//       木-少阳、火-老阳、土-无阴阳（纳阴纳阳）、金-少阴、水-老阴；类象是「理」的投射、非并列标签。
+// 实现：统计本盘五行力量占比与透藏，结合月令逐字喜忌给出每一行的用 / 忌 / 中判定与取象要点，
+//       并标出主导行与月令本气。取象数据由 CFG 单源驱动（可进化），不改动既有 marks 与评分逻辑。
+// ============================================================
+export interface WuXingQuXiangEntry extends IWuXingQuXiang {
+  mark: XiJiMark;
+  markLabel: string;
+  powerPct: number;
+  dominant: boolean;
+  presence: string;
+  reading: string;
+}
+
+export interface WuXingQuXiangResult {
+  version: string;
+  source: string;
+  method: string;
+  monthMainElement: string;
+  dominantElement: string;
+  entries: WuXingQuXiangEntry[];
+  verdict: string;
+}
+
+export function analyzeWuXingQuXiang(
+  chart: BaZiChart,
+  monthQi: MonthQiResult,
+  yongJi: YongJiResult,
+  elementPower: { wood: number; fire: number; earth: number; metal: number; water: number },
+): WuXingQuXiangResult {
+  const pillars: Pillar[] = [chart.year, chart.month, chart.day, chart.hour];
+  const markLabel = (m: XiJiMark) => (m === 'useful' ? '喜用' : m === 'taboo' ? '所忌' : '中性');
+
+  const pcts: Record<string, number> = {
+    wood: elementPower.wood, fire: elementPower.fire, earth: elementPower.earth,
+    metal: elementPower.metal, water: elementPower.water,
+  };
+  const dominantElement = (Object.keys(pcts) as string[]).reduce((a, b) => (pcts[a] >= pcts[b] ? a : b), 'wood');
+  const monthMainElement = monthQi.mainQiElement || chart.month.branchElement;
+
+  const entries: WuXingQuXiangEntry[] = WU_XING_QU_XIANG.items.map((q) => {
+    const mark: XiJiMark = yongJi.usefulElements.includes(q.element)
+      ? 'useful'
+      : yongJi.tabooElements.includes(q.element) ? 'taboo' : 'neutral';
+    const touGan = pillars.filter((p) => STEM_ELEMENTS[p.stem] === q.element);
+    const cangZhi = pillars.filter((p) => p.hiddenStems.some((s) => STEM_ELEMENTS[s] === q.element));
+    const presence = touGan.length || cangZhi.length
+      ? `${touGan.length ? `透干于${touGan.map((p) => p.stem).join('、')}` : ''}${touGan.length && cangZhi.length ? '，' : ''}${cangZhi.length ? `藏于${cangZhi.map((p) => p.branch).join('、')}` : ''}`
+      : '全盘不现、气机较缺';
+    const pct = pcts[q.element] ?? 0;
+    const reading = `以${q.name}论：${q.benXing}；${q.wuDe}。本盘${q.name}气占比 ${pct}%，月令判定「${markLabel(mark)}」——类象首推：${q.xiang[0]}。`;
+    return {
+      ...q,
+      mark,
+      markLabel: markLabel(mark),
+      powerPct: pct,
+      dominant: q.element === dominantElement,
+      presence,
+      reading,
+    };
+  });
+
+  const dominantEntry = entries.find((e) => e.dominant);
+  const verdict = `本盘${elementName(dominantElement)}气最旺（占比 ${pcts[dominantElement]}%${dominantEntry ? `，月令「${dominantEntry.markLabel}」` : ''}），月令本气为${elementName(monthMainElement)}；五行取象须以月令为权、随其规定推演，同类象在不同月令天差地别，不可执象为实。`;
+
+  return {
+    version: WU_XING_QU_XIANG.version,
+    source: WU_XING_QU_XIANG.source,
+    method: WU_XING_QU_XIANG.method,
+    monthMainElement,
+    dominantElement,
+    entries,
+    verdict,
+  };
+}
 
 // 五行力量计算（简化评分）
 export function calculateElementPower(chart: BaZiChart): {

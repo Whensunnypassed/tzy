@@ -5,7 +5,10 @@
 //          JIAZI_PILLARS_BY_XUN, MONTH_QI_EXPANDED, CORE_MINGLI_RULES, CLASSIC_MINGLI_CASES, ULTIMATE_SUMMARY,
 //          SHI_ER_CHANG_SHENG, WU_HU_DUN_MONTH_STEM, NIAN_YUE_TAIJI_DEFS, NIAN_YUE_TAIJI_CASES, NIAN_TAIJI_RULES,
 //          WU_HU_DUN_PRINCIPLE, GANZHI_YITI_RULES, GANZHI_ZIHE, CHUNQIU_SEASON_SEGMENTS, CHUNQIU_MONTH_FACTORS, WUXING_SIJI_YIJI,
-//          IDunYueRow, IDunShiRow, IGanZhiState, IGanZhiZiHe, IChunQiuSegment, IChunQiuRound, IChunQiuMonthFactor, IWuXingSiJi
+//          SHI_ER_CHANG_SHENG_CYCLE, ZHI_ZUO_YONG_RULES, WU_XING_QU_XIANG,
+//          TAI_JI_QI_PAIRS, TAI_JI_MODEL_PARAMS, YONG_JI_MODE,
+//          IDunYueRow, IDunShiRow, IGanZhiState, IGanZhiZiHe, IChunQiuSegment, IChunQiuRound, IChunQiuMonthFactor, IWuXingSiJi,
+//          IChangShengStage, IZhiZuoYongRule, IWuXingQuXiang, ITaiJiQiPair
 // 资料来源：《自然易鉴》（丁甲福） + 八字阴阳命理体系补充资料（reference/docs/03_八字阴阳命理·精炼整理.md）
 //          + reference/docs/太极阴阳法·年月分析核心基础.md（年月太极：五虎遁/年干先天吉/年支三类作用/月令两仪/十二长生量化）
 //          + reference/docs/六十甲子.md（六旬 60 柱干支一体状态释义）
@@ -1330,3 +1333,316 @@ export const SHENG_KE_QUAN_RULE = {
   premise: '只有发生刑冲合害破时，地支之间才产生接触；同柱天干与地支不发生物理接触、不交接权力。',
   warning: '本项仅作理气旁证，不参与本系统太极阴阳法的用忌判定与大运流年评分。',
 }
+
+// ============================================================
+// 四柱限段（人生阶段·「限」）配置 —— 判定内核增量
+// 依据《阴阳法基础·八字结构》：「年为根本，月令为权，日为动应，时为结果」；
+// 「天地五行流动不居，早年寄居于年，青年寄居在月，中年在日，晚年为归宿寄居于时」。
+// 一般划分为：年柱 0–16 岁、月柱 16–32 岁、日柱 32–48 岁、时柱 48 岁至晚年。
+// 本表为「四柱限段」判定模块的唯一真源，由 analyzeSiZhuXianDuan 消费；
+// 版本号变更即视为口径演进（可进化契约：仅改此处常量 + 对应纯函数即可升级）。
+// ============================================================
+export interface IXianDuanSegment {
+  position: '年柱' | '月柱' | '日柱' | '时柱'
+  ageStart: number
+  ageEnd: number | null   // null 表示 48 岁至晚年（开口上限）
+  theme: string           // 阶段主题（出身/成长/能动/归宿）
+  keyPoint: string        // 该限的核心关切
+}
+
+export const SI_ZHU_XIAN_DUAN = {
+  version: '1.0.0',
+  source: '《阴阳法基础》·年为根本/月令为权/日为动应/时为结果',
+  segments: [
+    { position: '年柱', ageStart: 0, ageEnd: 16, theme: '早年 · 出身血脉与先天环境', keyPoint: '祖荫、体质底色、家族与社会阶层' },
+    { position: '月柱', ageStart: 16, ageEnd: 32, theme: '青年 · 成长环境与家庭', keyPoint: '成长环境、父母家庭、事业起点' },
+    { position: '日柱', ageStart: 32, ageEnd: 48, theme: '中年 · 自身能动与配偶', keyPoint: '主观能动、人生态度、婚姻居所' },
+    { position: '时柱', ageStart: 48, ageEnd: null, theme: '晚年 · 成果归宿与子嗣', keyPoint: '事业成果、晚年状态、子女终局' },
+  ] as IXianDuanSegment[],
+  principle: '四柱既分层次又彼此关联：某限之柱干支为月令喜用则该阶段气机顺遂，为月令所忌则该阶段多阻力波折；年上为恒气，始终存在、伴随一生。',
+  supplement: '限段为主气归属，非时段独占——岁运引动可跨柱应事，故本模块与「大运流年」联动判读，不构成孤立结论。',
+} as const
+
+// ============================================================
+// 根本吉 / 根本凶（年月根本模式）配置 —— 判定内核增量
+// 依据《年月太极进阶内容》：年干落年支为「根本存在」，年到月为「变化状态」；
+// 「要用之因素在年月上就被否定」→ 根本凶；「年干即月令平衡因素且落实有力/天地一柱成立」→ 根本吉；
+// 年上为恒气，根本吉凶始终存在，岁运可否定或强化之。
+// 本表为「根本吉凶」判定模块的唯一真源，由 analyzeGenBenJiXiong 消费；
+// version 变更即视为口径演进（可进化契约）。
+// ============================================================
+export interface IGenBenCase {
+  yearGZ: string       // 年柱干支（如「庚申」）
+  monthBranch: string  // 月支（如「午」）
+  title: string
+  reason: string
+}
+
+export const GEN_BEN_JI_XIONG = {
+  version: '1.0.0',
+  source: '《年月太极进阶内容》根本模式（年干落年支为根本存在，年到月为变化状态）',
+  principle: '年月一确定，即规定好所有元素的状态与作用模式（根本模式）；「要用之因素在年月上被否定」谓之根本凶，「年干即月令平衡因素且落实有力」谓之根本吉。年上为恒气，吉凶始终存在，岁运可否定或强化之。',
+  // 天地一柱：年干与年支同五行，年干支成太极、力量叠加（在天成象、在地成形相合）
+  tianDiYiZhuRule: '年干与年支同五行则干支成太极、气机叠加为「天地一柱」：同为月令喜用则根本吉加倍（如庚申年午月庚金落实于申）；同为所忌则根本凶加倍。',
+  jiExamples: [
+    { yearGZ: '庚申', monthBranch: '午', title: '庚申年午月·天地一柱庚金', reason: '午月用阴，庚金为最有力、最直接的平衡因素；年干庚落实于年支申（同金一气），天地一柱庚金成立，为得年吉、根本吉——只要日时不去否定，即可得此吉。' },
+    { yearGZ: '戊辰', monthBranch: '子', title: '戊辰年子月·土止寒水', reason: '子月阴寒当令，土止寒制水为贵气之根；子辰合而辰土制水、火有气则为富，年上吉模式成立，为根本吉。' },
+  ] as IGenBenCase[],
+  xiongExamples: [
+    { yearGZ: '甲辰', monthBranch: '午', title: '甲辰年庚午月·克水埋金', reason: '午月用阴，庚金为有力用神、癸水为最弱用神；年支辰中癸水受制（用不起来），金欲用而水受制，庚金易不吉，谓之克水埋金——要用之因素在年月上即被否定，为根本凶；日时须以救应弱水为最佳。' },
+    { yearGZ: '甲寅', monthBranch: '午', title: '甲寅年庚午月·用神被否', reason: '同甲辰年庚午月：年支寅木助正月令之燥、水气难存，庚金用而水受制，为根本凶；日时动应须救应弱水方可转圜。' },
+    { yearGZ: '乙丑', monthBranch: '亥', title: '乙丑年丁亥月·伤阳', reason: '亥月阴重，丁火为要用之阳（生气），然丁坐亥、水旺伤阳；乙木亦受水寒困——年月即否定要用之因素，为根本凶。' },
+  ] as IGenBenCase[],
+} as const
+
+// ============================================================
+// 六亲换太极配置 —— 判定内核增量
+// 依据《阴阳法基础·食伤/印绶篇》：「食伤」为命主所生，是命局的寿元星；
+// 看六亲的灾坎，须对六亲星「换太极」——以六亲星为新太极点，观察其「食伤」的状态好坏。
+// 换太极链：财星的食伤是官杀，官杀的食伤是印绶，印绶的食伤是比劫（同理可续推：比劫的食伤是食伤、食伤的食伤是财星）。
+// 本表为「六亲换太极」判定模块的唯一真源，由 analyzeLiuQinHuanTaiJi 消费；
+// version 变更即视为口径演进（可进化契约）。
+// ============================================================
+export interface IHuanTaiJiChain {
+  from: string      // 太极锚点十神
+  shiShang: string  // 该锚点的「食伤」（换太极后的寿元/灾坎星）
+}
+export interface IHuanTaiJiAnchor {
+  name: string      // 六亲称谓
+  star: string      // 该六亲对应十神（以其为太极点）
+}
+
+export const LIU_QIN_HUAN_TAI_JI = {
+  version: '1.0.0',
+  source: '《阴阳法基础·食伤/印绶篇》',
+  principle: '「食伤」为命主所生，是命局的寿元星；同理，看六亲的灾坎，亦须观察六亲星的「食伤」状态好坏——故须对六亲星换太极。',
+  chainNote: '财星的食伤是官杀，官杀的食伤是印绶，印绶的食伤是比劫（可续推：比劫的食伤是食伤、食伤的食伤是财星）。',
+  usage: '女命断丈夫对己之情感：以官杀为夫，官杀之食伤为印星，印星即代表丈夫对己之情感，甚为常用。',
+  chain: [
+    { from: '财星', shiShang: '官杀' },
+    { from: '官杀', shiShang: '印绶' },
+    { from: '印绶', shiShang: '比劫' },
+    { from: '比劫', shiShang: '食伤' },
+    { from: '食伤', shiShang: '财星' },
+  ] as IHuanTaiJiChain[],
+  anchors: {
+    male: [
+      { name: '配偶（妻）', star: '财星' },
+      { name: '子女', star: '官杀' },
+      { name: '母亲', star: '印绶' },
+      { name: '父亲', star: '偏财' },
+      { name: '兄弟姐妹', star: '比劫' },
+    ] as IHuanTaiJiAnchor[],
+    female: [
+      { name: '配偶（夫）', star: '官杀' },
+      { name: '子女', star: '食伤' },
+      { name: '母亲', star: '印绶' },
+      { name: '父亲', star: '财星' },
+      { name: '兄弟姐妹', star: '比劫' },
+    ] as IHuanTaiJiAnchor[],
+  },
+  guardrail: '六亲灾坎一律以「倾向 + 可调」表述，仅作亲缘厚薄与身心关切的提醒，非宿命断言。',
+} as const
+
+// ============================================================
+// 十二长生「绝为起点」环序配置 —— 判定内核增量
+// 依据《阴阳法基础·十二长生》：十二长生是「看十天干在当前月状态」的核心气机标尺，古人谓通晓则「思过半矣」。
+// 其为循环无端之圆环、各状态互相承袭、周而复始；按阴阳旺衰强弱立序，则以「绝为起点」——绝处逢生、由弱变强：
+//   绝 → 胎 → 养 → 长生 → 沐浴 → 冠带 → 临官 → 帝旺 → 衰 → 病 → 死 → 墓 →（复归绝）
+// 「甲木生气布温、乙木成气承温」：甲长生则乙死、甲帝旺则乙临官——同五行阴阳二干状态恒错一位，
+// 此即「阴死阳生」之正解，非阴阳相害。
+// 本表为十二长生气机判定的唯一真源：CHANG_SHENG_POWER 由此派生（可进化契约：改环序/分值即升级）。
+// ============================================================
+export interface IChangShengStage {
+  stage: string                        // 状态名
+  ringIndex: number                    // 环序位（0 起于「绝」）
+  power: number                        // 气机强弱分（沿用既有量级：正=有力、负=无力）
+  phase: '伏藏' | '生发' | '鼎盛' | '衰退'
+}
+
+export const SHI_ER_CHANG_SHENG_CYCLE = {
+  version: '1.0.0',
+  source: '《阴阳法基础·十二长生》',
+  principle: '十二长生为循环无端之圆环，各状态互相承袭、周而复始；按阴阳旺衰强弱论，以「绝为起点」——绝处逢生、由弱变强。',
+  anchorNote: '甲木为生气布温、乙木为成气承温：甲长生则乙死、甲帝旺则乙临官，同五行阴阳二干状态恒错一位，即「阴死阳生」之正解，非阴阳相害。',
+  powerNote: '分值非按环序单调递增：长生为初生之气、气机已显，而沐浴为败地（阳干沐浴在四正地、无依托），故沐浴分值低于长生，符合古法「沐浴为败地」之义。',
+  stages: [
+    { stage: '绝', ringIndex: 0, power: -20, phase: '伏藏' },
+    { stage: '胎', ringIndex: 1, power: 2, phase: '伏藏' },
+    { stage: '养', ringIndex: 2, power: 6, phase: '伏藏' },
+    { stage: '长生', ringIndex: 3, power: 20, phase: '生发' },
+    { stage: '沐浴', ringIndex: 4, power: 8, phase: '生发' },
+    { stage: '冠带', ringIndex: 5, power: 18, phase: '生发' },
+    { stage: '临官', ringIndex: 6, power: 22, phase: '鼎盛' },
+    { stage: '帝旺', ringIndex: 7, power: 24, phase: '鼎盛' },
+    { stage: '衰', ringIndex: 8, power: 4, phase: '衰退' },
+    { stage: '病', ringIndex: 9, power: 2, phase: '衰退' },
+    { stage: '死', ringIndex: 10, power: -18, phase: '衰退' },
+    { stage: '墓', ringIndex: 11, power: -12, phase: '衰退' },
+  ] as IChangShengStage[],
+} as const
+
+// ============================================================
+// 地支作用规则配置 —— 判定内核增量
+// 依据《阴阳法基础·地支的作用关系》：① 一切作用须「根据月令的规定」进行（月令为权、定其主导）；
+// ② 刑、冲、合、害须「打开地支藏干」进行全面作用；③ 「三合三会不打开地支藏干」，仅按所汇之局论气机；
+// ④ 刑有作用方向（如丑未戌三刑为丑刑戌、戌刑未）。
+// 本表为地支作用判定的唯一规则真源（可进化契约）。
+// ============================================================
+export interface IZhiZuoYongRule { id: string; rule: string; note: string }
+
+export const ZHI_ZUO_YONG_RULES = {
+  version: '1.0.0',
+  source: '《阴阳法基础·地支的作用关系》',
+  principle: '地支之间的互动必须充分理解其作用关系；且一切作用都要「根据月令的规定」进行——月令为权，决定哪个元素占主导，当令有力者占主导地位。',
+  rules: [
+    { id: 'yueling', rule: '月令为权', note: '任何地支作用都须置于月令规定之下进行；当令有力者占主导，失令者虽众不强。' },
+    { id: 'xingchonghehai', rule: '刑冲合害·开藏干', note: '刑、冲、合、害须打开地支藏干进行全面作用。如寅巳相遇，寅中甲丙戊、巳中丙戊庚全部参与。' },
+    { id: 'sanhesanhui', rule: '三合三会·不开藏干', note: '三合、三会不打开地支藏干，仅按所汇之局的五行论气机厚薄。' },
+    { id: 'xingfangxiang', rule: '刑有方向', note: '刑有作用方向，如丑未戌三刑为丑刑戌、戌刑未。' },
+  ] as IZhiZuoYongRule[],
+  engineNote: '本系统「地支作用」评分模块中，三合/三会仅聚合所汇五行、不读取藏干，与此规则一致；藏干参与仅见于「五行力量 / 阴阳寒热」的静态量化，非作用开库。',
+} as const
+
+// ============================================================
+// 五行取象配置 —— 判定内核增量
+// 依据《五行取象逻辑》：从「理」到「象」——先明五行本性（四象气机），再推其在时空中的投射；
+// 类象是「理」的投射、非并列标签，更不可当比喻游戏。木-少阳、火-老阳、土-无阴阳（纳阴纳阳）、
+// 金-少阴、水-老阴；十干各分生气（布气）与成气（承气）。
+// 本表为五行 / 干支取象判定的唯一真源，供象意解读区消费（可进化契约）。
+// ============================================================
+export interface IWuXingQuXiang {
+  element: 'wood' | 'fire' | 'earth' | 'metal' | 'water'
+  name: string
+  benXing: string      // 本性 / 四象
+  qiFen: string        // 生气 / 成气
+  wuDe: string         // 五德
+  gua: string          // 后天八卦归属
+  xiang: string[]      // 主要类象
+  renTi: string        // 人体对应
+  liuZhuan: string     // 十二月令流转
+}
+
+export const WU_XING_QU_XIANG = {
+  version: '1.0.0',
+  source: '《五行取象逻辑》',
+  method: '从理到象：所有「象」都是「理」在时空中的投射——先明五行本性（四象气机），再随月令规定推其类象，不可执象为实、更不可作比喻游戏。',
+  items: [
+    {
+      element: 'wood', name: '木',
+      benXing: '少阳，外阳而内阴，本性为「温」——连接寒（水）与热（火）的枢纽',
+      qiFen: '甲木生气布温、乙木成气承温',
+      wuDe: '主仁（济物利人；阴重而木阳受损则异化为「嫉妒」）',
+      gua: '震卦（为雷、为动，阳气初出、万物始动之机）',
+      xiang: ['车象（大型工具车 / 货车 / 轮子）', '首领、公门之人', '大树、电线杆', '语言（木主语言）；术数（甲重道、乙重术，乙卯宜玄学术数）', '手工艺、庄稼、四肢、神经'],
+      renTi: '甲主头、胆；乙主肝、手指与胸部；木对应神经系统（阳重狂躁、阴重忧思）',
+      liuZhuan: '寅卯当令而旺（成温则温良恭让、余寒未尽则迂仁）；辰月温已成（克土救水）；巳午未被火焚（病死于阳过、杀身成仁）；申酉戌金旺克木（形质受否、劳苦无仁）；亥子水寒浸木（水漂木、贫寒流浪）',
+    },
+    {
+      element: 'fire', name: '火',
+      benXing: '老阳，内外皆阳，纯能量、几乎无物质基础，须寄附木石气而显',
+      qiFen: '丙火生气布热、丁火成气承热',
+      wuDe: '主礼（礼法与秩序，社会文明的最高层次）',
+      gua: '离卦（光、明，与名声、信仰、神佛相通）',
+      xiang: ['虚拟、影像与传媒（银幕 / 网络 / 影视 / 广告大屏）', '名声、表达、口才、神采（火为表达）', '礼法、秩序、宗教信仰', '武贵（火金平衡、火炼秋金）'],
+      renTi: '眼、心脏、血脉、小肠（火为血，火克金不吉常见流血象）',
+      liuZhuan: '寅卯为长生（实热不足）；辰月冠带（生气增强、平衡阴阳）；巳午未当令极旺（阳主富、无制则暴虐焚木焦土）；申酉戌退气（丁火余热炼秋金成规则之贵）；亥子丑绝胎养（有气则为雪中送炭之暖）',
+    },
+    {
+      element: 'earth', name: '土',
+      benXing: '无阴阳偏性，既非寒亦非热，是承载寒热之载体、阴阳交感之场所；寄旺四季、旺不在己，居中以调和四时、纳阴纳阳',
+      qiFen: '戊土生气为「稼」（布气承载）、己土成气为「穑」（接收收获）',
+      wuDe: '主信（守信守序；太过则愚忠死板）',
+      gua: '居中宫、散在四维（辰戌丑未为四季转接之枢纽、四墓库）',
+      xiang: ['平台（公司职位 / 社会背景 / 家庭依靠，承载立足之所）', '房子、土地、组织结构、制度、身体肌肉', '生活琐事、承载性事物', '四支体感：丑艮止寒治乱（狱警 / 城管 / 金库）、辰巽化湿暧昧（教育 / 商业 / 意乱情迷）、未坤晦火纳阳（衣食 / 食品 / 教师）、戌乾收燥威严（政府机构 / 影视传媒 / 宗教禅院）'],
+      renTi: '脾胃、肌肉、身体；戊主鼻、胃、皮肤，己主脾、腹',
+      liuZhuan: '土不独立当令，于四季交接处发挥作用：丑止冬寒、辰化春湿、未晦夏火、戌收秋燥——四者既收藏旧气机、又孕育新变化（「无土不成局」）',
+    },
+    {
+      element: 'metal', name: '金',
+      benXing: '少阴，外阴而内阳；气机为凉、肃、降、敛——寒之始、热之终，由散转收、由动归静',
+      qiFen: '庚金生气布凉（刚烈、开辟裁断，「庚金带煞」）、辛金成气承凉（成形、精器珠玉）',
+      wuDe: '主义（正义、原则、法律底线）',
+      gua: '兑卦（主口、主说话、音色，对应人体一切开口处）',
+      xiang: ['规则、法律、约束、制度与秩序', '金融、管理、公检法、部队', '庚金主刀兵（武职判断依据）；辛金主针、手术刀（医生行业依据）'],
+      renTi: '肺、大肠、骨（金寒水冷则肺气不足，金弱水旺则骨骼无力）',
+      liuZhuan: '当秋之令、气主肃降：金水相涵则思维敏捷、表达能力强；金强木弱则规则压制，木强金弱则想法多而缺执行',
+    },
+    {
+      element: 'water', name: '水',
+      benXing: '老阴，内外皆阴，阴气完全下沉、润入地下、无所止；渗透力极强，可透肌肤入骨髓',
+      qiFen: '壬水生气（江河湖海、气势宏大、志向远）、癸水成气（雨露溪泉、细密务实、幕后谋划）',
+      wuDe: '主智（水有吉方为真智；水弱被克或过旺失制则智失）',
+      gua: '坎卦（为轮 / 交通、为毒、为陷险）',
+      xiang: ['智慧、谋略、洞察人情；变化、流动、漂泊', '欲望（水阴太重无制则唯利是图、贪色重欲）', '文贵（水吉以学致贵）、歌（主歌）；车辆交通、毒物、陷阱危险、失踪'],
+      renTi: '津液、肾气、生殖之欲；疾病对应瘙痒、炎症、寒湿之症',
+      liuZhuan: '水为老阴、冬令当权；夏雨水多乃阴阳二气交感之象，非「五行水旺」——不可把五行水等同于现实之水',
+    },
+  ] as IWuXingQuXiang[],
+} as const
+
+// ============================================================
+// 太极二气配比配置（方案 B）—— 用神忌神「大方向」判据升级 · 判定内核增量
+// 依据《十二月份取用》：判断用阴用阳是「傻瓜式模版套用」的误区；月令的真实锚点是「太极二气」
+//   （春=丙癸 / 秋=丁壬 / 夏=火与庚金 / 冬=火与水），其余元素只是扶抑这两股气的辅助。
+// 本表为「各月太极二气代表字 + 定局方式」的唯一真源（可进化契约）：
+//   computeTaiJiQi 依据本表 + 十二长生「绝为起点」环序 + 柱位权重，量化本盘二气存量与配比，
+//   作为 analyzeYongJi「大方向判据来源」的候选；是否启用由 YONG_JI_MODE 逐月灰度开关控制。
+// 注：元素归方（木火→阳、金水→阴、土按燥湿折算）严格遵循两仪口径，与本表 yang/yin 代表字解耦——
+//     本表 yang/yin 仅用于标记「该月最有力的两股太极气」及春秋/救应等定局方式。
+// ============================================================
+export interface ITaiJiQiPair {
+  yang: string[]   // 阳仪代表元素（富基）
+  yin: string[]    // 阴仪代表元素（贵基）
+  mode: 'chun' | 'xia' | 'qiu' | 'dong' | 'rescueYin' | 'rescueYang'  // 定局方式
+}
+
+export const TAI_JI_QI_PAIRS = {
+  version: '1.0.0',
+  source: '《十二月份取用》',
+  principle: '判断用阴用阳为模版套用之误区；月令的真实锚点是太极二气（春=丙癸、秋=丁壬、夏=火与庚金、冬=火与水），其余元素只是扶抑这两股气的辅助。丙癸两不伤则富贵双全。',
+  months: {
+    寅: { yang: ['fire'], yin: ['water'], mode: 'chun' },
+    卯: { yang: ['fire'], yin: ['water'], mode: 'chun' },
+    辰: { yang: ['fire'], yin: ['water'], mode: 'rescueYin' },   // 救癸水
+    巳: { yang: ['fire'], yin: ['metal'], mode: 'xia' },         // 首用庚金
+    午: { yang: ['fire'], yin: ['metal'], mode: 'xia' },
+    未: { yang: ['fire'], yin: ['metal'], mode: 'xia' },
+    申: { yang: ['fire'], yin: ['water'], mode: 'qiu' },         // 丁壬，先辨余热/成凉
+    酉: { yang: ['fire'], yin: ['water'], mode: 'qiu' },
+    戌: { yang: ['wood'], yin: ['water'], mode: 'rescueYang' },  // 甲木第一用神
+    亥: { yang: ['fire'], yin: ['water'], mode: 'dong' },
+    子: { yang: ['fire'], yin: ['water'], mode: 'dong' },
+    丑: { yang: ['fire'], yin: ['water'], mode: 'dong' },
+  } as Record<string, ITaiJiQiPair>,
+} as const
+
+// 太极二气配比的量化参数（标定初值，可由 CFG 调整 → 可进化）
+export const TAI_JI_MODEL_PARAMS = {
+  version: '1.0.0',
+  source: '《十二月份取用》+ 《阴阳法基础·十二长生》',
+  principle: '二气存量 = Σ 柱位权重 × 该干支在本月令的十二长生强度 × 土折算系数；配比以阈值 θ 判定「过 / 均衡」。',
+  theta: 0.06,       // 均衡阈值：|阳−阴| 占比超过 θ 判「过」，否则判「均衡」（宁可判均衡、不误判过）
+  earthK: 0.35,      // 土折算系数（土无阴阳偏性、纳阴纳阳，不整体归方）
+  changShengRange: [-20, 24] as [number, number], // 十二长生归一化区间（绝=−20 … 帝旺=24），与环序 CFG 同源
+  huiHuoStoreJin: {
+    huiHuoFireScale: 0.55,      // 夏月见未 / 戌：晦火——阳方（火）贡献 × 0.55
+    storeJinBonusScale: 0.55,    // 夏月见未 / 戌：存金——阴方（金）贡献 × (1 + 0.55)
+    note: '「未戌晦火存金」双面记账，沿用寒热计算的 0.55 量级。',
+  },
+  hardConditions: {
+    chun: '春温局（寅卯）：木得火肯定、且不被金水阴气否定 → 成温为体阳用阴（用阴）；否则体阴用阳（用阳）。见水即体阴用阳；见金须落实年支方不以成温论。',
+    qiu: '秋凉局（申酉）：先辨余热局 / 成凉局——余热局用阴（金水泄土克火）、成凉局用阳（木火炼金），两局取用相反。',
+  },
+} as const
+
+// 用忌大方向判据来源开关（方案 B 回退 / 灰度）：mode='binary' 一键回退旧口径（逐月固化 usageDirection 二分）
+export const YONG_JI_MODE = {
+  version: '1.0.0',
+  source: '《十二月份取用》（方案 B：太极二气配比）',
+  principle: 'mode 为全局开关：taiji=以太极二气配比定用忌「大方向」；binary=沿用逐月固化的 usageDirection 二分（旧口径，一键回退）。months 为逐月灰度覆盖。',
+  mode: 'binary' as 'taiji' | 'binary',
+  months: {
+    // 灰度占位：某月积累 ≥3 例命例回放通过后，在此置 'taiji' 即单独启用该月（未列出者随全局 mode）
+  } as Record<string, 'taiji' | 'binary'>,
+} as const
