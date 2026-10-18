@@ -23,11 +23,12 @@
  *     ——可见注入不局限于该字自身五行格，而是沿五行生克传导演变为「作用向量」，
  *       故同一五行在不同命盘（用忌不同）所评出的得失结论不同（见 effects / verdict）。
  *
- *   理想函数 f*（虚线虚影）：二气配平——两仪各半
- *     T = w木+w火+w金+w水（两仪总权重，不含土）
- *     k_阳 = (T/2)/w_阳、k_阴 = (T/2)/w_阴（某侧为 0 则该侧取 0）
- *     f*(e) = Z_MAX × σ(e) × w_e × k_侧 / W
- *     实线与虚影之差 = 该五行距「本盘应去方向」的缺口：正值＝尚需增强（上移至理想），负值＝偏多需减。
+ *   理想函数 f*（虚线虚影）：用神理想态——与用忌判定同源
+ *     avg = (w木+w火+w金+w水)/4（两仪每行平均权重，不含土）
+ *     用神元素：w*_e = max(w_e, (1+δ)·avg)；忌神元素：w*_e = min(w_e, (1−δ)·avg)；中性/土：w*_e = w_e
+ *     f*(e) = Z_MAX × σ(e) × w*_e / W
+ *     实线与虚影之差 = 该五行距「用神理想态」的缺口：正＝尚差（需补此五行）、负＝已超（宜减）。
+ *     因 f* 只用「用忌标记 + 原局权重」定标，注入用神必使当前值向 f* 靠拢，与得失徽章口径一致。
  *
  * 数据单一真源：只读引擎既有导出（STEMS / BRANCHES / STEM_ELEMENTS / BRANCH_ELEMENTS /
  *              PILLAR_WEIGHTS / allStemMarks / allBranchMarks），不在模型层复制命理规则；
@@ -112,13 +113,14 @@ export interface MingJuFieldEffect {
 
 /** 模型常量（算法升级只改此处，不动 UI） */
 export const MINGJU_FIELD_CFG = {
-  version: 'field-v6.0.0',
+  version: 'field-v7.0.0',
   zMax: 7, // 阴阳轴满量程（与 DaYunCurveChart 的 ±7 对齐）
   neutralBand: 0.3, // |z| 小于此值视为中性（趋平）
   maxInject: 8, // 最多可注入的字数（保证图面可读；渲染层始终只有「实线 + 虚影」两条线）
   injectStemWeight: 1, // 注入天干的名义单字权重
   injectBranchWeight: 1.5, // 注入地支的名义单字权重
   shengKeCoupling: 0.35, // 生克耦合 λ：注入字对「所生 / 所克」五行节点的影响强度（0 = 关断传导）
+  idealDelta: 0.5, // 理想 f* 偏离均值幅度 δ：用神宜 ≥(1+δ)×两仪均值、忌神宜 ≤(1−δ)×两仪均值
   deltaEps: 0.05, // 位移/缺口阈：|Δ| 小于此值视为无变化，不画竖线
 } as const;
 
@@ -189,7 +191,7 @@ export interface MingJuFieldQi {
   yinWeight: number; // 阴仪权重（金+水）
   earthWeight: number; // 太极枢机权重（土）
   imbalance: number; // 阳 − 阴（正=偏阳，负=偏阴）
-  idealSideWeight: number; // 理想配平后每侧权重（=两仪总权重/2）
+  averageYiWeight: number; // 两仪每行平均权重（=两仪总权重/4），理想 f* 的定标基准
 }
 
 export interface MingJuField {
@@ -198,7 +200,7 @@ export interface MingJuField {
   elementNames: string[];
   /** 第 0 层 = 原局基准 f₀ */
   base: number[];
-  /** 理想函数虚影 f*（二气配平，固定参照线，不随注入变化） */
+  /** 理想函数虚影 f*（用神理想态，固定参照线，不随注入变化） */
   ideal: number[];
   sources: MingJuFieldSource[];
   /** 全部 22 个可注入字的目录（供 UI 渲染选择器） */
@@ -236,7 +238,7 @@ export function buildMingJuField(
   yongJi: YongJiResult,
   injectedIds: ReadonlySet<string> = new Set(),
 ): MingJuField {
-  const { zMax, neutralBand, maxInject, injectStemWeight, injectBranchWeight, shengKeCoupling } =
+  const { zMax, neutralBand, maxInject, injectStemWeight, injectBranchWeight, shengKeCoupling, idealDelta } =
     MINGJU_FIELD_CFG;
   const warnings: string[] = [];
 
@@ -309,6 +311,14 @@ export function buildMingJuField(
 
   const totalWeight = sources.reduce((sum, s) => sum + s.weight, 0) || 1;
 
+  // ---------- 五行格在本盘的用/忌（土为太极枢机、中轴不动，恒判中性；木火金水取自月令元素级二分） ----------
+  const elemMark = (e: FieldElement): XiJiMark => {
+    if (e === 'earth') return 'neutral';
+    if (yongJi.usefulElements.includes(e)) return 'useful';
+    if (yongJi.tabooElements.includes(e)) return 'taboo';
+    return 'neutral';
+  };
+
   // ---------- 原局基准 f₀（阴阳轴） ----------
   const base = FIELD_ELEMENT_ORDER.map((e) =>
     round3((zMax * signOfElement(e) * elementWeights[e]) / totalWeight),
@@ -317,35 +327,33 @@ export function buildMingJuField(
     s.contribution = round3((zMax * s.sign * s.weight) / totalWeight);
   }
 
-  // ---------- 理想函数 f*（二气配平：两仪各半） ----------
+  // ---------- 理想函数 f*（用神理想态：助用神、抑忌神，与用忌判定同源） ----------
+  // 用神元素宜至少达到「两仪每行均值上浮 (1+δ)」、忌神元素宜不高于 (1−δ) 倍均值，中性元素与太极枢机保原状。
+  // 如此「注入用神 → 当前值向 f* 靠拢（缺口缩小）」「注入忌神 → 远离 f*」恒成立，与得失徽章口径一致，
+  // 不会出现「喜用之字注入后反离理想更远」的矛盾。
   const yangWeight = elementWeights.wood + elementWeights.fire;
   const yinWeight = elementWeights.metal + elementWeights.water;
-  const yiTotal = yangWeight + yinWeight;
-  const idealSideWeight = yiTotal / 2;
-  const kYang = yangWeight > 1e-6 ? idealSideWeight / yangWeight : 0;
-  const kYin = yinWeight > 1e-6 ? idealSideWeight / yinWeight : 0;
-  const ideal = FIELD_ELEMENT_ORDER.map((e) => {
-    const sign = signOfElement(e);
-    const k = sign > 0 ? kYang : sign < 0 ? kYin : 0;
-    return round3((zMax * sign * elementWeights[e] * k) / totalWeight);
-  });
+  const averageYiWeight = (yangWeight + yinWeight) / 4;
+  const idealWeightOf = (e: FieldElement): number => {
+    const w = elementWeights[e];
+    const mark = elemMark(e);
+    if (mark === 'useful') return Math.max(w, (1 + idealDelta) * averageYiWeight);
+    if (mark === 'taboo') return Math.min(w, (1 - idealDelta) * averageYiWeight);
+    return w;
+  };
+  const ideal = FIELD_ELEMENT_ORDER.map((e) =>
+    round3((zMax * signOfElement(e) * idealWeightOf(e)) / totalWeight),
+  );
 
   const qi: MingJuFieldQi = {
     yangWeight: round3(yangWeight),
     yinWeight: round3(yinWeight),
     earthWeight: round3(elementWeights.earth),
     imbalance: round3(yangWeight - yinWeight),
-    idealSideWeight: round3(idealSideWeight),
+    averageYiWeight: round3(averageYiWeight),
   };
 
   // ---------- 可注入目录（十天干 + 十二地支；原局已含者仍可注入） ----------
-  // 五行格在本盘的用/忌（土为太极枢机、中轴不动，恒判中性；木火金水取自月令元素级二分）
-  const elemMark = (e: FieldElement): XiJiMark => {
-    if (e === 'earth') return 'neutral';
-    if (yongJi.usefulElements.includes(e)) return 'useful';
-    if (yongJi.tabooElements.includes(e)) return 'taboo';
-    return 'neutral';
-  };
   // 得失口诀：增用=助用吉、增忌=助忌凶、减忌=制忌吉、减用=制用凶；中性（含土）为平
   const judgeEffect = (mark: XiJiMark, change: 'increase' | 'decrease'): 'gain' | 'loss' | 'flat' => {
     if (mark === 'neutral') return 'flat';
@@ -456,7 +464,7 @@ export function buildMingJuField(
   }
 
   if (base.every((v) => Math.abs(v) < neutralBand)) {
-    warnings.push('两仪权重俱薄、原局基准曲线趋平，此时以理想虚影（二气配平线）为主要参照。');
+    warnings.push('两仪权重俱薄、原局基准曲线趋平，此时以理想虚影（用神理想态线）为主要参照。');
   }
 
   return {

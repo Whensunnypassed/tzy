@@ -6,12 +6,12 @@
  *   用/忌 语义只出现在下方「选字」区与用忌模块，避免与轴语义理解重复。
  * 两条线：
  *   实线 = 当前函数 f（原局 + 注入累积）；
- *   虚线 = 理想函数 f* 虚影（二气配平：两仪各半）——「本盘应去的方向」，固定参照线。
- *   二者之差即该五行距理想的缺口：正值＝尚需增强（上移至理想），负值＝偏多需减。
+ *   虚线 = 理想函数 f* 虚影（用神理想态：助用神、抑忌神）——「本盘应去的方向」，固定参照线。
+ *   竖线 = 该五行当前值与理想态的差距：尚差（需补此五行）/ 已超（宜减）。
  * 交互语义：点击任一干支（含原局已含者＝岁运再逢）→
- *   ① 该字以作用箭头指向其所属五行节点；
+ *   ① 该字以箭头垂直指向其所属五行节点（自身格；所生/所克格的连带变化见节点位移与读数条）；
  *   ② 被作用节点自「原局位置」平滑上移或下降（easeOutCubic 动画）；
- *   ③ 灰虚线方框保留「原来的位置」参照，竖线给出当前距理想的缺口，逐行读数条给出精确值。
+ *   ③ 灰虚线方框保留「原来的位置」参照，逐行读数条给出精确值。
  * 全图仅「实线 + 虚影」两条线，不再由注入层堆叠出新曲线；宽度 100% 自适应容器，无横向滚动。
  *
  * 瑞士风约束：全直角、无阴影、无渐变、无 emoji，色彩仅承载语义（阳橙 / 阴靛蓝 / 五行平涂色）。
@@ -82,7 +82,8 @@ const YANG_COLOR = '#DD7A16';
 const YIN_COLOR = '#2B528F';
 const SIGN_COLOR = (sign: number) => (sign > 0 ? YANG_COLOR : sign < 0 ? YIN_COLOR : ELEMENT_COLOR.earth);
 const CURVE_COLOR = '#1F2937';
-const IDEAL_COLOR = '#6B7280';
+/** 理想 f* 虚影：深青碧，与灰规线/原局灰框/实线均明显区分，专用作「本盘应去方向」参照 */
+const IDEAL_COLOR = '#0F766E';
 const GHOST_COLOR = '#94A3B8';
 
 const fmt = (n: number) => (n >= 0 ? '+' : '') + Math.round(n * 10) / 10;
@@ -158,7 +159,9 @@ export default function MingJuFieldChart({ chart, yongJi }: MingJuFieldChartProp
   const targetVals = useMemo(() => field.layers[field.layers.length - 1].values, [field]);
   const animVals = useAnimatedValues(targetVals);
   const baseDeltaOf = (i: number) => (targetVals[i] ?? 0) - (baseVals[i] ?? 0);
-  const gapOf = (i: number) => (targetVals[i] ?? 0) - (idealVals[i] ?? 0);
+  // 距「用神理想态」的缺口（已折算到该五行自身极性方向）：>0 ＝尚差（需补此五行）、<0 ＝已超（宜减）
+  const shortageOf = (i: number) =>
+    FIELD_YIN_YANG_SIGN[field.elements[i]] * ((idealVals[i] ?? 0) - (targetVals[i] ?? 0));
 
   const toggleInject = useCallback((id: string) => {
     setInjected((prev) => {
@@ -252,19 +255,19 @@ export default function MingJuFieldChart({ chart, yongJi }: MingJuFieldChartProp
         </span>
         <span className="label-mono case-preserve text-[9.5px] leading-snug text-foreground">
           原局二气　阳仪 w {qi.yangWeight} ／ 阴仪 w {qi.yinWeight} ｜ 差 {fmt(qi.imbalance)}（{biasLabel}）｜
-          理想配平每侧 w {qi.idealSideWeight} ｜ 已注入 {field.injected.length} 字 ｜ 注入沿五行生克传导（λ {cfg.shengKeCoupling}）
+          理想 f* 按用忌定标（用神上浮 / 忌神抑低，两仪均值 w {qi.averageYiWeight}）｜ 已注入 {field.injected.length} 字 ｜ 注入沿五行生克传导（λ {cfg.shengKeCoupling}）
         </span>
       </div>
 
-      {/* 逐行读数：原局 f₀ → 当前 f → 理想 f* → 距理想 */}
+      {/* 逐行读数：原局 f₀ → 当前 f → 理想 f*（用神理想态）→ 尚差 / 已超 */}
       <div className="mb-3 grid grid-cols-5 border border-border" style={{ borderRadius: 0 }}>
         {field.elements.map((el, i) => {
           const b = baseVals[i] ?? 0;
           const c = targetVals[i] ?? 0;
           const id = idealVals[i] ?? 0;
-          const g = c - id;
+          const sh = shortageOf(i);
           const ec = ELEMENT_COLOR[el as FieldElement];
-          const gc = g > cfg.deltaEps ? YANG_COLOR : g < -cfg.deltaEps ? YIN_COLOR : GHOST_COLOR;
+          const sc = sh > cfg.deltaEps ? SIGN_COLOR(FIELD_YIN_YANG_SIGN[el as FieldElement]) : GHOST_COLOR;
           const isPivot = field.elements[i] === 'earth';
           return (
             <div
@@ -289,8 +292,8 @@ export default function MingJuFieldChart({ chart, yongJi }: MingJuFieldChartProp
                     <span className="label-mono text-[8.5px] text-muted-foreground">理想 {fmt(id)}</span>
                   </div>
                   <div className="mt-0.5 flex items-baseline gap-1">
-                    <span className="label-mono case-preserve text-[9px] font-black" style={{ color: gc }}>
-                      距理想 {fmt(g)}
+                    <span className="label-mono case-preserve text-[9px] font-black" style={{ color: sc }}>
+                      {sh > cfg.deltaEps ? `尚差 ${fmt(sh)}` : sh < -cfg.deltaEps ? `已超 ${fmt(-sh)}` : '已达理想'}
                     </span>
                     {Math.abs(baseDeltaOf(i)) > cfg.deltaEps && (
                       <span className="label-mono case-preserve text-[8.5px] text-muted-foreground">
@@ -376,11 +379,19 @@ export default function MingJuFieldChart({ chart, yongJi }: MingJuFieldChartProp
             阴仪 ↓
           </text>
 
+          {/* 理想 f* 图内图例（补足「颜色身份」，避免与灰规线混淆） */}
+          <g>
+            <line x1={PLOT_L + 8} y1={26} x2={PLOT_L + 30} y2={26} stroke={IDEAL_COLOR} strokeWidth={1.8} strokeDasharray="7 5" strokeLinecap="round" />
+            <text x={PLOT_L + 36} y={29.5} fontSize="9.5" fontWeight="900" fill={IDEAL_COLOR} style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+              理想 f*（用神目标 · 固定参照）
+            </text>
+          </g>
+
           {/* z = 0 基准线（太极枢机所在） */}
           <line x1={PLOT_L - 8} y1={yAt(0)} x2={PLOT_R + 8} y2={yAt(0)} stroke="#3A4450" strokeWidth={1.4} />
 
-          {/* 理想函数虚影 f*（二气配平 · 本盘应去方向）；先画，使实线压在其上 */}
-          <path d={smoothPath(field.elements.map((_, i) => ({ x: xAt(i), y: yAt(idealVals[i] ?? 0) })))} fill="none" stroke={IDEAL_COLOR} strokeWidth={1.8} strokeDasharray="7 5" strokeLinecap="round" />
+          {/* 理想函数虚影 f*（用神理想态 · 本盘应去方向）；先画，使实线压在其上 */}
+          <path d={smoothPath(field.elements.map((_, i) => ({ x: xAt(i), y: yAt(idealVals[i] ?? 0) })))} fill="none" stroke={IDEAL_COLOR} strokeWidth={2} strokeDasharray="7 5" strokeLinecap="round" />
           {field.elements.map((_, i) => {
             if (field.elements[i] === 'earth') return null;
             const y = yAt(idealVals[i] ?? 0);
@@ -422,13 +433,14 @@ export default function MingJuFieldChart({ chart, yongJi }: MingJuFieldChartProp
             );
           })}
 
-          {/* 当前距理想的缺口竖线（阳橙＝尚需增强 / 阴靛蓝＝偏多需减） */}
+          {/* 当前值与理想 f* 的缺口竖线（尚差＝该五行仍需补 / 已超＝宜减）；两仪色标缺口、灰色标已足 */}
           {field.elements.map((_, i) => {
-            const g = gapOf(i);
-            if (Math.abs(g) <= cfg.deltaEps) return null;
+            const sh = shortageOf(i);
+            if (Math.abs(sh) <= cfg.deltaEps) return null;
             const iy = yAt(idealVals[i] ?? 0);
             const cy = yAt(animVals[i] ?? 0);
-            const col = g > 0 ? YANG_COLOR : YIN_COLOR;
+            const needMore = sh > 0;
+            const col = needMore ? SIGN_COLOR(FIELD_YIN_YANG_SIGN[field.elements[i]]) : GHOST_COLOR;
             const lx = i >= 3 ? xAt(i) - 8 : xAt(i) + 8;
             const anchor = i >= 3 ? 'end' : 'start';
             return (
@@ -443,7 +455,7 @@ export default function MingJuFieldChart({ chart, yongJi }: MingJuFieldChartProp
                   fill={col}
                   style={{ fontFamily: 'var(--font-mono, monospace)' }}
                 >
-                  距理想 {fmt(g)}
+                  {needMore ? `尚差 ${fmt(sh)}` : `已超 ${fmt(-sh)}`}
                 </text>
               </g>
             );
@@ -469,71 +481,30 @@ export default function MingJuFieldChart({ chart, yongJi }: MingJuFieldChartProp
             );
           })}
 
-          {/* 注入字作用向量：对 自身 / 所生 / 所克 三类五行格各画一条箭头（含跨五行传导） */}
+          {/* 注入字：自标签垂直指向其所属五行节点（自身格）；所生/所克格的连带变化见节点位移、读数条与悬停提示 */}
           {chips.map(({ c, ei, order }) => {
-            const nodeTopY = Math.min(yAt(animVals[ei] ?? 0), yAt(baseVals[ei])) - 10;
-            const chipY = nodeTopY - 16 - order * 24;
+            const nodeY = yAt(animVals[ei] ?? 0);
+            const chipY = nodeY - 24 - order * 22;
             const cx = xAt(ei);
-            const startX = cx;
+            const col = SIGN_COLOR(FIELD_YIN_YANG_SIGN[c.element]);
             const startY = chipY + 8;
+            const endY = nodeY - 9; // 箭头止于节点上缘
+            const selfDelta = c.effects.find((e) => e.kind === 'self')?.axisDelta ?? c.contribution;
             return (
               <g key={`inj-${c.id}`}>
-                {c.effects.map((eff) => {
-                  const isSelf = eff.kind === 'self';
-                  if (!isSelf && Math.abs(eff.axisDelta) <= cfg.deltaEps) return null;
-                  const ti = field.elements.indexOf(eff.element);
-                  const tx = xAt(ti);
-                  const ty = yAt(animVals[ti] ?? 0);
-                  const col = SIGN_COLOR(FIELD_YIN_YANG_SIGN[eff.element]);
-                  const dx = tx - startX;
-                  const dy = ty - startY;
-                  const len = Math.hypot(dx, dy) || 1;
-                  const ux = dx / len;
-                  const uy = dy / len;
-                  const ax = tx - ux * 11;
-                  const ay2 = ty - uy * 11;
-                  const px = -uy;
-                  const py = ux;
-                  const head = 4.2;
-                  const baseX = ax - ux * head * 2;
-                  const baseY = ay2 - uy * head * 2;
-                  // 标签落在箭头中部，左移/右移避开箭头线
-                  const t = isSelf ? 0.62 : 0.5;
-                  const lx2 = startX + (ax - startX) * t + (ti >= 3 ? -7 : 7);
-                  const ly2 = startY + (ay2 - startY) * t + 3;
-                  const labelText = isSelf
-                    ? `${fmt(eff.axisDelta)}`
-                    : `${EFFECT_LABEL[eff.kind]}${FIELD_ELEMENT_NAMES[eff.element]} ${fmt(eff.axisDelta)}`;
-                  return (
-                    <g key={`${c.id}-${eff.kind}`}>
-                      <line
-                        x1={startX}
-                        y1={startY}
-                        x2={ax}
-                        y2={ay2}
-                        stroke={col}
-                        strokeWidth={isSelf ? 1.6 : 1.2}
-                        strokeDasharray={eff.kind === 'controls' ? '4 3' : undefined}
-                        opacity={0.9}
-                      />
-                      <polygon
-                        points={`${ax},${ay2} ${baseX + px * head},${baseY + py * head} ${baseX - px * head},${baseY - py * head}`}
-                        fill={col}
-                      />
-                      <text
-                        x={lx2}
-                        y={ly2}
-                        textAnchor={ti >= 3 ? 'end' : 'start'}
-                        fontSize="9"
-                        fontWeight="800"
-                        fill={col}
-                        style={{ fontFamily: 'var(--font-mono, monospace)' }}
-                      >
-                        {labelText}
-                      </text>
-                    </g>
-                  );
-                })}
+                <line x1={cx} y1={startY} x2={cx} y2={endY - 6} stroke={col} strokeWidth={1.6} opacity={0.9} />
+                <polygon points={`${cx},${endY} ${cx - 3.6},${endY - 7} ${cx + 3.6},${endY - 7}`} fill={col} />
+                <text
+                  x={cx + 7}
+                  y={(startY + endY) / 2 + 3}
+                  textAnchor="start"
+                  fontSize="9"
+                  fontWeight="800"
+                  fill={col}
+                  style={{ fontFamily: 'var(--font-mono, monospace)' }}
+                >
+                  {fmt(selfDelta)}
+                </text>
                 {/* 注入字标签（含 吉/凶/杂/平 得失徽章） */}
                 <rect
                   x={cx - 20}
@@ -617,8 +588,36 @@ export default function MingJuFieldChart({ chart, yongJi }: MingJuFieldChartProp
               原局 f₀ {fmt(baseVals[hover] ?? 0)} → 当前 {fmt(targetVals[hover] ?? 0)}
             </div>
             <div className="label-mono case-preserve text-[9.5px] text-foreground">
-              理想 f* {fmt(idealVals[hover] ?? 0)} ｜ 距理想 {fmt(gapOf(hover))}
+              理想 f* {fmt(idealVals[hover] ?? 0)} ｜{' '}
+              {shortageOf(hover) > cfg.deltaEps
+                ? `尚差 ${fmt(shortageOf(hover))}`
+                : shortageOf(hover) < -cfg.deltaEps
+                  ? `已超 ${fmt(-shortageOf(hover))}`
+                  : '已达理想'}
             </div>
+            {(() => {
+              const hits = field.injected
+                .map((c) => ({
+                  c,
+                  eff: c.effects.find((e) => e.element === field.elements[hover] && e.kind !== 'self'),
+                }))
+                .filter((x) => x.eff && Math.abs(x.eff.axisDelta) > cfg.deltaEps);
+              if (hits.length === 0) return null;
+              return (
+                <div className="mt-1 border-t border-border pt-1">
+                  <div className="label-mono text-[9px] text-muted-foreground">注入影响（生克传导）</div>
+                  {hits.map(({ c, eff }) => (
+                    <div
+                      key={c.id}
+                      className="label-mono text-[9.5px]"
+                      style={{ color: SIGN_COLOR(FIELD_YIN_YANG_SIGN[eff!.element]) }}
+                    >
+                      {c.char} {EFFECT_LABEL[eff!.kind]}{FIELD_ELEMENT_NAMES[eff!.element]} {fmt(eff!.axisDelta)}
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
             {field.sources.filter((s) => s.element === field.elements[hover]).length > 0 && (
               <div className="mt-1 border-t border-border pt-1">
                 <div className="label-mono text-[9px] text-muted-foreground">原局来源字（用/忌见逐字表）</div>
@@ -646,7 +645,7 @@ export default function MingJuFieldChart({ chart, yongJi }: MingJuFieldChartProp
         <span className="flex items-center gap-1.5">
           <span className="h-0 w-4 border-t-2 border-dashed" style={{ borderColor: IDEAL_COLOR }} />
           <span className="label-mono case-preserve text-[9.5px] text-muted-foreground">
-            虚线 = 理想函数 f* 虚影（二气配平 · 本盘应去方向）
+            虚线 = 理想函数 f*（用神理想态 · 本盘应去方向，固定参照）
           </span>
         </span>
         <span className="flex items-center gap-1.5">
@@ -658,13 +657,13 @@ export default function MingJuFieldChart({ chart, yongJi }: MingJuFieldChartProp
         <span className="flex items-center gap-1.5">
           <span className="h-3 w-0 border-l-2" style={{ borderColor: YANG_COLOR }} />
           <span className="label-mono case-preserve text-[9.5px] text-muted-foreground">
-            竖线 = 当前距理想的缺口（阳橙＝尚需增强 / 阴靛蓝＝偏多需减）
+            竖线 = 当前值与理想 f* 的缺口（两仪色＝尚差、仍需补 / 灰＝已超、宜减）
           </span>
         </span>
         <span className="flex items-center gap-1.5">
           <span className="h-0 w-4 border-t-2" style={{ borderColor: YIN_COLOR }} />
           <span className="label-mono case-preserve text-[9.5px] text-muted-foreground">
-            注入字箭头：对其「自身 / 所生 / 所克」三类节点各画一条，跨五行联动（实线=增、虚线=减）
+            注入字箭头 = 该字垂直指向其所属五行节点；所生/所克格的连带变化见读数条与悬停提示
           </span>
         </span>
         <span className="flex items-center gap-1.5">
@@ -679,7 +678,7 @@ export default function MingJuFieldChart({ chart, yongJi }: MingJuFieldChartProp
       <div className="mt-3 border-t border-border pt-3">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <span className="label-mono case-preserve text-[9.5px] text-muted-foreground">
-            加入干支（十天干 / 十二地支全部可注入；标「原局」者＝该字原局已含，注入同于岁运再逢、再加一份名义权重）· 点击后该字对其「自身 / 所生 / 所克」三类五行节点各画一条箭头并带动节点平滑上移 / 下降；得失徽章随本盘用忌而异
+            加入干支（十天干 / 十二地支全部可注入；标「原局」者＝该字原局已含，注入同于岁运再逢、再加一份名义权重）· 点击后该字以其所属五行节点上的箭头带动曲线，并按五行生克联动相邻格（生＝加、克＝减）；得失徽章随本盘用忌而异
           </span>
           <span className="label-mono text-[9.5px] text-muted-foreground">
             已注入 {field.injected.length}/{MAXINJ}
@@ -746,7 +745,7 @@ export default function MingJuFieldChart({ chart, yongJi }: MingJuFieldChartProp
         )}
 
         <div className="mt-2 label-mono case-preserve text-[9px] leading-relaxed text-muted-foreground">
-          曲线阴阳由五行定（木火阳仪 / 金水阴仪 / 土枢机），用忌 见选字区与用忌模块；理想虚影＝二气配平，不随注入变化。
+          曲线阴阳由五行定（木火阳仪 / 金水阴仪 / 土枢机），用忌 见选字区与用忌模块；理想虚影＝用神理想态（助用神、抑忌神），不随注入变化。
         </div>
       </div>
 
