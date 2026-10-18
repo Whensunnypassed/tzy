@@ -41,6 +41,7 @@ import {
   TAI_JI_QI_PAIRS,
   TAI_JI_MODEL_PARAMS,
   YONG_JI_MODE,
+  SCORING_CFG,
   type IChunQiuSegment,
   type IWuXingQuXiang,
   type ITaiJiQiPair,
@@ -3358,7 +3359,7 @@ export type WuDangLevel = '夯' | '人上人' | 'npc' | '拉' | '拉完了';
 // ============ 新九档字母等级系统（S+ S A+ A B+ B- C C- D） ============
 export type LetterLevel = 'S+' | 'S' | 'A+' | 'A' | 'B+' | 'B-' | 'C' | 'C-' | 'D';
 
-const RAW_SCORE_DIVISOR = 3.6;
+const RAW_SCORE_DIVISOR = SCORING_CFG.rawDivisor;
 export function compressScore(rawScore: number): number {
   return Math.round((rawScore / RAW_SCORE_DIVISOR) * 10) / 10;
 }
@@ -3406,16 +3407,17 @@ export const LETTER_LEVEL_META: Record<LetterLevel, { classBg: string; classText
  */
 export function letterFromScore(rawScore: number): { level: LetterLevel; band: string; displayScore: number } {
   const displayScore = compressScore(rawScore);
+  const B = SCORING_CFG.bands.mingPan;
   let level: LetterLevel;
-  if      (displayScore > 6)  level = 'S+';
-  else if (displayScore > 4)  level = 'S';
-  else if (displayScore > 2)  level = 'A+';
-  else if (displayScore > 0)  level = 'A';
-  else if (displayScore >= -2) level = 'B+';
-  else if (displayScore >= -4) level = 'B-';
-  else if (displayScore >= -6) level = 'C';
-  else if (displayScore >= -8) level = 'C-';
-  else                         level = 'D';
+  if      (displayScore > B.sPlus)   level = 'S+';
+  else if (displayScore > B.s)       level = 'S';
+  else if (displayScore > B.aPlus)   level = 'A+';
+  else if (displayScore > B.a)       level = 'A';
+  else if (displayScore >= B.bMinus) level = 'B+';
+  else if (displayScore >= B.c)      level = 'B-';
+  else if (displayScore >= B.cMinus) level = 'C';
+  else if (displayScore >= B.d)      level = 'C-';
+  else                               level = 'D';
   return { level, band: LETTER_BAND[level], displayScore };
 }
 
@@ -3437,16 +3439,17 @@ export function letterFromScore(rawScore: number): { level: LetterLevel; band: s
  * 十年不拖后腿、同盘唯一），见 analyzeDaYunLiuNian 叠加循环。
  */
 export function letterFromCombined(adjustDisplayScore: number): { level: LetterLevel; band: string } {
+  const B = SCORING_CFG.bands.combined;
   let level: LetterLevel;
-  if      (adjustDisplayScore > 3.8)  level = 'S+';
-  else if (adjustDisplayScore > 2.6)  level = 'S';
-  else if (adjustDisplayScore > 1.4)  level = 'A+';
-  else if (adjustDisplayScore > 0.4)  level = 'A';
-  else if (adjustDisplayScore >= -0.4) level = 'B+';
-  else if (adjustDisplayScore >= -1.4) level = 'B-';
-  else if (adjustDisplayScore >= -2.6) level = 'C';
-  else if (adjustDisplayScore >= -3.8) level = 'C-';
-  else                         level = 'D';
+  if      (adjustDisplayScore > B.sPlus)   level = 'S+';
+  else if (adjustDisplayScore > B.s)       level = 'S';
+  else if (adjustDisplayScore > B.aPlus)   level = 'A+';
+  else if (adjustDisplayScore > B.a)       level = 'A';
+  else if (adjustDisplayScore >= B.bMinus) level = 'B+';
+  else if (adjustDisplayScore >= B.c)      level = 'B-';
+  else if (adjustDisplayScore >= B.cMinus) level = 'C';
+  else if (adjustDisplayScore >= B.d)      level = 'C-';
+  else                                     level = 'D';
   return { level, band: LETTER_BAND[level] };
 }
 
@@ -3469,11 +3472,12 @@ export function certifyDaYunSPLUS(args: {
   adjustScore: number;
 }): boolean {
   const { selfCompress, liuNianAvgAdjust, badYearCount, adjustScore } = args;
+  const C = SCORING_CFG.sPlusCert;
   return (
-    selfCompress >= 3.6 &&
-    liuNianAvgAdjust >= 0 &&
-    badYearCount <= 3 &&
-    adjustScore >= 3.8
+    selfCompress >= C.selfCompressMin &&
+    liuNianAvgAdjust >= C.liuNianAvgMin &&
+    badYearCount <= C.maxBadYears &&
+    adjustScore >= C.adjustMin
   );
 }
 
@@ -3615,7 +3619,6 @@ export function scoreGanZhiImpact(
   branch: string,
   chart: BaZiChart,
   yongJi: YongJiResult,
-  monthQi: MonthQiResult,
   yinYangPct: { yang: number; yin: number },
 ): {
   score: number;            // 原始分 ±27 级（内部使用）
@@ -3638,7 +3641,7 @@ export function scoreGanZhiImpact(
   const daiRatio = refRows.length > 0
     ? refRows.filter((r) => r[0] === 'dai').length / refRows.length
     : 0;
-  const conf = daiRatio >= 0.5 ? 0.3 : 1.0;
+  const conf = daiRatio >= SCORING_CFG.confidence.daiRatioThreshold ? SCORING_CFG.confidence.daiConfFactor : 1.0;
 
   // —— MVP 口径对齐：最终"综合分 displayScore" = compressScore(score) = score / 3.6
   //    因此 topReasons 里展示给用户看的每一项"±X"也要同步除以 3.6，保证用户能手动加起来等于综合分
@@ -3687,22 +3690,22 @@ export function scoreGanZhiImpact(
   const branchShengStem = isShengyu(branchEl, stemEl);
 
   if (stemMark === 'useful' || stemMark === 'taboo') {
-    const base  = stemMark === 'useful' ? 3 : -3;
+    const base  = stemMark === 'useful' ? SCORING_CFG.base.stem : -SCORING_CFG.base.stem;
     const label = stemMark === 'useful' ? `天干${stem}属月令用神（${elementName(stemEl)}）` : `天干${stem}属月令忌神（${elementName(stemEl)}）`;
     if (branchKeStem) {
-      pushSum(`干支一体·截脚：${label}，其气受${branch}（${elementName(branchEl)}克${elementName(stemEl)}）否定→${stemMark === 'useful' ? '用不施为' : '忌被化解'}（干分作废）`, 0);
+      pushSum(`干支一体·截脚：${label}，其气受${branch}（${elementName(branchEl)}克${elementName(stemEl)}）否定→${stemMark === 'useful' ? '用不施为' : '忌被化解'}（干分作废）`, base * SCORING_CFG.ganZhiCoupling.jieJiaoStemFactor);
     } else if (stemShengBranch) {
-      const s = base * 0.5; score += s;
+      const s = base * SCORING_CFG.ganZhiCoupling.buQiStemFactor; score += s;
       pushSum(`${label}，其气下布于${branch}（干生支），功能减半`, s);
     } else {
       score += base; pushSum(label, base);
     }
   }
   if (branchMark === 'useful' || branchMark === 'taboo') {
-    const base  = branchMark === 'useful' ? 10 : -10;
+    const base  = branchMark === 'useful' ? SCORING_CFG.base.branch : -SCORING_CFG.base.branch;
     const label = branchMark === 'useful' ? `地支${branch}属月令用神（${elementName(branchEl)}）` : `地支${branch}属月令忌神（${elementName(branchEl)}）`;
     if (stemKeBranch) {
-      const s = base * 0.5; score += s;
+      const s = base * SCORING_CFG.ganZhiCoupling.gaiTouBranchFactor; score += s;
       pushSum(`干支一体·盖头：${label}，其质被${stem}（${elementName(stemEl)}克${elementName(branchEl)}）所盖，力量减半`, s);
     } else {
       score += base; pushSum(label, base);
@@ -3715,32 +3718,32 @@ export function scoreGanZhiImpact(
   const yangShort = yinYangPct.yang < 40; // 命局偏阴，阳气不够
   const yinShort  = yinYangPct.yin  < 40; // 命局偏阳，阴气不够
   const balanced  = !yangShort && !yinShort; // 二气均衡，弥合权重减半（避免拉向单边）
-  const half = balanced ? 0.5 : 1.0;
+  const half = balanced ? SCORING_CFG.refine.evenHalfFactor : 1.0;
   const stemUndecided = stemMark === 'neutral';
   const branchUndecided = branchMark === 'neutral';
 
   if (stemUndecided) {
     // 天干补偏（权重小：天干主象）
-    if (yangShort && stemYY === 'yang') { const s = +2.5*half*conf; score += s; pushSum(`天干${stem}月令待定·气暖（木火/燥土），补原局阳气不足`, +s); }
-    if (yangShort && stemYY === 'yin')  { const s = -1.5*half*conf; score += s; pushSum(`天干${stem}月令待定·气寒（金水/湿土），再增阴气→偏`, s); }
-    if (yinShort  && stemYY === 'yin')  { const s = +2.5*half*conf; score += s; pushSum(`天干${stem}月令待定·气寒（金水/湿土），补原局阴气不足`, +s); }
-    if (yinShort  && stemYY === 'yang') { const s = -1.5*half*conf; score += s; pushSum(`天干${stem}月令待定·气暖（木火/燥土），再增阳气→偏`, s); }
+    if (yangShort && stemYY === 'yang') { const s = SCORING_CFG.refine.stemPositive*half*conf; score += s; pushSum(`天干${stem}月令待定·气暖（木火/燥土），补原局阳气不足`, +s); }
+    if (yangShort && stemYY === 'yin')  { const s = SCORING_CFG.refine.stemNegative*half*conf; score += s; pushSum(`天干${stem}月令待定·气寒（金水/湿土），再增阴气→偏`, s); }
+    if (yinShort  && stemYY === 'yin')  { const s = SCORING_CFG.refine.stemPositive*half*conf; score += s; pushSum(`天干${stem}月令待定·气寒（金水/湿土），补原局阴气不足`, +s); }
+    if (yinShort  && stemYY === 'yang') { const s = SCORING_CFG.refine.stemNegative*half*conf; score += s; pushSum(`天干${stem}月令待定·气暖（木火/燥土），再增阳气→偏`, s); }
     if (balanced) {
       const yangDom = yinYangPct.yang > yinYangPct.yin;
-      if (yangDom && stemYY === 'yang') { const s = -1*conf; score += s; pushSum(`原局阳气略多，待定干${stem}再气暖易失衡`, s); }
-      if (!yangDom && stemYY === 'yin') { const s = -1*conf; score += s; pushSum(`原局阴气略多，待定干${stem}再气寒易失衡`, s); }
+      if (yangDom && stemYY === 'yang') { const s = SCORING_CFG.refine.stemEvenNegative*conf; score += s; pushSum(`原局阳气略多，待定干${stem}再气暖易失衡`, s); }
+      if (!yangDom && stemYY === 'yin') { const s = SCORING_CFG.refine.stemEvenNegative*conf; score += s; pushSum(`原局阴气略多，待定干${stem}再气寒易失衡`, s); }
     }
   }
   if (branchUndecided) {
     // 地支补偏（权重大：地支主实，大运重地支）
-    if (yangShort && branchYY === 'yang') { const s = +5.5*half*conf; score += s; pushSum(`地支${branch}月令待定·气暖（木火/燥土），补原局阳气不足`, +s); }
-    if (yangShort && branchYY === 'yin')  { const s = -3*half*conf; score += s; pushSum(`地支${branch}月令待定·气寒（金水/湿土），再增阴气→偏`, s); }
-    if (yinShort  && branchYY === 'yin')  { const s = +5.5*half*conf; score += s; pushSum(`地支${branch}月令待定·气寒（金水/湿土），补原局阴气不足`, +s); }
-    if (yinShort  && branchYY === 'yang') { const s = -3*half*conf; score += s; pushSum(`地支${branch}月令待定·气暖（木火/燥土），再增阳气→偏`, s); }
+    if (yangShort && branchYY === 'yang') { const s = SCORING_CFG.refine.branchPositive*half*conf; score += s; pushSum(`地支${branch}月令待定·气暖（木火/燥土），补原局阳气不足`, +s); }
+    if (yangShort && branchYY === 'yin')  { const s = SCORING_CFG.refine.branchNegative*half*conf; score += s; pushSum(`地支${branch}月令待定·气寒（金水/湿土），再增阴气→偏`, s); }
+    if (yinShort  && branchYY === 'yin')  { const s = SCORING_CFG.refine.branchPositive*half*conf; score += s; pushSum(`地支${branch}月令待定·气寒（金水/湿土），补原局阴气不足`, +s); }
+    if (yinShort  && branchYY === 'yang') { const s = SCORING_CFG.refine.branchNegative*half*conf; score += s; pushSum(`地支${branch}月令待定·气暖（木火/燥土），再增阳气→偏`, s); }
     if (balanced) {
       const yangDom = yinYangPct.yang > yinYangPct.yin;
-      if (yangDom && branchYY === 'yang') { const s = -2*conf; score += s; pushSum(`原局阳气略多，待定支${branch}再气暖易失衡`, s); }
-      if (!yangDom && branchYY === 'yin') { const s = -2*conf; score += s; pushSum(`原局阴气略多，待定支${branch}再气寒易失衡`, s); }
+      if (yangDom && branchYY === 'yang') { const s = SCORING_CFG.refine.branchEvenNegative*conf; score += s; pushSum(`原局阳气略多，待定支${branch}再气暖易失衡`, s); }
+      if (!yangDom && branchYY === 'yin') { const s = SCORING_CFG.refine.branchEvenNegative*conf; score += s; pushSum(`原局阴气略多，待定支${branch}再气寒易失衡`, s); }
     }
   }
   if (conf < 1) {
@@ -3750,12 +3753,12 @@ export function scoreGanZhiImpact(
   // -------- C. 干支相生 · 气机流通（小分量C，±3；克的关系已由 A 段落实修正承接，不重复计分） --------
   // 待定字（dai→neutral）不作「气顺加分」的强判——其利害本身存疑，按不增减处理。
   if (stemShengBranch) {
-    if (branchMark === 'useful')     { const s = +3*conf; score += s; pushSum(`干生支（${stem}生${branch}），支为月令用神→气流通`, +s); }
-    else if (branchMark === 'taboo') { const s = -1*conf; score += s; pushSum(`干生支（${stem}生${branch}），支为月令忌神→助忌`, s); }
+    if (branchMark === 'useful')     { const s = SCORING_CFG.flow.generatesUseful*conf; score += s; pushSum(`干生支（${stem}生${branch}），支为月令用神→气流通`, +s); }
+    else if (branchMark === 'taboo') { const s = SCORING_CFG.flow.generatesTaboo*conf; score += s; pushSum(`干生支（${stem}生${branch}），支为月令忌神→助忌`, s); }
     else                             { pushSum(`干生支（${stem}生${branch}），支为月令待定→气机之益存疑（不增减）`, 0); }
   } else if (branchShengStem) {
-    if (stemMark === 'useful')       { const s = +3*conf; score += s; pushSum(`支生干（${branch}生${stem}），干为月令用神→得根落实`, +s); }
-    else if (stemMark === 'taboo')   { const s = -1*conf; score += s; pushSum(`支生干（${branch}生${stem}），干为月令忌神→助忌`, s); }
+    if (stemMark === 'useful')       { const s = SCORING_CFG.flow.generatesUseful*conf; score += s; pushSum(`支生干（${branch}生${stem}），干为月令用神→得根落实`, +s); }
+    else if (stemMark === 'taboo')   { const s = SCORING_CFG.flow.generatesTaboo*conf; score += s; pushSum(`支生干（${branch}生${stem}），干为月令忌神→助忌`, s); }
     else                             { pushSum(`支生干（${branch}生${stem}），干为月令待定→气机之益存疑（不增减）`, 0); }
   }
 
@@ -4378,7 +4381,6 @@ export interface DaYunFortuneEntry {
 export function analyzeDaYunLiuNian(
   chart: BaZiChart,
   yongJi: YongJiResult,
-  monthQi: MonthQiResult,
   elementPower: { wood: number; fire: number; earth: number; metal: number; water: number },
   currentYear: number,
 ): {
@@ -4404,7 +4406,7 @@ export function analyzeDaYunLiuNian(
       plusSumRaw,
       minusSumRaw,
       otherSumRaw,
-    } = scoreGanZhiImpact(stem, branch, chart, yongJi, monthQi, yinYangPct);
+    } = scoreGanZhiImpact(stem, branch, chart, yongJi, yinYangPct);
     const { level, band, displayScore } = wuDangFromScore(rawScore);
     const topReasons = summary.length > 0 ? summary : ['阴阳气平常，吉凶平静'];
     const hint = `${year}${stem}${branch}（分 ${displayScore >= 0 ? '+' : ''}${displayScore}，${level}）：${band}。关键阴阳作用：${topReasons.slice(0, 2).join('；')}。`;
@@ -4423,16 +4425,18 @@ export function analyzeDaYunLiuNian(
       plusSumRaw: ps,
       minusSumRaw: ms,
       otherSumRaw: os,
-    } = scoreGanZhiImpact(dy.stem, dy.branch, chart, yongJi, monthQi, yinYangPct);
+    } = scoreGanZhiImpact(dy.stem, dy.branch, chart, yongJi, yinYangPct);
     const liuNian10 = getLiuNianList(dy.startYear, 10).map((ln) => calcLiuNian(ln.year, ln.stem, ln.branch));
 
-    // —— 大运总判新口径：rawScore = 大运本身分数 + 下辖10年流年平均分数（压缩分口径相加再还原） ——
-    // 先统一为压缩分（÷3.6），把大运压缩分 + 十年平均压缩分，再乘回 3.6 还原成 rawScore，
-    // 这样后续 wuDangFromScore 会走同一套 compressScore + 5级映射逻辑。
-    const dyCompress = rawScoreDY / 3.6;
-    const liuNianAvgCompress = liuNian10.reduce((s, ln) => s + (ln.rawScore / 3.6), 0) / liuNian10.length;
-    const finalCompress = dyCompress + liuNianAvgCompress;
-    const rawScore = finalCompress * 3.6;
+    // —— 大运总判口径：rawScore = 大运本身分 与 下辖10年流年平均分 的加权合成（压缩分口径） ——
+    // 权重取 `SCORING_CFG.daYunMix`（0.5 / 0.5 = 取平均）：使大运调整分满量程回到 ±4.4，
+    // 与流年同一把尺子、与 letterFromCombined 阈值设计一致（避免两分相加把量程翻倍致 S/A+ 偏松）。
+    // 先统一为压缩分（÷3.6）加权后，再乘回 3.6 还原 rawScore，后续 wuDangFromScore 走同一套映射逻辑。
+    const dyCompress = rawScoreDY / RAW_SCORE_DIVISOR;
+    const liuNianAvgCompress = liuNian10.reduce((s, ln) => s + (ln.rawScore / RAW_SCORE_DIVISOR), 0) / liuNian10.length;
+    const finalCompress = SCORING_CFG.daYunMix.selfWeight * dyCompress
+      + SCORING_CFG.daYunMix.liuNianAvgWeight * liuNianAvgCompress;
+    const rawScore = finalCompress * RAW_SCORE_DIVISOR;
 
     const base = wuDangFromScore(rawScore);
     const topReasons = summary.length > 0 ? summary : ['阴阳气平常，吉凶平静'];
@@ -4659,9 +4663,9 @@ export function analyzeDaYunLiuNian(
       (b.selfCompress ?? 0) - (a.selfCompress ?? 0) ||
       (a.index ?? 0) - (b.index ?? 0),
     );
-  const sPlusWinner = sPlusCandidates[0];
+  const sPlusWinners = sPlusCandidates.slice(0, SCORING_CFG.sPlusCert.quotaPerChart);
   for (const dy of daYunWithFortune) {
-    if (dy.letterLevel === 'S+' && dy !== sPlusWinner) {
+    if (dy.letterLevel === 'S+' && !sPlusWinners.includes(dy)) {
       dy.letterLevel = 'S';
       dy.band = LETTER_BAND['S'];
       // 五档映射 S+/S 同为「夯」，level/fortune 无需变动

@@ -2,7 +2,7 @@
 
 > 本文件用于其他模型/开发者快速接手项目，了解当前版本、已完成工作与同步流程。
 > 未竟事项（未来计划 / 前置条件 / 技术债）见 [BACKLOG.md](./BACKLOG.md) —— 对话中出现的「待…／未来…」一律落到该文件。
-> 最后更新：v2.9.1
+> 最后更新：v2.9.2
 
 ---
 
@@ -10,9 +10,9 @@
 
 **项目**：`tzy` — 沛然堂 · 八字命理智能分析系统（React + Vite + Tailwind v4）
 **仓库**：`Whensunnypassed/tzy`（GitHub，main 分支）
-**当前版本**：**v2.9.1 · 正式版**（`package.json` 与 `BaZiAnalyzerPage.tsx` 中 `APP_VERSION` 两处同步维护）
+**当前版本**：**v2.9.2 · 正式版**（`package.json` 与 `BaZiAnalyzerPage.tsx` 中 `APP_VERSION` 两处同步维护）
 **线上地址**：https://whensunnypassed.github.io/tzy/ （由 gh-pages 分支驱动部署）
-**工作区状态**：已提交 v2.9.1（命局函数曲线 debug：箭头精简、理想线专用色 + 图内图例、理想 f* 口径改为用神理想态、缺口标签改尚差/已超）。
+**工作区状态**：已实现 v2.9.2「打分链路参数集中化（零行为变更）+ 大运九档梯度收紧（`daYunMix` 由 1:1 求和改为 0.5/0.5 取平均，大运调整分满量程回到 ±4.4、与流年同尺）」，**未提交**，`vite build` 通过，待预览确认后 commit / push。
 
 ---
 

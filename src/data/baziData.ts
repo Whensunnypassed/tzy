@@ -1646,3 +1646,42 @@ export const YONG_JI_MODE = {
     // 灰度占位：某月积累 ≥3 例命例回放通过后，在此置 'taiji' 即单独启用该月（未列出者随全局 mode）
   } as Record<string, 'taiji' | 'binary'>,
 } as const
+
+/**
+ * 大运 / 流年打分链路可调参数（版本化 CFG · 唯一真源）
+ * 说明：此处集中打分链路全部数值与阈值，便于日后随命例积累标定；改动前须经命例回放验证。
+ * —— 本 CFG 仅影响打分/评级，不涉及用忌 marks 的生成。
+ */
+export const SCORING_CFG = {
+  version: 'score-v1.1.0',
+  /** 原始分 → 压缩分 的除数（compressScore） */
+  rawDivisor: 3.6,
+  /** A 段：月令逐字喜忌（主分量，单位=原始分） */
+  base: { stem: 3, branch: 10 },
+  /** 干支一体修正系数：截脚（支克干）干分作废 / 盖头（干克支）支分减半 / 布气（干生支）干分减半 */
+  ganZhiCoupling: { jieJiaoStemFactor: 0, gaiTouBranchFactor: 0.5, buQiStemFactor: 0.5 },
+  /** 逐字待定占比超阈值时，B/C 段置信降权 */
+  confidence: { daiRatioThreshold: 0.5, daiConfFactor: 0.3 },
+  /** B 段：原局偏枯弥合（仅对 A 段未判定/中性字启用；补偏用寒暖「用阴阳」） */
+  refine: {
+    stemPositive: 2.5, stemNegative: -1.5,
+    branchPositive: 5.5, branchNegative: -3,
+    stemEvenNegative: -1, branchEvenNegative: -2,
+    evenHalfFactor: 0.5,
+  },
+  /** C 段：干支相生·气机流通 */
+  flow: { generatesUseful: 3, generatesTaboo: -1 },
+  /** 大运总判：大运本身分 与 下辖十年流年平均分 的混合权重。
+   *  0.5/0.5 = 取平均 → 大运调整分满量程回到 ±4.4，与流年同尺、合于 letterFromCombined 的阈值设计；
+   *  （历史值 1/1 = 求和，使量程翻倍至约 ±8.8，导致 S / A+ / A 对大运偏松、且十年均可凑分——已修正）
+   *  若后续命例显示本柱应更主导，可上调 selfWeight（须经命例回放验证，勿轻改）。 */
+  daYunMix: { selfWeight: 0.5, liuNianAvgWeight: 0.5 },
+  /** 九档阈值：mingPan=letterFromScore（±26 大尺度） / combined=letterFromCombined（岁运调整分尺度） */
+  bands: {
+    // d = C- → D 的下界（低于此值判 D）
+    mingPan: { sPlus: 6, s: 4, aPlus: 2, a: 0, bMinus: -2, c: -4, cMinus: -6, d: -8 },
+    combined: { sPlus: 3.8, s: 2.6, aPlus: 1.4, a: 0.4, bMinus: -0.4, c: -1.4, cMinus: -2.6, d: -3.8 },
+  },
+  /** S+ 顶级运硬认证（certifyDaYunSPLUS）+ 同盘配额 */
+  sPlusCert: { selfCompressMin: 3.6, liuNianAvgMin: 0, maxBadYears: 3, adjustMin: 3.8, quotaPerChart: 1 },
+} as const

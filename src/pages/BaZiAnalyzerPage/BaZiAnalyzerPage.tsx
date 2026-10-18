@@ -832,7 +832,7 @@ type ScoreBreakdownRow = {
 };
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.9.1';
+const APP_VERSION = '2.9.2';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -1059,7 +1059,7 @@ export default function BaZiAnalyzerPage() {
 
   const daYunAnalysis = useMemo(() => {
     if (!chart || !yongJi || !monthQi || !elementPower) return null;
-    return analyzeDaYunLiuNian(chart, yongJi, monthQi, elementPower, currentYear);
+    return analyzeDaYunLiuNian(chart, yongJi, elementPower, currentYear);
   }, [chart, yongJi, monthQi, elementPower, currentYear]);
 
   // 第一次算出分析结果后，默认把「当前步大运」展开
