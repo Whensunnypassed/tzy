@@ -1,7 +1,7 @@
 # 沛然堂 · 八字命理智能分析系统
 
 **线上地址**：https://whensunnypassed.github.io/tzy/
-**当前版本**：v2.9.2 · 正式版
+**当前版本**：v2.9.3 · 正式版
 **技术栈**：React 18 + Vite 5 + TypeScript + Tailwind CSS v4
 
 ---

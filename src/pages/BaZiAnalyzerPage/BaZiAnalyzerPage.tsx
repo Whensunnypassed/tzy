@@ -832,7 +832,7 @@ type ScoreBreakdownRow = {
 };
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.9.2';
+const APP_VERSION = '2.9.3';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -3448,7 +3448,7 @@ export default function BaZiAnalyzerPage() {
                                 <div className="flex items-center justify-between">
                                   <span className="text-[12px] font-black text-foreground">{e.name}</span>
                                   <span className="label-mono text-[9.5px]" style={{ color: col }}>
-                                    食伤 · {e.outputStar}
+                                    {e.star} → 其食伤 {e.outputStar}
                                   </span>
                                 </div>
                                 <div className="mt-1.5 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 label-mono text-[9.5px] text-muted-foreground">
