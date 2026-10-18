@@ -1247,3 +1247,86 @@ export const WUXING_SIJI_YIJI: IWuXingSiJi[] = [
     winter: '司令当权：遇火则增暖除寒，见土则形藏归化；金多而反助其寒，木盛而始通其气。',
   },
 ]
+
+// ============ 古法辑要扩展：阴阳干支命理讲义底层增量（仅作旁证，不改用忌与评分） ============
+// 依据《阴阳干支命理完整系统讲义》（《五行正名之鉴》+《尚泫书院太极阴阳八字基础》）第7/10/13/27/30/37章，
+// 及 reference/docs/05_阴阳干支命理完整系统讲义·核心逻辑对照与接口核查.md。
+// 定位：静态底层数据，供象意「古法旁证」卡片展示；不改写用忌 marks、不影响大运流年评分。格局法（第九编）明确不实现。
+
+// 气干 / 形干（第7章核心革新）与阴阳集团
+// 注：group 为讲义「阵营」（阳集团=甲乙丙丁戊 / 阴集团=己庚辛壬癸），
+// 与 IHeavenlyStem.yinYang（奇偶序位「体」阴阳）口径不同，二者并存不悖。
+export interface IStemQiXing {
+  stem: string
+  qiXing: '气干' | '形干'
+  group: '阳' | '阴'
+  note: string
+}
+
+export const STEM_QI_XING: IStemQiXing[] = [
+  { stem: '甲', qiXing: '气干', group: '阳', note: '含气多而杂，活跃涉猎广；皮实耐克泄' },
+  { stem: '乙', qiXing: '形干', group: '阳', note: '含气少而精，稳定专一；脆弱惧怕克泄' },
+  { stem: '丙', qiXing: '气干', group: '阳', note: '含气多而杂，发散普照' },
+  { stem: '丁', qiXing: '形干', group: '阳', note: '含气少而精，内敛专注' },
+  { stem: '戊', qiXing: '气干', group: '阳', note: '燥土，阳集团平台，执行火的意志' },
+  { stem: '己', qiXing: '形干', group: '阴', note: '湿土，阴集团平台，左右逢源' },
+  { stem: '庚', qiXing: '气干', group: '阴', note: '刚硬之金，执行力强' },
+  { stem: '辛', qiXing: '形干', group: '阴', note: '精致之金，精细技艺精英' },
+  { stem: '壬', qiXing: '气干', group: '阴', note: '江河大水，野心谋略' },
+  { stem: '癸', qiXing: '形干', group: '阴', note: '雨露之水，细腻洞察' },
+]
+
+// 天干四冲（第10章）：甲庚、乙辛、丙壬、丁癸
+export const TIAN_GAN_CHONG_PAIRS: string[][] = [
+  ['甲', '庚'], ['乙', '辛'], ['丙', '壬'], ['丁', '癸'],
+]
+
+// 地支六破（第13章，相破坏腐蚀）：子酉、卯午、寅亥、巳申、丑辰、戌未
+export const LIU_PO_PAIRS: string[][] = [
+  ['子', '酉'], ['卯', '午'], ['寅', '亥'], ['巳', '申'], ['丑', '辰'], ['戌', '未'],
+]
+
+// 驿马三合查法（第37章）
+export interface IYiMaRule {
+  groups: string[]   // 引动驿马的三合局地支
+  ma: string         // 驿马地支
+  desc: string
+}
+
+export const YI_MA_TABLE: IYiMaRule[] = [
+  { groups: ['申', '子', '辰'], ma: '寅', desc: '申子辰水局，驿马在寅' },
+  { groups: ['寅', '午', '戌'], ma: '申', desc: '寅午戌火局，驿马在申' },
+  { groups: ['巳', '酉', '丑'], ma: '亥', desc: '巳酉丑金局，驿马在亥' },
+  { groups: ['亥', '卯', '未'], ma: '巳', desc: '亥卯未木局，驿马在巳' },
+]
+
+// 月令分日用事诀 / 司令真神（第30章，子平真宗版）：逐月天数表，看出生当日何天干当令值班
+export interface ISiLingRiYong {
+  monthBranch: string
+  monthName: string
+  rulers: { stem: string; days: number }[]   // 依次当令的天干与天数
+  zhenShen: string                            // 司令真神=当令天数最多者（本气司令）
+}
+
+export const SI_LING_RI_YONG: ISiLingRiYong[] = [
+  { monthBranch: '寅', monthName: '寅月', rulers: [{ stem: '己', days: 7 }, { stem: '丙', days: 5 }, { stem: '甲', days: 18 }], zhenShen: '甲' },
+  { monthBranch: '卯', monthName: '卯月', rulers: [{ stem: '甲', days: 9 }, { stem: '癸', days: 3 }, { stem: '乙', days: 18 }], zhenShen: '乙' },
+  { monthBranch: '辰', monthName: '辰月', rulers: [{ stem: '乙', days: 7 }, { stem: '癸', days: 5 }, { stem: '戊', days: 18 }], zhenShen: '戊' },
+  { monthBranch: '巳', monthName: '巳月', rulers: [{ stem: '戊', days: 7 }, { stem: '庚', days: 5 }, { stem: '丙', days: 18 }], zhenShen: '丙' },
+  { monthBranch: '午', monthName: '午月', rulers: [{ stem: '丙', days: 9 }, { stem: '己', days: 3 }, { stem: '丁', days: 18 }], zhenShen: '丁' },
+  { monthBranch: '未', monthName: '未月', rulers: [{ stem: '丁', days: 7 }, { stem: '乙', days: 5 }, { stem: '己', days: 18 }], zhenShen: '己' },
+  { monthBranch: '申', monthName: '申月', rulers: [{ stem: '己', days: 7 }, { stem: '壬', days: 5 }, { stem: '庚', days: 18 }], zhenShen: '庚' },
+  { monthBranch: '酉', monthName: '酉月', rulers: [{ stem: '庚', days: 2 }, { stem: '己', days: 1 }, { stem: '辛', days: 27 }], zhenShen: '辛' },
+  { monthBranch: '戌', monthName: '戌月', rulers: [{ stem: '辛', days: 7 }, { stem: '丁', days: 5 }, { stem: '戊', days: 18 }], zhenShen: '戊' },
+  { monthBranch: '亥', monthName: '亥月', rulers: [{ stem: '戊', days: 7 }, { stem: '甲', days: 5 }, { stem: '壬', days: 18 }], zhenShen: '壬' },
+  { monthBranch: '子', monthName: '子月', rulers: [{ stem: '壬', days: 9 }, { stem: '辛', days: 3 }, { stem: '癸', days: 18 }], zhenShen: '癸' },
+  { monthBranch: '丑', monthName: '丑月', rulers: [{ stem: '癸', days: 7 }, { stem: '辛', days: 5 }, { stem: '己', days: 18 }], zhenShen: '己' },
+]
+
+// 生克权流转规则说明（第27章理气法），仅作旁证
+export const SHENG_KE_QUAN_RULE = {
+  principle: '掌权多克少生，克代表权力交接',
+  flow: '从月令开始，紧贴的藏干或天干发生相克，就把权力交接给下一个五行；直到没有相克继续传递，得到最终掌权五行。',
+  premise: '只有发生刑冲合害破时，地支之间才产生接触；同柱天干与地支不发生物理接触、不交接权力。',
+  warning: '本项仅作理气旁证，不参与本系统太极阴阳法的用忌判定与大运流年评分。',
+}

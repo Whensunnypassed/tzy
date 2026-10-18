@@ -1,7 +1,7 @@
 # 项目状态总览（PROJECT STATUS）
 
 > 本文件用于其他模型/开发者快速接手项目，了解当前版本、已完成工作与同步流程。
-> 最后更新：v2.7.0
+> 最后更新：v2.8.0
 
 ---
 
@@ -9,9 +9,9 @@
 
 **项目**：`tzy` — 沛然堂 · 八字命理智能分析系统（React + Vite + Tailwind v4）
 **仓库**：`Whensunnypassed/tzy`（GitHub，main 分支）
-**当前版本**：**v2.7.0 · 正式版**（`package.json` 与 `BaZiAnalyzerPage.tsx` 中 `APP_VERSION` 两处同步维护）
+**当前版本**：**v2.8.0 · 正式版**（`package.json` 与 `BaZiAnalyzerPage.tsx` 中 `APP_VERSION` 两处同步维护）
 **线上地址**：https://whensunnypassed.github.io/tzy/ （由 gh-pages 分支驱动部署）
-**工作区状态**：已提交 v2.7.0（结果页精简与版块重排：删寒热气/特别提示/复制导出/今日节气，版块统一为 01–07，节气卡改特别鸣谢，移除标语式文案）。
+**工作区状态**：已提交 v2.8.0（可进化架构 + 古法旁证：报告版块注册表统一编号，月气真源收敛，新增气干/形干·天干四冲·地支六破·驿马三合·司令真神等旁证数据与形干同性重克·生克权流转纯函数，六亲措辞软化；格局法不实现）。
 
 ---
 
@@ -44,6 +44,7 @@
 | **v2.5.1** | （本提交） | **用忌标记规则修复：月令大方向二分之上的干支级无条件覆盖（方案 A）**：<br>① **问题**：`analyzeYongJi` 只按 `usageDirection` 做元素级二分（用阳则木火全绿、金水全红），与 v2.5.0 校准的月气定论存在 5 处冲突；红绿标记直接喂给命盘评分（忌神计数）、命局模式、日干支平衡、六亲、年月太极年干判定，会给出与文案相反的结论<br>② **本版修复两条无条件定论**：辰月**甲木**由忌改用（疏土救癸水第一救应，天干粒度，乙木力弱不预）；午月**壬癸水**由用改中性（「慎用」：丑戌晦火得富亦克水失贵，须庚辛金通关），元素级覆盖使壬癸亥子干支同步降级、庚金首用不变；新增 `MONTH_STEM_XIJI_OVERRIDES` / `MONTH_ELEMENT_XIJI_OVERRIDES` 两张表与 `YongJiResult.overrideNotes`，markElement 改四级判定（天干覆盖→土独立判定→元素覆盖→大方向二分）；元素级 useful/taboo 数组保持大方向不变（象法分析与五行标签依赖）<br>③ **UI**：09 用忌卡片新增「干支级取用例外」说明块（数据驱动，仅辰/午月显示），复制报告摘要同步输出「例外：」行；条件性取舍（午月木救水、卯月金落实年支、申酉余热局）留待条件模型（方案 B），文案已承载<br>④ **工程**：补标准 `src/vite-env.d.ts`（`vite/client` 引用），修复 Memorial 双页面 `import *.jpg` 的 TS2307；21 条断言脚本验证四场景（辰/午/申/子）覆盖生效且无回归；`vite build` EXIT=0；版本号 2.5.0 → 2.5.1 |
 | **v2.5.0** | 2026-10-14 | **命理数据修正：六十甲子补全 + 十二月令取用口径统一**（仅改数据与引擎文案，不改打分运算逻辑）：<br>① **六十甲子补全（功能 bug）**：原表缺整旬「甲子旬」9 柱（甲子…壬申）、癸酉错置甲戌旬（实为 51 柱），导致日柱释义匹配与页面干支自合检测对这 9 个干支直接落空；据 `reference/docs/六十甲子.md` 补入甲子旬 10 柱（清理 OCR 错字录入）、癸酉归位，TS 旬联合类型补 `甲子旬`，程序化校验六旬 60 柱无缺无重、旬归属全对<br>② **十二月令取用口径统一**：`MOCK_MONTH_QI`（baziData）与 `MONTH_QI_INFO`（baziAnalyzer 副本）+ `FOUR_SYMBOL_META` 口诀三层全部对齐《十二月份取用》——巳午未庚金第一（午月细化：丑戌晦火得富亦克水失贵、壬癸慎用、庚辛金通关则无虑、土克水明确时水生木而木克土救水）；子月辰未阳土第一、丙丁火生扶土气第二、庚辛金壬癸水皆忌、木唯生火成木火土相生方可用（水生木而木克土不吉，区别亥月甲木泄水）；丑月己土止寒为贵根、忌辛金泄土；卯月见水即体阴用阳、金落实年支才破格；戌月甲木第一；辰月改为救癸水、甲木第一救应；申酉拆余热/成凉两局取用相反；子月节气区间改「大雪—小寒」，子丑两月十干长生状态补齐<br>③ **术语/硬错误/规范**：戊土忌神修正为「木旺克土过重、水旺水多土荡」；太极段注释澄清「天干对峙太极（夏庚丙/冬丙壬）」与「月令救应太极（夏庚癸/冬丙甲，analyzeNianYueTaiJi 使用）」是两个分析层，代码逻辑无需改；甲午条释义按「阳过之木=受热肯定、木不克土而生助阳气」校准，日时应验段补「宜年」术语注释；EXPORTS 注释补 IXunGroup 等 4 项；天干/地支 yinYang 字段加「体用阴阳」防误改注释；数据文件 `bazidata.ts` → `baziData.ts`（与 AGENTS.md 对齐，git rename，3 处 import 同步）；`reference/docs` 新增六十甲子、十二月份取用、20262014gjm 三份 UTF-8 资料，午/子月新口径回写 md<br>④ `vite build` 通过（1665 模块，EXIT=0）；版本号 2.4.3 → 2.5.0 |
 | **v2.7.0** | （本提交） | **结果页精简 + 版块顺序重排 + 品牌与文案统一**（仅改 UI 层与外显文案，不改动 `baziData.ts` / `baziCalculator.ts` / `baziAnalyzer.ts` 三大核心文件与评分逻辑）：<br>① **删除版块**：「寒热气 · 阴阳气占比」卡、「特别提示」卡整块移除；「复制摘要 / 导出报告」功能（含 `generateReportText` / `handleCopyReport` / `handleExportReport` 三函数、底部按钮与右栏 TOOLS 两行按钮）全部移除<br>② **版块顺序与编号重排为 7 项**：01 四柱排盘 → 02 命主速览 → 03 月气分析 → 04 用神忌神 → 05 大运流年 → 06 命局模式 → 07 象意解读；左侧导航、正文版块头、右侧目录三处编号完全统一，命局模式块由 04 位整体移至原占比卡位置（同时完成「删占比」与「大运提前」）<br>③ **节气 → 特别鸣谢**：报头「今日节气」卡改为「特别鸣谢 / ACKNOWLEDGEMENT」（当前鸣谢对象凤梨）；右栏「当前节气 / SOLAR TERM」卡整块删除，顶部信息条与输入区标签改「纯本地计算」，左栏 INFO「更新」行改「版本 / v{APP_VERSION}」<br>④ **移除标语式文案**：报头「以太极阴阳为体 · 以月气动应为用 · 以平衡为得失」句、页脚体用句、鸣谢副文一并删除（用户明确不要此类口号文字）<br>⑤ **清理死代码**：删除 `DonutPieChart` 组件与 `yinYangPct` / `coldHotPct` / `specialTips` / `allJiaziPillars` 等 useMemo，移除 `calculateYinYangBalance` / `calculateColdHotBalance` / `extractSpecialTips` 导入<br>⑥ **同步**：`package.json` 与 `APP_VERSION` 两处升至 2.7.0，README / CHANGELOG / AGENTS.md / PROJECT_STATUS.md 同步；`vite build` 通过；版本号 2.6.7 → 2.7.0 |
+| **v2.8.0** | （本提交） | **可进化架构 + 古法旁证并入**（新增项全部为旁证 / 护栏层，不写入用忌 marks、不改动九档评级与 S+ 认证逻辑；格局法按需求不实现）：<br>① **报告版块注册表** `REPORT_SECTIONS`（单一真源）：01–07 版块 id/no/label/en/title 由它驱动，左侧导航 / 正文版块头 / 右侧目录三处一次注册、处处一致，杜绝编号漂移（可进化契约）<br>② **月气真源收敛**：`baziAnalyzer` 内私有 `MONTH_QI_INFO` 副本删除，改为派生自 `baziData.MOCK_MONTH_QI`，口径只维护一处<br>③ **古法数据表入 `baziData`**：气干 / 形干、天干四冲、地支六破、驿马三合查法、月令分日用事诀（司令真神）<br>④ **旁证纯函数入 `baziAnalyzer`**：`analyzeShengKeQuan`（理气法生克权流转）、`detectXingGanChongKe`（形干同性重克·紧贴重克 / 隔位轻克）、`getStemQiXing` / `detectTianGanChong` / `detectLiuPo` / `detectYiMa` / `analyzeSiLingZhenShen`、`resolveShengKeQuanUnderYun`（岁运生克权复核，含截脚取地支本气），统一挂载 `analyzeGuFaPangZheng` 汇总<br>⑤ **措辞护栏**：六亲·婚姻措辞软化为「倾向 + 可调」语气，引擎层新增全引擎措辞护栏规范注释，禁用恐吓 / 宿命断言<br>⑥ **UI「古法旁证」区块**（07 象意解读内，不新增版块编号）：十干定性·气干/形干、天干四冲·地支六破、驿马·三合查法、月令分日用事·司令真神 4 格网格；全宽「形干同性重克·实质压力点」「理气法·生克权流转（含当前大运掌权复核）」两块<br>⑦ **同步**：`package.json` 与 `APP_VERSION` 两处升至 2.8.0，README / CHANGELOG / PROJECT_STATUS.md 同步；新增参考文档 `reference/docs/05_阴阳干支命理完整系统讲义·核心逻辑对照与接口核查.md`；`vite build` 通过；版本号 2.7.0 → 2.8.0 |
 
 ---
 

@@ -9,6 +9,7 @@ import {
   BRANCH_ELEMENTS,
   STEM_YINYANG,
   BRANCH_YINYANG,
+  HIDDEN_STEMS,
   getShiShen,
   getLiuNianList,
   getCurrentDaYunIndex,
@@ -25,6 +26,13 @@ import {
   NIAN_YUE_TAIJI_DEFS,
   NIAN_YUE_TAIJI_CASES,
   NIAN_TAIJI_RULES,
+  MOCK_MONTH_QI,
+  STEM_QI_XING,
+  TIAN_GAN_CHONG_PAIRS,
+  LIU_PO_PAIRS,
+  YI_MA_TABLE,
+  SI_LING_RI_YONG,
+  SHENG_KE_QUAN_RULE,
   type IChunQiuSegment,
 } from '../data/baziData';
 import { getBirthJulianDay, getTermJulianDay } from './solarTermsCalc';
@@ -69,8 +77,8 @@ export const FOUR_SYMBOL_META: Record<string, {
 
 const FOUR_SYMBOL_BY_MBI = ['少阳', '少阳', '少阳', '老阳', '老阳', '老阳', '少阴', '少阴', '少阴', '老阴', '老阴', '老阴'] as const;
 
-// 十二月气信息
-const MONTH_QI_INFO: Record<number, {
+// 月气信息（真源唯一：派生自 baziData.MOCK_MONTH_QI，禁止在本文件另立副本；改口径只改 baziData）
+export interface MonthQiInfo {
   monthName: string;
   solarTerm: string;
   mainQi: string;
@@ -82,164 +90,26 @@ const MONTH_QI_INFO: Record<number, {
   description: string;
   detailedDesc: string;
   coreXiJi: string;
-}> = {
-  0: { // 寅月
-    monthName: '寅月',
-    solarTerm: '立春',
-    mainQi: '甲木',
-    mainQiElement: 'wood',
-    usageDirection: 'yang',
-    yangState: 'weak',
-    yinState: 'strong',
-    fourSymbol: '少阳',
-    description: '初春寒气尚存、阳气初动，气机生发偏弱，最喜火暖局暖化寒湿，辅土固本，忌金水泛滥加重寒气',
-    detailedDesc: '寅月为正月，立春之后，木气当权，少阳初始阶段。此时冬寒未尽，阳气初布，地球尚未温暖。木主温，为少阳初始阶段。寒气（金水）仍强，寒气未消，故需要用阳气（火土）来平衡。戊土止寒，丙火成阳，为寅月核心用神方向。《自然易鉴》：寒木喜暖，以火为尊，暖则生发有成、格局清贵，寒则木滞无荣、贫贱多磨。',
-    coreXiJi: '用神：丙火（成阳）、戊土（止寒）。忌神：金水（加重寒气）。辅神：丁火暖化、木助生发',
+}
+const MONTH_QI_INFO: Record<number, MonthQiInfo> = MOCK_MONTH_QI.reduce<Record<number, MonthQiInfo>>(
+  (acc, q, i) => {
+    acc[i] = {
+      monthName: q.month,
+      solarTerm: q.solarTerm,
+      mainQi: q.mainQi,
+      mainQiElement: q.mainQiElement,
+      usageDirection: q.usageDirection,
+      yangState: q.yangState,
+      yinState: q.yinState,
+      fourSymbol: q.fourSymbol,
+      description: q.description,
+      detailedDesc: q.detailedDesc,
+      coreXiJi: q.coreXiJi,
+    };
+    return acc;
   },
-  1: { // 卯月
-    monthName: '卯月',
-    solarTerm: '惊蛰',
-    mainQi: '乙木',
-    mainQiElement: 'wood',
-    usageDirection: 'yang',
-    yangState: 'weak',
-    yinState: 'strong',
-    fourSymbol: '少阳',
-    description: '木气纯粹、气机舒展，以成温为标准；喜火助生发，见水余寒则体阴用阳，金落实年支则不成温，忌温气被金水否定',
-    detailedDesc: '卯月为二月，惊蛰之后，温气已成。乙木当令，少阳气成，甲木帝旺持续布温；然癸水在卯长生，余寒尚存，温气落实亦易受否定。年月不否定乙木温气即为成温：一般见水即作体阴用阳论；见金须看是否落实于年支，落实则不以成温论，未落实之金仅为辅用。核心仍在丙癸太极，其余干支皆为扶抑丙癸的辅助。',
-    coreXiJi: '用神：丁火（泄木成阳）、丙火（暖局）。忌神：水（余寒否定温气，见水即体阴用阳）、金落实年支（不成温）。辅神：未落实之金修整成材',
-  },
-  2: { // 辰月
-    monthName: '辰月',
-    solarTerm: '清明',
-    mainQi: '戊土',
-    mainQiElement: 'earth',
-    usageDirection: 'yin',
-    yangState: 'strong',
-    yinState: 'weak',
-    fourSymbol: '少阳',
-    description: '暮春戊土当令、温湿交接，辰为湿土藏癸，气机模糊（辰戌无贵），核心在救癸水、存阴气；喜甲木克土救水、庚金泄土生水，忌戊土无制',
-    detailedDesc: '辰月为三月，清明之后，戊土当令、气进五阳，温而不热、润而不寒，阴阳不显、气机呆滞。辰中戊土克癸水，癸水为唯一贵气来源，无需常规体用判断：①甲木克土救水为第一救应，木须得水润，木旺无润则生火助土、徒劳无功；②庚金泄土生水，辛金无力。戊土无制则晦火克水、阴阳俱伤、无富无贵；癸水有气则局活、富贵可成。辰中戊癸自合主暗昧，辰戌相见主情感婚姻破败，多由后天环境导致，不影响富贵格局。',
-    coreXiJi: '用神：癸水（唯一贵气来源）、甲木（第一救应，克土救水）、庚金（泄土生水，辛金无力）。忌神：戊土无制（晦火克水、阴阳俱伤）。注：木须得水润方有效',
-  },
-  3: { // 巳月
-    monthName: '巳月',
-    solarTerm: '立夏',
-    mainQi: '丙火',
-    mainQiElement: 'fire',
-    usageDirection: 'yin',
-    yangState: 'strong',
-    yinState: 'weak',
-    fourSymbol: '老阳',
-    description: '初夏六阳纯阳、阳气大显，庚金长生为月令最有力之阴，首用庚金凉土晦火、生水存阴；水木须齐见、孤见皆败，忌火土过旺熔金',
-    detailedDesc: '巳月为四月，立夏之后，丙火当权，气进六阳。壬绝癸胎、水形同虚设，戊土虎踞、滴水立涸，执"用水制火"之常理反入歧途。首用庚金：庚金长生在巳，为月令规定下最有力的平衡因子，凉土晦火、生水存阴，富贵相依；唯丙丁透干而金无救应，则金熔火海，富亦艰辛。水木救阴须齐见：孤水被旺土所克、孤木生火助纣；戌丑二土为阴土，晦火存金，反成富基。',
-    coreXiJi: '用神：庚金（第一用神，凉土晦火、生水存阴）。辅用：水木齐见、戌丑阴土晦火。忌神：火土过旺、丙丁熔金、孤水孤木',
-  },
-  4: { // 午月
-    monthName: '午月',
-    solarTerm: '芒种',
-    mainQi: '丁火',
-    mainQiElement: 'fire',
-    usageDirection: 'yin',
-    yangState: 'strong',
-    yinState: 'weak',
-    fourSymbol: '老阳',
-    description: '盛夏阳极、丁己成热，庚金首用；丑戌二土晦火有吉，然土晦火得富亦克水失贵，故慎用壬癸，有庚辛金通关则无虑；土克水明确时取木（水生木、木克土）救水',
-    detailedDesc: '午月为五月，芒种之后，丁火当权，火炎土燥、万物焦灼，阴气弱极。①庚金为第一用神：庚金沐浴有气，为午中唯一能立足之阴，干透庚或支会申酉，平衡火势、稳财源、通水发贵，孤金成富；丙丁透干而庚无依，则烈火熔金反成凶象。②丑戌二土晦火有吉：阴土晦火存金可致富贵，然土晦火得富的同时克水，水伤则失贵，故壬癸水须慎用。③若柱有庚辛金，土生金、金生水接续通关，则水不足为虑。④土克水态势明确时，可取木为救：水来生木、木去克土，解土克水之困。无金水平衡则火炎土燥、躁妄无德。',
-    coreXiJi: '用神：庚金（首用，孤金成富、通水发贵）、丑戌阴土（晦火存金得富）。慎用：壬癸水（土克水则失贵，有庚辛金通关则无虑）。救应：土克水明确时取木（水生木、木克土）。忌神：烈火熔金、火土焦枯',
-  },
-  5: { // 未月
-    monthName: '未月',
-    solarTerm: '小暑',
-    mainQi: '己土',
-    mainQiElement: 'earth',
-    usageDirection: 'yin',
-    yangState: 'strong',
-    yinState: 'weak',
-    fourSymbol: '老阳',
-    description: '暮夏火土成党、地表极热、二阴进气，庚金冠带有气，首用庚金泄火生水，水木须齐见，阴土晦火可为富基但土过伤水，忌火土燥热熔金',
-    detailedDesc: '未月为六月，小暑之后，己土当令，地表储热至盛，然阳极生阴、二阴进气、热极藏寒。取用与巳午月同理：首推庚金，冠带有气，泄火、平衡旺土、生水润燥，申酉金助力更佳，唯丁火透干无制则熔金败局；水木须齐见，孤水被土克、孤木生火，壬癸养墓气弱须庚金引水；丑戌阴土晦火藏金可成富基，然土太过则金埋水涸、富而不久。',
-    coreXiJi: '用神：庚金（第一用神，泄火、平衡土、生水润燥）。辅用：水木齐见、丑戌阴土晦火（土过伤水、富不久）。忌神：火土燥热、丁火熔金',
-  },
-  6: { // 申月
-    monthName: '申月',
-    solarTerm: '立秋',
-    mainQi: '庚金',
-    mainQiElement: 'metal',
-    usageDirection: 'yang',
-    yangState: 'weak',
-    yinState: 'strong',
-    fourSymbol: '少阴',
-    description: '初秋三阴生长、阴阳交错，丁壬太极定局：地热犹存为余热之申，金气得布为成凉之申，两局取用相反，以土是否得火烘热为辨',
-    detailedDesc: '申月为七月，立秋之后，庚金临官当令、壬水长生，然丁火沐浴、土受金泄，余热未散尽。金为少阴初始，主凉主降。申月最复杂，须分两局：①余热之申（阳体阴用）：火土旺、金难舒展，见土埋金、忌木火克金，宜水木克土、动金泄土；②成凉之申（阴体阳用）：无火有水、金气得布，宜木火助阳制衡金凉。土性双面：制水取贵、晦火失富。',
-    coreXiJi: '余热之申：用水木克土、金泄土，忌木火克金、土旺埋金；成凉之申：用木火扶阳炼金，忌金水再旺。土双面（制水取贵、晦火失富）',
-  },
-  7: { // 酉月
-    monthName: '酉月',
-    solarTerm: '白露',
-    mainQi: '辛金',
-    mainQiElement: 'metal',
-    usageDirection: 'yang',
-    yangState: 'weak',
-    yinState: 'strong',
-    fourSymbol: '少阴',
-    description: '仲秋四阴生长、金气专旺成凉，丁壬太极定局：丁己长生、地热犹存为余热之酉，无火见水为成凉之酉，两局取用相反，以土是否得火烘热为辨',
-    detailedDesc: '酉月为八月，白露之后，辛金当权，金气专旺、成凉定型，然丁己在酉长生，地表余温尚存，未至极寒。须分两局：①余热之酉：火土旺、金气受制，见土埋金、忌木火克金，宜水木克土、动金泄土；②成凉之酉：金气得布、土凉无热，宜火克金、木生火助阳。土性双面：制水取贵、晦火失富。',
-    coreXiJi: '余热之酉：用水木克土、金泄土，忌木火克金、土旺埋金；成凉之酉：用木火扶阳炼金，忌金水再旺。土双面（制水取贵、晦火失富）',
-  },
-  8: { // 戌月
-    monthName: '戌月',
-    solarTerm: '寒露',
-    mainQi: '戊土',
-    mainQiElement: 'earth',
-    usageDirection: 'yang',
-    yangState: 'weak',
-    yinState: 'strong',
-    fourSymbol: '少阴',
-    description: '暮秋五阴成局、阳气最弱，首用甲木克土解晦、助火破阴，丙丁火扶阳救丁，忌独旺土晦火、无制金凉、无制水寒',
-    detailedDesc: '戌月为九月，寒露之后，戊土当令、气进五阴，火余之热、金气之伏，主体成凉、体阴用阳，破阴显阳为核心。第一用神甲木：克旺土、解火晦、制凉金，有"甲贵"之说；丙丁火扶阳救丁为辅。土忌独旺，旺土晦火则阴阳俱伤；辛金冠带无制，金泄土凉、层次愈低；壬水有当令土制方贵（壬戌为玄武贵）。',
-    coreXiJi: '用神：甲木（第一用神，克土解晦、破阴显阳）、丙丁火（扶阳救丁）。忌神：独旺土晦火、无制金、无制水。注：水有制则贵显（壬戌玄武贵）',
-  },
-  9: { // 亥月
-    monthName: '亥月',
-    solarTerm: '立冬',
-    mainQi: '壬水',
-    mainQiElement: 'water',
-    usageDirection: 'yang',
-    yangState: 'weak',
-    yinState: 'strong',
-    fourSymbol: '老阴',
-    description: '初冬六阴阴极、壬水当令，首用阳土（辰未）克水制寒为贵气之源，次用甲木泄水（甲优于乙），火暖土为辅助，忌木水乱动、金助寒',
-    detailedDesc: '亥月为十月，立冬之后，壬水临官当权，寒气极盛；亥中藏甲、甲木长生，寒中藏温，俗称"小阳春"。用土克水为贵气之源，阳土（辰、未）尤佳，土得火生则富贵双全，土无力则仅安稳、不显贵。次用甲木泄水，甲木生气耐寒，优于乙木；火为辅助，暖土助阳、破除阴寒。动木见水多贫困，无火仅有戊土则衣食无忧、无大富贵。',
-    coreXiJi: '用神：戊土/辰未土（第一，克水制寒、贵气之源）、甲木（次用，泄水生温）。辅用：丙火（暖土助阳）。忌神：金（助水增寒）、木水乱动',
-  },
-  10: { // 子月
-    monthName: '子月',
-    solarTerm: '大雪',
-    mainQi: '癸水',
-    mainQiElement: 'water',
-    usageDirection: 'yang',
-    yangState: 'weak',
-    yinState: 'strong',
-    fourSymbol: '老阴',
-    description: '深冬寒气最盛、癸水成寒、一阳来复，首用土止寒制水（辰未阳土最好），次用丙丁火肯定土气，庚辛金、壬癸水皆忌；木须生火（木→火→土）方可用，水去生木、木转克土则不吉',
-    detailedDesc: '子月为十一月，大雪之后，癸水临官、壬水帝旺，寒气彻骨、万物蛰伏，整体体阴用阳。①首用土止寒：土制水隔寒、稳住格局，阳土辰未最为可贵，土弱无力则水横流局势乱。②次用丙丁火：火之要在肯定土、生扶土气，使土有力止寒，丙火太阳亦可解冰封；丁火绝地力薄，火土同见以土卫火为佳。③庚辛金、壬癸水皆为忌神：金助水增寒，水旺无制则冰封格局、奔波劳碌。④木须视去向取用：木去生火（肯定火，成木→火→土相生）方可为用；若水去生木、木转而克土（水肯定木则木克土），破坏止寒之土，则为不吉。《穷通宝鉴》"专用丙火解冻"为旧法，本体系以土止寒为根本、火生土为助。',
-    coreXiJi: '用神：辰未阳土（第一，止寒制水）、丙丁火（次用，生扶土气、解冻）。辅用：木（唯生火成木火土相生时可用）。忌神：庚辛金（助水增寒）、壬癸水（寒水无制）。注：水生木而木克土不吉',
-  },
-  11: { // 丑月
-    monthName: '丑月',
-    solarTerm: '小寒',
-    mainQi: '己土',
-    mainQiElement: 'earth',
-    usageDirection: 'yang',
-    yangState: 'weak',
-    yinState: 'strong',
-    fourSymbol: '老阴',
-    description: '暮冬湿寒极重、二阳并进，己土当令克癸止寒为取贵根本，丙火助阳暖局，甲木冠带可生火，忌辛金泄土生水、寒湿不化',
-    detailedDesc: '丑月为十二月，小寒之后至立春前夕，己土当令、气进二阳，寒中藏生。己土担负克水止寒大任，丑中藏己癸本身具克制结构，己土动则贵气生，为止寒要素、取贵之根。丙火暖局助阳，甲木冠带有气、动木生火，木火齐动则富贵双全。丑中辛金为变数：辛金泄土生水，再透金干则土虚水旺、反不为贵。《穷通宝鉴》"专用丙火解冻、戊透清贵"为旧法，本体系以己土止寒为本、丙火为助。',
-    coreXiJi: '用神：己土（第一，本气止寒、取贵之根）、丙火（助阳暖局）。辅用：甲木（冠带生火）。忌神：辛金（泄土生水助寒）、寒湿不化',
-  },
-};
+  {},
+);
 
 // 五行与阴阳归属
 // 木火属阳（温→热），金属阴（凉→寒）
@@ -290,18 +160,7 @@ export function judgeEarthXiJi(
   return 'neutral';
 }
 
-export interface MonthQiResult {
-  monthName: string;
-  solarTerm: string;
-  mainQi: string;
-  mainQiElement: string;
-  usageDirection: 'yang' | 'yin';
-  yangState: 'strong' | 'weak';
-  yinState: 'strong' | 'weak';
-  fourSymbol: '少阳' | '老阳' | '少阴' | '老阴';
-  description: string;
-  detailedDesc: string;
-  coreXiJi: string;
+export interface MonthQiResult extends MonthQiInfo {
   coreMantra?: string;
 }
 
@@ -2677,6 +2536,9 @@ function analyzeInteractions(pillars: Pillar[]): string {
 }
 
 // 六亲分析（融合《自然易鉴》第九章第三节·婚姻六亲断法）
+// 措辞护栏（全引擎通用）：输出一律采用「倾向 + 可调」语气，语义结论须可落地、可经营；
+// 禁用「克夫/克妻/童子命/阴债/必定离婚/短命」等恐吓性或宿命论断言——命理只作顺势参考，不作人生判决。
+// 后续新增文案须遵守此规范（对应《五行正名之鉴》防坑铁律第二/四条）。
 export function analyzeLiuQin(
   chart: BaZiChart,
   yongJi: YongJiResult,
@@ -2709,7 +2571,7 @@ export function analyzeLiuQin(
   const marriageHint = balanceLevel === '阴阳均衡倾向'
     ? '命局阴阳均衡倾向，婚姻和睦、夫妻恩爱、家庭稳固、相守长久的基础。'
     : balanceLevel === '阴阳偏枯倾向'
-      ? '命局阴阳偏枯倾向，需防婚姻波折、争吵不断、离合反复、孤独寡缘，后天经营尤为重要。'
+      ? '命局阴阳偏枯倾向，婚姻易有波折起伏，宜多沟通、避让冲突、用心经营，后天调养可渐趋安稳。'
       : '命局阴阳状态中等，婚姻需双方用心经营，方得长久安稳。';
   const spouse = `配偶宫为日支${chart.day.branch}（夫妻宫）。${isMale ? '男命以财星为妻' : '女命以官星为夫'}，${spouseStar}代表配偶。日支${chart.day.branch}五行属${elementName(chart.day.branchElement)}，${dayBranchMark === 'useful' ? '夫妻宫为用神，配偶有助力，婚姻美满。' : dayBranchMark === 'taboo' ? '夫妻宫为忌神，配偶助力弱，婚姻中易有矛盾。' : '夫妻宫为中性，婚姻关系平常。'}日柱${chart.day.stem}${chart.day.branch}干支关系影响夫妻相处模式。《自然易鉴》婚姻断法：格局阴阳均衡、干支有情、合多冲少，婚姻和睦长久；格局阴阳偏枯、干支无情、冲害混杂、刑破严重，婚姻波折。${marriageHint}`;
 
@@ -4256,3 +4118,310 @@ export function getAllShiGanXiJi(): ShiGanXiJiItem[] {
 }
 
 export { STEM_ELEMENTS, BRANCH_ELEMENTS, STEM_YINYANG, BRANCH_YINYANG, MONTH_QI_INFO };
+
+// ============ 古法旁证（阴阳干支命理讲义底层增量，仅作展示与解释） ============
+// 依据《阴阳干支命理完整系统讲义》（《五行正名之鉴》+《尚泫书院太极阴阳八字基础》）第7/10/13/27/30/37章。
+// 全部为「旁证」用途：不改写用忌 marks、不参与大运流年评分。格局法（第九编）按用户要求不实现。
+
+/** 气干 / 形干 + 阴阳集团查询（第7章） */
+export interface StemQiXingInfo {
+  stem: string;
+  qiXing: '气干' | '形干';
+  group: '阳' | '阴';
+  note: string;
+}
+export function getStemQiXing(stem: string): StemQiXingInfo | null {
+  return STEM_QI_XING.find((s) => s.stem === stem) ?? null;
+}
+
+/** 天干四冲检测（第10章）：甲庚、乙辛、丙壬、丁癸 */
+export function detectTianGanChong(chart: BaZiChart): string[] {
+  const stems = [chart.year.stem, chart.month.stem, chart.day.stem, chart.hour.stem];
+  const hits: string[] = [];
+  for (const [a, b] of TIAN_GAN_CHONG_PAIRS) {
+    const ai = stems.indexOf(a);
+    const bi = stems.indexOf(b);
+    if (ai >= 0 && bi >= 0 && ai !== bi) hits.push(`${a}${b}冲`);
+  }
+  return hits;
+}
+
+/** 地支六破检测（第13章）：子酉、卯午、寅亥、巳申、丑辰、戌未 */
+export function detectLiuPo(chart: BaZiChart): string[] {
+  const branches = [chart.year.branch, chart.month.branch, chart.day.branch, chart.hour.branch];
+  const hits: string[] = [];
+  for (const [a, b] of LIU_PO_PAIRS) {
+    if (branches.includes(a) && branches.includes(b)) hits.push(`${a}${b}破`);
+  }
+  return hits;
+}
+
+/** 驿马检测（第37章）：以年支、日支所属三合局查驿马，命中则标出 */
+export interface YiMaHit {
+  from: '年支' | '日支';
+  group: string;
+  ma: string;
+  hit: boolean;
+  desc: string;
+}
+export function detectYiMa(chart: BaZiChart): YiMaHit[] {
+  const branches = [chart.year.branch, chart.month.branch, chart.day.branch, chart.hour.branch];
+  const bases: Array<{ from: '年支' | '日支'; base: string }> = [
+    { from: '年支', base: chart.year.branch },
+    { from: '日支', base: chart.day.branch },
+  ];
+  const out: YiMaHit[] = [];
+  for (const c of bases) {
+    const rule = YI_MA_TABLE.find((r) => r.groups.includes(c.base));
+    if (!rule) continue;
+    out.push({
+      from: c.from,
+      group: rule.groups.join(''),
+      ma: rule.ma,
+      hit: branches.some((b) => b === rule.ma),
+      desc: `${c.from}${c.base}属${rule.groups.join('')}局，驿马在${rule.ma}`,
+    });
+  }
+  return out;
+}
+
+/** 月令分日用事诀 · 司令真神（第30章）：按出生日距本月交节日天数取当令天干 */
+export interface SiLingZhenShenResult {
+  monthName: string;
+  termName: string;
+  daysIntoMonth: number | null;   // 出生日距交节日天数（0 起）
+  ruler: string | null;           // 当前当令天干（司令真神）
+  rulerRange: string | null;      // 该司令所辖天数区间
+  allRulers: { stem: string; days: number }[];
+  zhenShen: string;               // 本气司令（天数最多者）
+  matched: boolean;               // 是否按交节时刻算出具体司令
+  note: string;
+}
+export function analyzeSiLingZhenShen(chart: BaZiChart): SiLingZhenShenResult {
+  const tbl = SI_LING_RI_YONG[chart.monthBranchIndex];
+  const termName = MOCK_MONTH_QI[chart.monthBranchIndex]?.solarTerm ?? '';
+  const base: SiLingZhenShenResult = {
+    monthName: tbl?.monthName ?? `${chart.month.branch}月`,
+    termName,
+    daysIntoMonth: null,
+    ruler: null,
+    rulerRange: null,
+    allRulers: tbl?.rulers ?? [],
+    zhenShen: tbl?.zhenShen ?? '',
+    matched: false,
+    note: '需精确交节时刻/出生时间方可定位司令；未定位时以本气司令（天数最多者）为参考。',
+  };
+  const birth = parseBirthMoment(chart);
+  if (!birth || !tbl || !termName) return base;
+  const birthJd = getBirthJulianDay(birth.year, birth.month, birth.day, birth.hour, birth.minute);
+  let termJd = getTermJulianDay(termName, birth.year);
+  if (termJd === null || termJd > birthJd) termJd = getTermJulianDay(termName, birth.year - 1);
+  if (termJd === null) return base;
+  const daysInto = Math.floor(birthJd - termJd);
+  if (daysInto < 0) return base;
+  let cum = 0;
+  let ruler = tbl.rulers[tbl.rulers.length - 1].stem;
+  let range = '';
+  for (let k = 0; k < tbl.rulers.length; k++) {
+    const start = cum;
+    cum += tbl.rulers[k].days;
+    if (daysInto < cum) {
+      ruler = tbl.rulers[k].stem;
+      range = `第 ${start + 1}–${cum} 天`;
+      break;
+    }
+  }
+  return { ...base, daysIntoMonth: daysInto, ruler, rulerRange: range, matched: true };
+}
+
+/** 地支接触判定（第27章前提：仅刑冲合害破时地支之间才产生接触） */
+function branchTouches(a: string, b: string): boolean {
+  const k = a + b;
+  const rev = b + a;
+  if (DI_ZHI_LIU_HE[k] !== undefined || DI_ZHI_LIU_HE[rev] !== undefined) return true;
+  if (LIU_CHONG_PAIRS[k] || LIU_CHONG_PAIRS[rev]) return true;
+  if (LIU_HAI_PAIRS[k] || LIU_HAI_PAIRS[rev]) return true;
+  for (const [x, y] of LIU_PO_PAIRS) {
+    if ((x === a && y === b) || (x === b && y === a)) return true;
+  }
+  if (SAN_XING_WUEN.includes(a) && SAN_XING_WUEN.includes(b)) return true;
+  if (SAN_XING_SHISHI.includes(a) && SAN_XING_SHISHI.includes(b)) return true;
+  if (ZI_MAO_XING.includes(a) && ZI_MAO_XING.includes(b)) return true;
+  if (a === b && ZI_XING_LIST.includes(a)) return true;
+  return false;
+}
+
+/** 理气法 · 生克权流转（第27章）：从月令起，紧贴干支相克即交接权力，得最终掌权五行 */
+export interface ShengKeQuanStep {
+  element: string;
+  label: string;
+  via: string;
+}
+export interface ShengKeQuanResult {
+  startElement: string;
+  startLabel: string;
+  rulerElement: string;
+  rulerLabel: string;
+  chain: ShengKeQuanStep[];
+  description: string;
+}
+export function analyzeShengKeQuan(chart: BaZiChart): ShengKeQuanResult {
+  const pillars = [chart.year, chart.month, chart.day, chart.hour];
+  const startHidden = HIDDEN_STEMS[chart.month.branch] ?? [];
+  const startEl = STEM_ELEMENTS[startHidden[0]] ?? 'earth';
+  const startLabel = HUA_ELEMENT_TO_NAME[startEl] ?? '';
+
+  let holderEl = startEl;
+  let curIdx = 1; // 从月令（月柱）起
+  const visited = new Set<number>([1]);
+  const chain: ShengKeQuanStep[] = [
+    { element: holderEl, label: startLabel, via: `月令${chart.month.branch}本气${startHidden[0] ?? ''}` },
+  ];
+
+  for (let step = 0; step < 8; step++) {
+    const neighbors = [curIdx - 1, curIdx + 1].filter((i) => i >= 0 && i <= 3 && !visited.has(i));
+    let moved = false;
+    for (const nb of neighbors) {
+      const cands: Array<{ el: string; via: string }> = [
+        { el: STEM_ELEMENTS[pillars[nb].stem], via: `邻柱天干${pillars[nb].stem}` },
+      ];
+      if (branchTouches(pillars[curIdx].branch, pillars[nb].branch)) {
+        for (const h of HIDDEN_STEMS[pillars[nb].branch] ?? []) {
+          cands.push({ el: STEM_ELEMENTS[h], via: `邻柱地支${pillars[nb].branch}藏${h}（刑冲合害破接触）` });
+        }
+      }
+      const ke = cands.find((c) => KE_ORDER[c.el] === holderEl);
+      if (ke) {
+        holderEl = ke.el;
+        curIdx = nb;
+        visited.add(nb);
+        chain.push({ element: holderEl, label: HUA_ELEMENT_TO_NAME[holderEl] ?? '', via: ke.via });
+        moved = true;
+        break;
+      }
+    }
+    if (!moved) break;
+  }
+
+  const rulerLabel = HUA_ELEMENT_TO_NAME[holderEl] ?? '';
+  const description =
+    chain.length === 1
+      ? `自月令${chart.month.branch}本气（${startLabel}）起，紧贴干支无相克交接，${rulerLabel}一路掌权到底。`
+      : `自月令${chart.month.branch}本气（${startLabel}）起，${chain.slice(1).map((s) => s.via).join(' → ')}，权力最终交接至${rulerLabel}掌权。`;
+  return { startElement: startEl, startLabel, rulerElement: holderEl, rulerLabel, chain, description };
+}
+
+/** 形干同性重克（第7章）：形干脆弱，被同为形干者所克即「无情」，紧贴为重克、隔位为轻克；仅作风险旁证，不计分 */
+export interface XingGanChongKe {
+  defender: string;         // 被克形干
+  attacker: string;         // 施克形干
+  defenderPillar: string;   // 年柱/月柱/日柱/时柱
+  attackerPillar: string;
+  distance: number;         // 两柱间隔（1=紧贴）
+  level: '重克' | '轻克';
+  isDayMaster: boolean;     // 被克者是否为日干（日主自承压力）
+  desc: string;
+}
+export function detectXingGanChongKe(chart: BaZiChart): XingGanChongKe[] {
+  const pillars = [
+    { name: '年柱', stem: chart.year.stem },
+    { name: '月柱', stem: chart.month.stem },
+    { name: '日柱', stem: chart.day.stem },
+    { name: '时柱', stem: chart.hour.stem },
+  ];
+  const isXingGan = (s: string) => STEM_QI_XING.find((x) => x.stem === s)?.qiXing === '形干';
+  const out: XingGanChongKe[] = [];
+  for (let i = 0; i < pillars.length; i++) {
+    if (!isXingGan(pillars[i].stem)) continue;
+    for (let j = 0; j < pillars.length; j++) {
+      if (i === j || !isXingGan(pillars[j].stem)) continue;
+      // 施克方五行克被克方五行（形克形＝同性，生克无情）
+      if (KE_ORDER[STEM_ELEMENTS[pillars[j].stem]] !== STEM_ELEMENTS[pillars[i].stem]) continue;
+      const d = Math.abs(i - j);
+      out.push({
+        defender: pillars[i].stem,
+        attacker: pillars[j].stem,
+        defenderPillar: pillars[i].name,
+        attackerPillar: pillars[j].name,
+        distance: d,
+        level: d === 1 ? '重克' : '轻克',
+        isDayMaster: i === 2,
+        desc: `${pillars[j].name}${pillars[j].stem}（形干）克${pillars[i].name}${pillars[i].stem}（形干）：同为形干、生克无情，${d === 1 ? '两柱紧贴，判为重克，属实质压力点' : '两柱隔位，力道次之，判为轻克'}。`,
+      });
+    }
+  }
+  return out;
+}
+
+/** 岁运介入后生克权复核（第27章）：岁运干支紧贴克制原局掌权五行即交接，明确该运谁掌权；仅作旁证，不进评分 */
+export interface ShengKeQuanShift {
+  yunGanZhi: string;
+  yunElement: string;
+  yunElementLabel: string;
+  fromRulerLabel: string;
+  shifted: boolean;
+  rulerElement: string;
+  rulerLabel: string;
+  description: string;
+}
+export function resolveShengKeQuanUnderYun(
+  fromRulerElement: string,
+  yunStem: string,
+  yunBranch: string,
+): ShengKeQuanShift {
+  const sEl = STEM_ELEMENTS[yunStem];
+  const bMain = HIDDEN_STEMS[yunBranch]?.[0] ?? '';
+  const bEl = (bMain && STEM_ELEMENTS[bMain]) || BRANCH_ELEMENTS[yunBranch];
+  const jieJiao = KE_ORDER[bEl] === sEl; // 截脚：支克干，天干不兑现
+  const yunEl = jieJiao ? bEl : sEl;
+  const fromLabel = HUA_ELEMENT_TO_NAME[fromRulerElement] ?? '';
+  const yunLabel = HUA_ELEMENT_TO_NAME[yunEl] ?? '';
+  const shifted = KE_ORDER[yunEl] === fromRulerElement;
+  const jieNote = jieJiao
+    ? `（岁运天干${yunStem}被地支${yunBranch}截脚、不兑现，权取地支本气${bMain || yunBranch}）`
+    : '';
+  return {
+    yunGanZhi: `${yunStem}${yunBranch}`,
+    yunElement: yunEl,
+    yunElementLabel: yunLabel,
+    fromRulerLabel: fromLabel,
+    shifted,
+    rulerElement: shifted ? yunEl : fromRulerElement,
+    rulerLabel: shifted ? yunLabel : fromLabel,
+    description: shifted
+      ? `岁运${yunStem}${yunBranch}（${yunLabel}）克原局掌权${fromLabel}，生克权交接，此运由${yunLabel}掌权。${jieNote}`
+      : `岁运${yunStem}${yunBranch}（${yunLabel}）未克原局掌权${fromLabel}，权力仍由${fromLabel}执掌。${jieNote}`,
+  };
+}
+
+/** 古法旁证汇总（供象意「古法旁证」卡片一次性渲染） */
+export interface GuFaPangZheng {
+  qiXing: StemQiXingInfo[];
+  tianGanChong: string[];
+  liuPo: string[];
+  yiMa: YiMaHit[];
+  siLing: SiLingZhenShenResult;
+  shengKeQuan: ShengKeQuanResult;
+  shengKeQuanShift: ShengKeQuanShift | null; // 当前大运介入后的掌权复核
+  currentDaYunGanZhi: string | null;
+  xingGanChongKe: XingGanChongKe[];
+  rule: typeof SHENG_KE_QUAN_RULE;
+}
+export function analyzeGuFaPangZheng(chart: BaZiChart, currentYear: number = new Date().getFullYear()): GuFaPangZheng {
+  const stems = [chart.year.stem, chart.month.stem, chart.day.stem, chart.hour.stem];
+  const shengKeQuan = analyzeShengKeQuan(chart);
+  const dyIdx = getCurrentDaYunIndex(chart, currentYear);
+  const curDy = chart.daYun[dyIdx] ?? null;
+  return {
+    qiXing: stems.map((s) => getStemQiXing(s)).filter((x): x is StemQiXingInfo => x !== null),
+    tianGanChong: detectTianGanChong(chart),
+    liuPo: detectLiuPo(chart),
+    yiMa: detectYiMa(chart),
+    siLing: analyzeSiLingZhenShen(chart),
+    shengKeQuan,
+    shengKeQuanShift: curDy ? resolveShengKeQuanUnderYun(shengKeQuan.rulerElement, curDy.stem, curDy.branch) : null,
+    currentDaYunGanZhi: curDy ? `${curDy.stem}${curDy.branch}` : null,
+    xingGanChongKe: detectXingGanChongKe(chart),
+    rule: SHENG_KE_QUAN_RULE,
+  };
+}

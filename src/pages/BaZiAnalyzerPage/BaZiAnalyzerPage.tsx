@@ -48,9 +48,11 @@ import {
   analyzeZhuZiXiJi,
   getChunQiuMonthFactor,
   detectGanZhiZiHe,
+  analyzeGuFaPangZheng,
   type MonthQiResult,
   type ChunQiuFactorResult,
   type GanZhiZiHeHit,
+  type GuFaPangZheng,
   type YongJiResult,
   type ZhuZiXiJiResult,
   type ZhuZiEntry,
@@ -104,6 +106,22 @@ const TERMINAL_PALETTE = {
 
 // 光谱：瑞士平涂五色 + 墨
 const TERMINAL_SPECTRUM = ['#E31C29', '#4A834E', '#B98C31', '#788491', '#31669B', '#1F2937'];
+
+// ============ 报告版块注册表（单一真源） ============
+// 左侧导航 / 正文版块头 / 右侧目录三处共用，禁止各自硬编码编号；
+// 新增或调整版块只改此处，避免编号漂移（可进化契约）。
+const REPORT_SECTIONS = [
+  { id: 'pillars', no: '01', label: '四柱排盘', en: 'PILLARS', title: '四柱排盘总览' },
+  { id: 'overview', no: '02', label: '命主速览', en: 'OVERVIEW', title: '命主速览' },
+  { id: 'monthqi', no: '03', label: '月气分析', en: 'MONTH QI', title: '月气分析' },
+  { id: 'yongji', no: '04', label: '用神忌神', en: 'FAVORABLE & TABOO', title: '用神忌神判断' },
+  { id: 'dayun', no: '05', label: '大运流年', en: 'FORTUNE', title: '大运流年分析' },
+  { id: 'mingju-pattern', no: '06', label: '命局模式', en: 'PATTERN', title: '命局模式分析' },
+  { id: 'xiangfa', no: '07', label: '象意解读', en: 'XIANG FA', title: '象意 · 财富 · 感情 · 学历' },
+] as const;
+
+const SECTION_META: Record<string, { no: string; label: string; en: string; title: string }> =
+  Object.fromEntries(REPORT_SECTIONS.map((s) => [s.id, s]));
 
 // ============ 辅助组件：SVG 函数波动曲线（折线+面积+分档横线） ============
 function DaYunCurveChart({
@@ -736,7 +754,7 @@ type ScoreBreakdownRow = {
 };
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.7.0';
+const APP_VERSION = '2.8.0';
 
 /** 排盘历史 localStorage 键（沛然堂八字系统） */
 const HISTORY_KEY = '__app_peirantang_history';
@@ -1124,6 +1142,12 @@ export default function BaZiAnalyzerPage() {
     return analyzeWealthVerdict(chart, monthQi, wealthNobility, elementPower);
   }, [chart, monthQi, wealthNobility, elementPower]);
 
+  // 古法旁证（阴阳干支命理讲义底层增量：气干/形干、四冲、六破、驿马、司令真神、生克权流转）
+  const guFaPangZheng = useMemo<GuFaPangZheng | null>(() => {
+    if (!chart) return null;
+    return analyzeGuFaPangZheng(chart);
+  }, [chart]);
+
   // ===== 象法·应期年份排序（按可能性从高到低排列，展示结论年份，不展示中间过程与数据库规则）=====
   type ScoredYear = { year: number; ganzhi: string; age: number; score: number };
 
@@ -1405,22 +1429,14 @@ export default function BaZiAnalyzerPage() {
                 导航 / INDEX
               </div>
               <ul>
-                {[
-                  { id: 'pillars', label: '四柱排盘' },
-                  { id: 'overview', label: '命主速览' },
-                  { id: 'monthqi', label: '月气分析' },
-                  { id: 'yongji', label: '用神忌神' },
-                  { id: 'dayun', label: '大运流年' },
-                  { id: 'mingju-pattern', label: '命局模式' },
-                  { id: 'xiangfa', label: '象意解读' },
-                ].map((item, i) => (
+                {REPORT_SECTIONS.map((item) => (
                   <li key={item.id} className="border-b border-border">
                     <a
                       href={`#section-${item.id}`}
                       className="group flex items-center gap-3 py-2 text-[13px] font-bold text-foreground/75 transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                     >
                       <span className="font-mono text-[11px] text-muted-foreground group-hover:text-primary">
-                        {String(i + 1).padStart(2, '0')}
+                        {item.no}
                       </span>
                       {item.label}
                     </a>
@@ -1957,10 +1973,10 @@ export default function BaZiAnalyzerPage() {
                 {/* 区块标题栏：瑞士编辑式 */}
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-card px-5 py-3 md:px-8">
                   <div className="flex items-center gap-3">
-                    <span className="label-mono text-primary">01 / PILLARS</span>
+                    <span className="label-mono text-primary">{SECTION_META.pillars.no} / {SECTION_META.pillars.en}</span>
                     <span className="h-3 w-px bg-border" />
                     <span className="text-sm font-bold tracking-[0.15em] text-foreground">
-                      四柱排盘总览
+                      {SECTION_META.pillars.title}
                     </span>
                   </div>
                   <span className="num-tabular text-xs font-medium text-muted-foreground" style={{ fontFamily: 'var(--font-mono)' }}>
@@ -2142,9 +2158,9 @@ export default function BaZiAnalyzerPage() {
               >
                 <div className="flex items-center justify-between border-b border-border px-5 py-3 md:px-8">
                   <div className="flex items-center gap-3">
-                    <span className="label-mono text-primary">02 / OVERVIEW</span>
+                    <span className="label-mono text-primary">{SECTION_META.overview.no} / {SECTION_META.overview.en}</span>
                     <span className="h-3 w-px bg-border" />
-                    <span className="text-sm font-bold tracking-[0.15em] text-foreground">命主速览</span>
+                    <span className="text-sm font-bold tracking-[0.15em] text-foreground">{SECTION_META.overview.title}</span>
                   </div>
                   <span className="label-mono hidden text-muted-foreground md:inline">日主 · 格局 · 用神 · 整体定调</span>
                 </div>
@@ -2312,9 +2328,9 @@ export default function BaZiAnalyzerPage() {
               <Card id="section-monthqi" className="relative crosshair scroll-mt-6 overflow-hidden rounded-sm border-border bg-card">
                 <div className="flex items-center justify-between border-b border-border px-5 py-3 md:px-8">
                   <div className="flex items-center gap-3">
-                    <span className="label-mono text-primary">03 / MONTH QI</span>
+                    <span className="label-mono text-primary">{SECTION_META.monthqi.no} / {SECTION_META.monthqi.en}</span>
                     <span className="h-3 w-px bg-border" />
-                    <span className="text-sm font-bold tracking-[0.15em] text-foreground">月气分析</span>
+                    <span className="text-sm font-bold tracking-[0.15em] text-foreground">{SECTION_META.monthqi.title}</span>
                   </div>
                   <span className="label-mono hidden text-muted-foreground md:inline">月令为权 · 吉凶准绳</span>
                 </div>
@@ -2453,9 +2469,9 @@ export default function BaZiAnalyzerPage() {
               >
                 <div className="flex items-center justify-between border-b border-border px-5 py-3 md:px-8">
                   <div className="flex items-center gap-3">
-                    <span className="label-mono text-primary">04 / FAVORABLE & TABOO</span>
+                    <span className="label-mono text-primary">{SECTION_META.yongji.no} / {SECTION_META.yongji.en}</span>
                     <span className="h-3 w-px bg-border" />
-                    <span className="text-sm font-bold tracking-[0.15em] text-foreground">用神忌神判断</span>
+                    <span className="text-sm font-bold tracking-[0.15em] text-foreground">{SECTION_META.yongji.title}</span>
                   </div>
                   <span className="label-mono hidden text-muted-foreground md:inline">平衡为则</span>
                 </div>
@@ -2635,9 +2651,9 @@ export default function BaZiAnalyzerPage() {
               >
                 <div className="flex items-center justify-between border-b border-border px-5 py-3 md:px-8">
                   <div className="flex items-center gap-3">
-                    <span className="label-mono text-primary">05 / FORTUNE</span>
+                    <span className="label-mono text-primary">{SECTION_META.dayun.no} / {SECTION_META.dayun.en}</span>
                     <span className="h-3 w-px bg-border" />
-                    <span className="text-sm font-bold tracking-[0.15em] text-foreground">大运流年分析</span>
+                    <span className="text-sm font-bold tracking-[0.15em] text-foreground">{SECTION_META.dayun.title}</span>
                   </div>
                   <span className="label-mono hidden text-muted-foreground md:inline">十年大运 · 岁运引动</span>
                 </div>
@@ -2953,9 +2969,9 @@ export default function BaZiAnalyzerPage() {
               >
                 <div className="flex items-center justify-between border-b border-border px-5 py-3 md:px-8">
                   <div className="flex items-center gap-3">
-                    <span className="label-mono text-primary">06 / PATTERN</span>
+                    <span className="label-mono text-primary">{SECTION_META['mingju-pattern'].no} / {SECTION_META['mingju-pattern'].en}</span>
                     <span className="h-3 w-px bg-border" />
-                    <span className="text-sm font-bold tracking-[0.15em] text-foreground">命局模式分析</span>
+                    <span className="text-sm font-bold tracking-[0.15em] text-foreground">{SECTION_META['mingju-pattern'].title}</span>
                   </div>
                   <span className="label-mono hidden text-muted-foreground md:inline">年月太极 · 格局根本</span>
                 </div>
@@ -3081,9 +3097,9 @@ export default function BaZiAnalyzerPage() {
               >
                 <div className="flex items-center justify-between border-b border-border px-5 py-3 md:px-8">
                   <div className="flex items-center gap-3">
-                    <span className="label-mono text-primary">07 / XIANG FA</span>
+                    <span className="label-mono text-primary">{SECTION_META.xiangfa.no} / {SECTION_META.xiangfa.en}</span>
                     <span className="h-3 w-px bg-border" />
-                    <span className="text-sm font-bold tracking-[0.15em] text-foreground">象意 · 财富 · 感情 · 学历</span>
+                    <span className="text-sm font-bold tracking-[0.15em] text-foreground">{SECTION_META.xiangfa.title}</span>
                   </div>
                 </div>
                 <CardContent className="p-4 md:p-8">
@@ -3104,6 +3120,205 @@ export default function BaZiAnalyzerPage() {
                     <p className="text-center text-sm font-bold text-muted-foreground">数据计算中，请稍候…</p>
                   )}
                 </CardContent>
+
+                {/* ===== 古法旁证（阴阳干支命理讲义底层增量｜仅佐证解释，不参与用忌判定与大运流年评分） ===== */}
+                {guFaPangZheng && (
+                  <div className="border-t-2 border-foreground/80 px-4 py-4 md:px-8 md:py-6">
+                    <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                      <span className="label-mono text-[11px] font-black text-foreground">古法旁证 / ANCIENT CROSS-REFERENCE</span>
+                      <span className="text-[10px] font-bold text-muted-foreground">仅佐证解释 · 不参与用忌判定与大运流年评分</span>
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {/* 十干定性：气干 / 形干 */}
+                      <div className="border border-border bg-muted/30 p-3">
+                        <div className="label-mono mb-2 text-[10px] font-black text-muted-foreground">十干定性 · 气干 / 形干</div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {guFaPangZheng.qiXing.map((q) => (
+                            <span
+                              key={q.stem}
+                              className="inline-flex items-center gap-1 border border-border bg-card px-2 py-0.5 text-[11px] font-bold"
+                            >
+                              <span className="font-mono text-sm font-black">{q.stem}</span>
+                              <span className="text-[10px] text-muted-foreground">{q.qiXing}</span>
+                              <span
+                                className="text-[10px] font-black"
+                                style={{ color: q.group === '阳' ? 'hsl(28 82% 48%)' : 'hsl(215 55% 38%)' }}
+                              >
+                                {q.group}集团
+                              </span>
+                            </span>
+                          ))}
+                        </div>
+                        <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
+                          气干含气多而杂、皮实耐克泄；形干含气少而精、脆弱惧克泄。同为气/形者生克彻底无情，气形相见则生克有情、留有余地。
+                        </p>
+                      </div>
+
+                      {/* 天干四冲 · 地支六破 */}
+                      <div className="border border-border bg-muted/30 p-3">
+                        <div className="label-mono mb-2 text-[10px] font-black text-muted-foreground">天干四冲 · 地支六破</div>
+                        <div className="space-y-1.5 text-[11px] font-bold">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-muted-foreground">天干四冲</span>
+                            {guFaPangZheng.tianGanChong.length > 0 ? (
+                              guFaPangZheng.tianGanChong.map((s) => (
+                                <span key={s} className="border px-1.5 py-0.5" style={{ borderColor: 'rgba(227,28,41,.4)', color: '#E31C29' }}>{s}</span>
+                              ))
+                            ) : (
+                              <span className="text-muted-foreground">本盘未见</span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-muted-foreground">地支六破</span>
+                            {guFaPangZheng.liuPo.length > 0 ? (
+                              guFaPangZheng.liuPo.map((s) => (
+                                <span key={s} className="border px-1.5 py-0.5" style={{ borderColor: 'rgba(227,28,41,.4)', color: '#E31C29' }}>{s}</span>
+                              ))
+                            ) : (
+                              <span className="text-muted-foreground">本盘未见</span>
+                            )}
+                          </div>
+                        </div>
+                        <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
+                          四冲（甲庚·乙辛·丙壬·丁癸）主观念对立互伤；六破（子酉·卯午·寅亥·巳申·丑辰·戌未）主暗中侵蚀破坏。
+                        </p>
+                      </div>
+
+                      {/* 驿马 */}
+                      <div className="border border-border bg-muted/30 p-3">
+                        <div className="label-mono mb-2 text-[10px] font-black text-muted-foreground">驿马 · 三合查法</div>
+                        <div className="space-y-1.5">
+                          {guFaPangZheng.yiMa.map((m) => (
+                            <div key={m.from} className="flex flex-wrap items-center gap-2 text-[11px] font-bold">
+                              <span className="text-muted-foreground">{m.from}</span>
+                              <span className="font-mono">{m.group}</span>
+                              <span className="text-muted-foreground">→ 马在</span>
+                              <span className="font-mono font-black">{m.ma}</span>
+                              <span
+                                className="ml-auto border px-1.5 py-0.5 text-[10px] font-black"
+                                style={
+                                  m.hit
+                                    ? { borderColor: 'rgba(46,118,84,.5)', color: '#2E7654', background: 'rgba(46,118,84,.07)' }
+                                    : { borderColor: 'var(--border)', color: 'var(--muted-foreground)' }
+                                }
+                              >
+                                {m.hit ? '本盘命驿马' : '本盘未见'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
+                          申子辰马在寅、寅午戌马在申、巳酉丑马在亥、亥卯未马在巳；主变动、走动、迁旅与外出机遇。
+                        </p>
+                      </div>
+
+                      {/* 司令真神 */}
+                      <div className="border border-border bg-muted/30 p-3">
+                        <div className="label-mono mb-2 text-[10px] font-black text-muted-foreground">月令分日用事 · 司令真神</div>
+                        <div className="text-[11px] font-bold">
+                          <span className="text-muted-foreground">{guFaPangZheng.siLing.monthName}（{guFaPangZheng.siLing.termName}）</span>
+                        </div>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] font-bold">
+                          <span className="text-muted-foreground">当令</span>
+                          <span className="border border-border bg-card px-1.5 py-0.5 font-mono font-black">{guFaPangZheng.siLing.ruler ?? '—'}</span>
+                          {guFaPangZheng.siLing.rulerRange && (
+                            <span className="text-[10px] text-muted-foreground">{guFaPangZheng.siLing.rulerRange}</span>
+                          )}
+                          {guFaPangZheng.siLing.daysIntoMonth !== null && (
+                            <span className="text-[10px] text-muted-foreground">（生于交节后第 {guFaPangZheng.siLing.daysIntoMonth + 1} 天）</span>
+                          )}
+                        </div>
+                        <div className="mt-1.5 text-[11px] font-bold">
+                          <span className="text-muted-foreground">本气司令（全月天数最多）</span>
+                          <span className="ml-1 font-mono font-black">{guFaPangZheng.siLing.zhenShen}</span>
+                        </div>
+                        <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">{guFaPangZheng.siLing.note}</p>
+                      </div>
+                    </div>
+
+                    {/* 形干同性重克 · 实质压力点 */}
+                    <div className="mt-3 border border-border bg-muted/30 p-3">
+                      <div className="label-mono mb-2 text-[10px] font-black text-muted-foreground">形干同性重克 · 实质压力点</div>
+                      {guFaPangZheng.xingGanChongKe.length > 0 ? (
+                        <div className="space-y-1.5">
+                          {guFaPangZheng.xingGanChongKe.map((h, i) => (
+                            <div key={i} className="flex flex-wrap items-center gap-2 text-[11px] font-bold">
+                              <span
+                                className="border px-1.5 py-0.5 text-[10px] font-black"
+                                style={
+                                  h.level === '重克'
+                                    ? { borderColor: 'rgba(227,28,41,.45)', color: '#E31C29', background: 'rgba(227,28,41,.06)' }
+                                    : { borderColor: 'var(--border)', color: 'var(--muted-foreground)' }
+                                }
+                              >
+                                {h.level}
+                              </span>
+                              <span className="font-mono font-black">{h.attacker}</span>
+                              <span className="text-muted-foreground">克</span>
+                              <span className="font-mono font-black">{h.defender}</span>
+                              <span className="text-muted-foreground">（{h.attackerPillar} → {h.defenderPillar}）</span>
+                              {h.isDayMaster && (
+                                <span className="border px-1.5 py-0.5 text-[10px] font-black" style={{ borderColor: 'rgba(227,28,41,.6)', color: '#E31C29' }}>涉日主</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[11px] font-bold text-muted-foreground">本盘天干形干之间未见无情同性之克，无实质压力点。</p>
+                      )}
+                      <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
+                        形干（乙·丁·己·辛·癸）本脆弱，被同为形干者所克即「生克无情」。两柱紧贴判为重克（实质压力点），隔位判为轻克（力道次之）；气干克形干属异性、生克留有余地，不计入。
+                      </p>
+                    </div>
+
+                    {/* 理气法 · 生克权流转 */}
+                    <div className="mt-3 border border-border bg-muted/30 p-3">
+                      <div className="label-mono mb-2 text-[10px] font-black text-muted-foreground">理气法 · 生克权流转</div>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {guFaPangZheng.shengKeQuan.chain.map((s, i) => (
+                          <span key={i} className="flex items-center gap-1.5">
+                            {i > 0 && <span className="text-[10px] text-muted-foreground">→</span>}
+                            <span
+                              className="border px-2 py-0.5 text-[11px] font-black"
+                              style={{
+                                borderColor: `${ELEMENT_COLORS[s.element] ?? '#788491'}66`,
+                                color: ELEMENT_COLORS[s.element] ?? '#788491',
+                                background: `${ELEMENT_COLORS[s.element] ?? '#788491'}12`,
+                              }}
+                            >
+                              {s.label}
+                            </span>
+                          </span>
+                        ))}
+                      </div>
+                      <p className="mt-2 text-[11px] font-bold leading-relaxed text-foreground">{guFaPangZheng.shengKeQuan.description}</p>
+                      {guFaPangZheng.shengKeQuanShift && (
+                        <div className="mt-2 border-t border-border pt-2">
+                          <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold">
+                            <span className="label-mono text-[10px] font-black text-muted-foreground">当前大运掌权复核</span>
+                            <span className="font-mono font-black">{guFaPangZheng.currentDaYunGanZhi}</span>
+                            <span
+                              className="border px-1.5 py-0.5 text-[10px] font-black"
+                              style={
+                                guFaPangZheng.shengKeQuanShift.shifted
+                                  ? { borderColor: 'rgba(227,28,41,.45)', color: '#E31C29' }
+                                  : { borderColor: 'rgba(46,118,84,.5)', color: '#2E7654' }
+                              }
+                            >
+                              {guFaPangZheng.shengKeQuanShift.shifted ? '权已交接' : '权未交接'}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">{guFaPangZheng.shengKeQuanShift.description}</p>
+                        </div>
+                      )}
+                      <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+                        {guFaPangZheng.rule.principle}——{guFaPangZheng.rule.flow}
+                      </p>
+                      <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">{guFaPangZheng.rule.warning}</p>
+                    </div>
+                  </div>
+                )}
               </Card>
 
 
@@ -3127,15 +3342,7 @@ export default function BaZiAnalyzerPage() {
                   目录 / CONTENTS
                 </div>
                 <nav className="space-y-0.5 p-2">
-                  {[
-                    { id: 'pillars', no: '01', label: '四柱排盘' },
-                    { id: 'overview', no: '02', label: '命主速览' },
-                    { id: 'monthqi', no: '03', label: '月气分析' },
-                    { id: 'yongji', no: '04', label: '用神忌神' },
-                    { id: 'dayun', no: '05', label: '大运流年' },
-                    { id: 'mingju-pattern', no: '06', label: '命局模式' },
-                    { id: 'xiangfa', no: '07', label: '象意解读' },
-                  ].map((item) => (
+                  {REPORT_SECTIONS.map((item) => (
                     <a
                       key={item.id}
                       href={`#section-${item.id}`}
