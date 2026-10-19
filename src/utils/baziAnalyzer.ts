@@ -4975,7 +4975,8 @@ export function analyzeShengKeQuan(chart: BaZiChart): ShengKeQuanResult {
     const neighbors = [curIdx - 1, curIdx + 1].filter((i) => i >= 0 && i <= 3 && !visited.has(i));
     let moved = false;
     for (const nb of neighbors) {
-      const cands: Array<{ el: string; via: string }> = [
+      // el 收紧为五行联合类型（typeof startEl）：避免被擦成 string 后与 holderEl 赋值不兼容
+      const cands: Array<{ el: typeof startEl; via: string }> = [
         { el: STEM_ELEMENTS[pillars[nb].stem], via: `邻柱天干${pillars[nb].stem}` },
       ];
       if (branchTouches(pillars[curIdx].branch, pillars[nb].branch)) {

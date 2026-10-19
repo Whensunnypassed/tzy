@@ -6,7 +6,7 @@
 >
 > **维护约定**：新增事项写入对应分区；完成后移入「已完成」并注明完成版本；每项必须写清
 > **来源 / 条件 / 当前状态 / 文件锚点**，不留模糊表述。
-> 最后更新：v2.9.2 候选（未提交 · 打分链路参数 CFG 化）
+> 最后更新：2026-10-19（v2.9.3 已上线；新增 G1「BYOK AI 解读」暂缓方向决策）
 
 ---
 
@@ -14,10 +14,11 @@
 
 ### A1 · 太极二气「全链路同源」口径统一
 - **来源**：方案 B（太极二气配比，`reference/docs/06_方案B·太极二气配比与土纳阴纳阳·设计与标定.md`）实施记录。
-- **问题**：`YONG_JI_MODE` 开关目前只切换了 `analyzeYongJi` 的大方向判据来源；而 `analyzeMingJuPattern` 等下游模块仍直接读取 `monthQi.usageDirection`。一旦把某月切成 `taiji` 模式，同盘会出现两套口径（用忌用太极、命局模式用旧二分）而自相矛盾。
-- **条件**：切换任一月份为 `taiji` 之前，必须先让全部读取 `monthQi.usageDirection` 的模块统一改为从同一判据来源取值（建议统一走 `resolveYongJiMode` + `computeTaiJiQi` 的出口）。
+- **问题（2026-10-19 全量检索核实，锚点已订正）**：`YONG_JI_MODE` 开关只切换了 `analyzeYongJi` 的大方向判据来源；仍有 **4 处直接读 `monthQi.usageDirection`**：① `analyzeWealthNobility`（L2742 / L2744 / L2771 / L2816 —— 用神力量与富贵档位的**实质判定**）；② `analyzeSevenCategories`（L2900 / L2941-2949 / L2960 —— 阴阳二气与事业适配文案）；③ `analyzeZhuZiXiJi`（L889 方向标签；L894-895 **仅资料缺月的兜底分支**）；④ 页面 `BaZiAnalyzerPage.tsx` L2571（月气方向展示）。原登记所举示例 `analyzeMingJuPattern` 经核实**并不直接读该字段**（它走入参 `yongJi`，已同源），故原锚点有误。
+- **现状影响**：默认 `binary` 模式下两套判据同值，**当前无实际矛盾**；仅当某月灰度切为 `taiji` 时才出现同盘两套口径。
+- **条件**：切换任一月份为 `taiji` 之前，必须先让上述 4 处统一改为从同一判据来源取值（建议统一走 `resolveYongJiMode` + `computeTaiJiQi` 的出口）。
 - **状态**：未开始（切 taiji 的前置门槛）。
-- **锚点**：`src/utils/baziAnalyzer.ts`（`analyzeYongJi` / `analyzeMingJuPattern` / `resolveYongJiMode` / `computeTaiJiQi`）；`src/data/baziData.ts`（`YONG_JI_MODE`）。
+- **锚点**：`src/utils/baziAnalyzer.ts`（`analyzeYongJi` L329 / `analyzeWealthNobility` L2718 / `analyzeSevenCategories` L2922 / `analyzeZhuZiXiJi` L888 / `resolveYongJiMode` L1738 / `computeTaiJiQi` L1751）；`src/pages/BaZiAnalyzerPage/BaZiAnalyzerPage.tsx` L2571；`src/data/baziData.ts`（`YONG_JI_MODE`）。
 
 ### A2 · 逐月灰度放行门槛（≥3 命例回放）
 - **来源**：方案 B 灰度策略（`YONG_JI_MODE.months` 覆盖全局 `mode`）。
@@ -28,11 +29,6 @@
 ---
 
 ## B. 待确认（需用户拍板后才能动）
-
-### B1 · v2.9.1 提交与发布
-- **来源**：v2.9.0 累计改动（方案 B 引擎落地 + 命局函数场可视化改造 + 逐月条件字回写）+ 本轮命局函数曲线 debug（field-v7.0.0）。
-- **条件**：用户已确认 commit 升 v2.9.1 并 push 到 GitHub Pages。
-- **状态**：**已完成** —— 代码已 commit（`e13f388`）并 push 到 main；gh-pages 线上部署待用户明确要求后执行。
 
 ### B2 · 酉月两局落定延伸
 - **来源**：申月余热局/成凉局动态判定已落地；酉月可选延伸。
@@ -108,6 +104,18 @@
 
 ---
 
+## G. 暂缓方向（决策已定 · 暂不实施）
+
+### G1 · BYOK「客户自带 Key」AI 解读
+- **来源**：2026-10-19 用户先提出「让客户用自己的 API，让他的 AI 解读我们给的数据」，方案已勘察成型（右侧全局抽屉 + `localStorage` 存 Key + 前端直连 OpenAI 兼容接口 + 把引擎结论以「既成事实」注入 prompt，AI 仅做语言层解读）；同日用户复评后决定 **暂不做**。
+- **决策理由**：本系统判定为非标准体系（月气定用阳/用阴、逐字喜忌带条件、得失口诀、两仪气机、岁运调整分九档），通用大模型不具备该体系知识，即使 system 硬约束「不得改判」，仍会按扶抑 / 调候 / 格局等通行先验渗透外行话；自由问答场景风险最高。且 BYOK 只解决算力与费用归属，不解决「AI 不懂」这一根本缺口。
+- **复启前置条件（缺一不可）**：① 已形成成体系的术语词典 + 惯用判词话术库（可直接作为 prompt 约束与验收基准）；② 命例回测通过——同一命盘重复生成 N 次，输出不得出现与引擎判定冲突的表述；③ AI 仅开放「润色 / 串联」档，不开放自由问答（问答若上，必须走自有规则问答层）。
+- **替代方向（已向用户呈现，待其选择）**：A 彻底放弃；B AI 降级为「朗读员 / 排版助手」，逐字复述引擎结论、禁止自主推演；C 换用途（术语解释 / FAQ）；D 搁置。执行者建议为「确定性长文解读生成器」（自有话术层产出长文，零 AI、零 Key、零隐私敞口），用户暂未采纳、暂不实施。
+- **状态**：**暂缓（未实施，无代码改动）**。备选方案已完整勘察，可直接复用：① 版本化常量层 `AI_CFG`（厂商预设 / 请求参数 / prompt 模板 / UI 文案，拟落 `src/data/baziData.ts`）；② 纯函数层 `src/utils/aiClient.ts`（`buildAiDigest` 报告→摘要 / `buildMessages` / SSE 流式解析 / 错误分流 401·429·CORS·超时）；③ 组件 `src/components/AiInterpretDrawer.tsx`（右侧全局抽屉，挂载于页面根，大屏 `xl:pr-[440px]` 让内容左移不遮挡）。
+- **锚点**：`src/data/baziData.ts`（拟增 `AI_CFG`）；`src/components/AiInterpretDrawer.tsx`（未建）；`src/pages/BaZiAnalyzerPage/BaZiAnalyzerPage.tsx`（拟挂载点：页根 L3700 附近 + 左栏 `工具 / TOOLS` L1486）。
+
+---
+
 ## F. 页面人机功效重设计（2026-10 用户提出 · 已批准并按 P0→P3 实施）
 
 - **来源**：用户——「模块很多，要好好思考人机功效；能折叠/隐藏在哪；不要锁死在单栏竖向，左右空白要像导师批改论文一样做侧边批注；十二长生环序本质是波动函数曲线，应改圆环或弧形」。
@@ -128,15 +136,17 @@
 
 | 事项 | 完成版本 | 说明 |
 |---|---|---|
-| 方案 B 引擎落地（默认 dormant） | v2.9.0 候选 | `TAI_JI_QI_PAIRS`/`TAI_JI_MODEL_PARAMS`/`YONG_JI_MODE` + `computeTaiJiQi`/`resolveYongJiMode` + UI 旁证块；默认 `binary` 零回归 |
+| 方案 B 引擎落地（默认 dormant） | v2.9.0 | `TAI_JI_QI_PAIRS`/`TAI_JI_MODEL_PARAMS`/`YONG_JI_MODE` + `computeTaiJiQi`/`resolveYongJiMode` + UI 旁证块；默认 `binary` 零回归 |
 | 逐字喜忌条件字回写 | v2.8.x | 申月余热/成凉局动态落定，13 条原待定明确为用/忌，仅留 9 个土类真条件字 |
 | 月气数据单一真源 | v2.8.0 | `baziAnalyzer.ts` 月气结构改为从 `MOCK_MONTH_QI` 派生 |
 | 命局函数场 3D 曲线族 | v2.8.x → v3.1.0 | 模型层/渲染层分离；本轮升级可视化对照 |
 | 命局函数场 → 单曲线（阴阳轴 + 理想虚影） | v4.0.0 → v5.0.0 | 折线改平滑曲线；Y 轴改阴阳（木火+/金水−/土枢机居中）；新增理想函数 f* 虚线虚影＝二气配平；22 字全可注入（原局字标「原局」＝岁运再逢）；「距理想」竖线替代助用/为忌标注，消除与选字区喜忌的重复 |
 | 命局函数场 → 作用向量 + 因盘而异得失 | v6.0.0 | 注入效果由单格标量升级为跨五行**作用向量**（自身 / 所生 +λ / 所克 −λ，λ=`shengKeCoupling`），每字带动三节点并各画箭头（增实线 / 克虚线）；按本盘用忌以得失口诀评出每字 **吉/凶/杂/平** 徽章（同一五行不同命盘结论不同）；读数条联动显示非注入五行的「（注入 ±x）」 |
-| 页面内部依据小字清理 | 未提交 | 用户：「这类小字灰色的特别小，根本没人去看，这些应该是我们自己知道就行，夹在里面很影响使用和观感」。已删各模块尾部的「依据 / 出处 / 口径来源 / 规则」类灰色小字段落共 12 处：02·B 四柱限段、十二长生（原理段 + 读图注）、太极二气配比、逐字喜忌表头、06·A 根本吉凶（含「天地一柱·规则」行）、换太极、五行取象、R 地支作用规则、命局函数场脚注、05 岁运记分卡评分方法论、05 生克权规则定义（principle——flow）与旁证声明；内部方法论与出处仍保留在数据层（`baziData.ts` 的 `principle`/`method`/`engineNote`/`source` 字段），只是不再上 UI |
-| 十二长生气机加减值下线 | 未提交 | 用户：「十二长生环序 · 气机强弱 这个模块旁边还有一些加减，不要显示出来」。已删除 entries 网格每个天干的 `e.power`（+/- 分值）显示 span，及环图峰谷标注中的数值（保留阶段名/帝旺·绝标注与颜色判定逻辑；引擎 `power` 字段不动） |
-| 折叠块展开提示 | 未提交 | 用户：「你折叠的起码得做个表示说这里可以展开吧？红色标识一下起码」。`Detail` 折叠态右侧指示器由灰色 `+/−` 改为朱红「▸ 展开」，展开态为灰「▾ 收起」；5 处折叠块（02·A 命局函数曲线 / 02·B 四柱限段 / 06·A 根本吉凶 / R 地支作用规则 / 古法旁证）共用该组件，统一生效 |
-| 移除「排盘历史」功能 | 未提交 | 用户要求删除。已清理 `HISTORY_KEY`/`HISTORY_KEY_LEGACY`/`HistoryRecord`/`useState`/加载 `useEffect`/`saveToHistory`/`applyHistory`/`clearHistory` 与首页历史卡片（HISTORY 卡）；README 功能清单与隐私段、AGENTS.md 功能列表与数据来源表同步；产物已无 `__app_peirantang_history` 与「排盘历史」字样 |
+| 页面内部依据小字清理 | v2.9.0 | 用户：「这类小字灰色的特别小，根本没人去看，这些应该是我们自己知道就行，夹在里面很影响使用和观感」。已删各模块尾部的「依据 / 出处 / 口径来源 / 规则」类灰色小字段落共 12 处：02·B 四柱限段、十二长生（原理段 + 读图注）、太极二气配比、逐字喜忌表头、06·A 根本吉凶（含「天地一柱·规则」行）、换太极、五行取象、R 地支作用规则、命局函数场脚注、05 岁运记分卡评分方法论、05 生克权规则定义（principle——flow）与旁证声明；内部方法论与出处仍保留在数据层（`baziData.ts` 的 `principle`/`method`/`engineNote`/`source` 字段），只是不再上 UI |
+| 十二长生气机加减值下线 | v2.9.0 | 用户：「十二长生环序 · 气机强弱 这个模块旁边还有一些加减，不要显示出来」。已删除 entries 网格每个天干的 `e.power`（+/- 分值）显示 span，及环图峰谷标注中的数值（保留阶段名/帝旺·绝标注与颜色判定逻辑；引擎 `power` 字段不动） |
+| 折叠块展开提示 | v2.9.0 | 用户：「你折叠的起码得做个表示说这里可以展开吧？红色标识一下起码」。`Detail` 折叠态右侧指示器由灰色 `+/−` 改为朱红「▸ 展开」，展开态为灰「▾ 收起」；5 处折叠块（02·A 命局函数曲线 / 02·B 四柱限段 / 06·A 根本吉凶 / R 地支作用规则 / 古法旁证）共用该组件，统一生效 |
+| 移除「排盘历史」功能 | v2.9.0 | 用户要求删除。已清理 `HISTORY_KEY`/`HISTORY_KEY_LEGACY`/`HistoryRecord`/`useState`/加载 `useEffect`/`saveToHistory`/`applyHistory`/`clearHistory` 与首页历史卡片（HISTORY 卡）；README 功能清单与隐私段、AGENTS.md 功能列表与数据来源表同步；产物已无 `__app_peirantang_history` 与「排盘历史」字样 |
 | 报告版块注册表统一编号 | v2.8.0 | `REPORT_SECTIONS` 为唯一真源，导航/正文/目录三处一致 |
-| 打分链路参数 CFG 化（零行为变更） | v2.9.2 候选 | `SCORING_CFG`（`baziData.ts`，`score-v1.0.0`）集中打分链路全部数值：干支基础分/一体系数/补偏分/流通分/置信降权/大运混合权重/九档阈值（`letterFromScore` + `letterFromCombined`）/S+ 认证阈值 + 同盘配额；`baziAnalyzer.ts` 全链路改读 CFG（`RAW_SCORE_DIVISOR` 与 `analyzeDaYunLiuNian` 内 3.6 均改从 CFG/常量取）；清理 `scoreGanZhiImpact` 与 `analyzeDaYunLiuNian` 两处冗余 `monthQi` 形参。数值逐一核对与原字面量一致，`vite build` 通过 |
+| 打分链路参数 CFG 化（零行为变更） | v2.9.2 | `SCORING_CFG`（`baziData.ts`，`score-v1.1.0`）集中打分链路全部数值：干支基础分/一体系数/补偏分/流通分/置信降权/大运混合权重/九档阈值（`letterFromScore` + `letterFromCombined`）/S+ 认证阈值 + 同盘配额；`baziAnalyzer.ts` 全链路改读 CFG（`RAW_SCORE_DIVISOR` 与 `analyzeDaYunLiuNian` 内 3.6 均改从 CFG/常量取）；清理 `scoreGanZhiImpact` 与 `analyzeDaYunLiuNian` 两处冗余 `monthQi` 形参。数值逐一核对与原字面量一致，`vite build` 通过 |
+| 版本发布与上线 v2.9.1 → v2.9.3 | v2.9.3 | 三次提交推送 main + gh-pages 上线：打分链路参数 CFG 化 → 大运九档梯度收紧（`daYunMix` 0.5/0.5）→ 六亲换太极标签去歧义 |
+| 系统审查 · 类型缺口修复（2026-10-19） | 未提交 | 全量审查发现 `analyzeShengKeQuan` 的 `cands` 声明为 `{ el: string }`、擦除了五行联合类型，构成 `tsc` 唯一的业务代码错误（TS2322）；改为 `{ el: typeof startEl }` 后 `tsc -p tsconfig.app.json` 归零（零行为变更）。同批订正：BACKLOG A1 锚点清单（原举示例 `analyzeMingJuPattern` 有误）、B1 归并至本表、PROJECT_STATUS / SYNC 过期行 |

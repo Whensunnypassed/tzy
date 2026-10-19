@@ -18,7 +18,7 @@ npm.cmd run build:pages # vite build 验证（必须通过才能提交）
 | 文件 | 位置 |
 |---|---|
 | `package.json` | `"version": "1.x.x"` |
-| `src/pages/BaZiAnalyzerPage/BaZiAnalyzerPage.tsx` | `const APP_VERSION = '1.x.x'`（约 504 行，网页页脚会显示） |
+| `src/pages/BaZiAnalyzerPage/BaZiAnalyzerPage.tsx` | `const APP_VERSION = '1.x.x'`（当前在第 835 行，行号会随改动浮动，按符号搜索；网页页脚会显示） |
 
 - 功能 / UI 改动 → 递增次版本号（如 `1.1.0 → 1.2.0`）
 - 仅修 bug → 递增补丁号（如 `1.1.0 → 1.1.1`）

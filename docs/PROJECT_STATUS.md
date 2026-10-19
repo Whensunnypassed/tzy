@@ -2,7 +2,7 @@
 
 > 本文件用于其他模型/开发者快速接手项目，了解当前版本、已完成工作与同步流程。
 > 未竟事项（未来计划 / 前置条件 / 技术债）见 [BACKLOG.md](./BACKLOG.md) —— 对话中出现的「待…／未来…」一律落到该文件。
-> 最后更新：v2.9.2
+> 最后更新：2026-10-19（v2.9.3 已上线；本轮完成系统审查：修 `analyzeShengKeQuan` 五行类型缺口使 `tsc` 归零、订正 BACKLOG A1 锚点、订正本文过期行）
 
 ---
 
@@ -12,7 +12,7 @@
 **仓库**：`Whensunnypassed/tzy`（GitHub，main 分支）
 **当前版本**：**v2.9.3 · 正式版**（`package.json` 与 `BaZiAnalyzerPage.tsx` 中 `APP_VERSION` 两处同步维护）
 **线上地址**：https://whensunnypassed.github.io/tzy/ （由 gh-pages 分支驱动部署）
-**工作区状态**：v2.9.2（打分链路 CFG 化 + 大运九档梯度收紧）已提交推送并上线；v2.9.3（六亲换太极标签去歧义）**已提交待推送**，`vite build` 通过。
+**工作区状态**：v2.9.1 / v2.9.2 / v2.9.3 均已提交推送、gh-pages 已上线。本轮（2026-10-19）系统审查修复 1 处类型缺口（`baziAnalyzer.ts` 生克权流转 `cands.el` 收紧为五行联合类型，`tsc -p tsconfig.app.json` 已归零，零行为变更），并订正文档过期行；上述改动**尚未提交**。
 
 ---
 
