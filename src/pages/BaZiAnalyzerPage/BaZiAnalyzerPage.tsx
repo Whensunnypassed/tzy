@@ -832,7 +832,7 @@ type ScoreBreakdownRow = {
 };
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.9.3';
+const APP_VERSION = '2.10.0';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');

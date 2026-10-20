@@ -105,7 +105,7 @@ export const MONTHLY_TAIJI_DEFS: Record<
     monthName: '未月',
     monthPillar: '辛未',
     stemPairs: [
-      { pair: ['庚', '丙'], reason: '未月余火未退、燥土当令；庚丙并现火土金连环成器', type: '夏末庚丙成器太极（天干并现）' },
+      { pair: ['庚', '丙'], reason: '未月余火未退、土当令；庚丙并现火土金连环成器', type: '夏末庚丙成器太极（天干并现）' },
       { pair: ['丁', '壬'], reason: '未月燥气盛；丁壬合木润土，为润燥相济太极', type: '未月丁壬润燥太极（天干并现）' },
     ],
     hiddenQiPairs: [
@@ -143,7 +143,7 @@ export const MONTHLY_TAIJI_DEFS: Record<
     monthName: '戌月',
     monthPillar: '甲戌',
     stemPairs: [
-      { pair: ['甲', '戊'], reason: '戌月燥土当令，甲木疏土为第一要；甲戊交克主疏土成才', type: '戌月甲戊疏土太极（天干并现）' },
+      { pair: ['甲', '戊'], reason: '戌月土当令，甲木疏土为第一要；甲戊交克主疏土成才', type: '戌月甲戊疏土太极（天干并现）' },
       { pair: ['丙', '辛'], reason: '戌为火库、辛为金精；丙辛煅金，主大器晚成', type: '戌月丙辛煅金太极（天干并现）' },
     ],
     hiddenQiPairs: [
@@ -181,7 +181,7 @@ export const MONTHLY_TAIJI_DEFS: Record<
     monthPillar: '丁丑',
     stemPairs: [
       { pair: ['丙', '癸'], reason: '丑月寒中带湿，丙火暖局、癸水润土；丙癸并现温湿相济', type: '丑月丙癸温湿太极（天干并现）' },
-      { pair: ['丁', '甲'], reason: '丑为湿土，甲木破土、丁火暖土；丁甲并现主寒谷回春', type: '丑月丁甲回春太极（天干并现）' },
+      { pair: ['丁', '甲'], reason: '丑为土，甲木破土、丁火暖土；丁甲并现主寒谷回春', type: '丑月丁甲回春太极（天干并现）' },
     ],
     hiddenQiPairs: [
       { pair: ['己', '癸'], reason: '丑藏己癸辛；己土止水、癸水润土，再见辛泄己即构成流通', type: '丑月己癸土水太极（藏干含气）' },

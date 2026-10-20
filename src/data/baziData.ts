@@ -320,9 +320,9 @@ export const MONTH_QI_EXPANDED: IMonthQiExt[] = [
     solarTermRange: '小寒—立春',
     guaName: '地泽临卦䷒',
     qiJin: '二阳并进',
-    guaXiang: '四阴二阳，寒气已极、阳气萌动，湿土承载、寒温交替；丑属坤艮之间，主收纳、酝酿、转折。',
+    guaXiang: '四阴二阳，寒气已极、阳气萌动，土承载、寒温交替；丑属坤艮之间，主收纳、酝酿、转折。',
     hiddenStemsAndChangSheng: '藏己、癸、辛；十干状态：甲冠带、乙衰、丙戊养、丁己墓、庚墓、辛养、壬衰、癸冠带。',
-    coreQiJi: '己土当令、癸水冠带余寒、辛金养地；湿土止水、寒中藏生，为冬尽春来之转折，辛金泄土生水为局中变数。',
+    coreQiJi: '己土当令、癸水冠带余寒、辛金养地；丑土止水、寒中藏生，为冬尽春来之转折，辛金泄土生水为局中变数。',
     tiYongLunDuan: '整体体阴用阳。①己土为本气，动而克癸止寒，为取贵之根本，丑藏己癸自带克制结构，贵气多藏而不显；②丙火暖局助阳，甲木冠带有气、动木生火，木火齐动则富贵双全；③忌辛金泄土生水，再透金干则土虚水旺、反不为贵。《穷通宝鉴》「癸水寒极专用丙火、戊透清贵」为旧法，本体系以己土止寒为本、丙火为助。',
     yueLingSummary: '丑月止寒者贵、助寒者败：己土止寒为贵气之根，丙火甲木助阳为富贵之辅，忌辛金泄土、寒湿锢局。',
   },
@@ -561,10 +561,10 @@ export interface INianYueCase {
 export const NIAN_YUE_TAIJI_CASES: INianYueCase[] = [
   { id: 1, yearGZ: '甲子', monthGZ: '丙寅', title: '先天年吉·落地兑现', analysis: '年月干支无核心硬伤，年支子水直接落实癸水阴仪，寅木稳固丙火阳仪。日时干支不损伤丙、癸二气，则格局成富贵；伤癸无救则失贵气，损丙火则减富气。' },
   { id: 2, yearGZ: '甲寅', monthGZ: '丙寅', title: '木火成势·阴仪悬空', analysis: '年月木火成势，无先天阴气保障。格局核心要求水火二气互不损伤，最终吉凶由日时干支保全癸水阴仪的状态决定。' },
-  { id: 3, yearGZ: '甲辰', monthGZ: '丙寅', title: '阴仪受损·需日时救助', analysis: '年支辰土克耗癸水贵气，先天阴仪受损。日时需见庚、壬、寅、卯水木之气救助癸水；若再见辰、戌、丑湿土，癸水无救，格局无贵。' },
+  { id: 3, yearGZ: '甲辰', monthGZ: '丙寅', title: '阴仪受损·需日时救助', analysis: '年支辰土克耗癸水贵气，先天阴仪受损。日时需见庚、壬、寅、卯水木之气救助癸水；若再见辰、戌、丑之土，癸水无救，格局无贵。' },
   { id: 4, yearGZ: '甲午', monthGZ: '丙寅', title: '阴仪受压·子午动荡', analysis: '年支午火克制、挤压癸水，阴仪气机退却。日时需扶助生扶癸水；若见子水，子午相冲，格局气机动荡，人生得失起伏明显。' },
   { id: 5, yearGZ: '甲申', monthGZ: '丙寅', title: '金气暗藏·忌全盘木火', analysis: '年月无致命损伤，年支申金暗藏气机隐患。忌日时全盘木火制金，引发格局凶性；核心需保全丙、癸二气无伤，如甲申、丙寅、乙卯、辛巳格局，为大贵格局。' },
-  { id: 6, yearGZ: '甲戌', monthGZ: '丙寅', title: '燥土藏火·忌丁孤立', analysis: '戌中丁火偏弱，易被湿气晦损；忌日时丁火孤立无援、遭干支克制。格局总纲：水火气机彰显，阴阳二气互不损伤。' },
+  { id: 6, yearGZ: '甲戌', monthGZ: '丙寅', title: '戌土藏火·忌丁孤立', analysis: '戌中丁火偏弱，易被寒气晦损；忌日时丁火孤立无援、遭干支克制。格局总纲：水火气机彰显，阴阳二气互不损伤。' },
 ]
 
 // 十天干（《自然易鉴》第五章第二节）
@@ -621,7 +621,7 @@ export const MOCK_HEAVENLY_STEMS: IHeavenlyStem[] = [
     char: '己',
     element: 'earth',
     yinYang: 'yin',
-    xiang: '田园湿土、温润之土',
+    xiang: '田园之土、温润之土',
     shiXiang: '细腻、谦和、隐忍、务实',
     deYong: '心思细腻、踏实肯干、善于积累、家庭和睦、福禄绵长',
     shiYong: '过湿消极纠结、心胸狭隘、多思多虑、琐事缠身',
@@ -681,7 +681,7 @@ export const MOCK_EARTHLY_BRANCHES: IEarthlyBranch[] = [
     element: 'earth',
     yinYang: 'yin',
     hiddenStems: ['己', '辛', '癸'],
-    xiang: '湿土藏金水、冬末余寒，主包容、运化、积蓄',
+    xiang: '藏金水、冬末余寒，主包容、运化、积蓄',
     deYong: '得用则踏实聚财、暗藏福气',
     shiYong: '失用则湿淤阻滞、琐事缠身、财运不通',
   },
@@ -708,7 +708,7 @@ export const MOCK_EARTHLY_BRANCHES: IEarthlyBranch[] = [
     element: 'earth',
     yinYang: 'yang',
     hiddenStems: ['戊', '乙', '癸'],
-    xiang: '湿土藏水木、春末气暖，主运化、生发、包容',
+    xiang: '藏水木、春末气暖，主运化、生发、包容',
     deYong: '得用则气机流通、贵人相助',
     shiYong: '失用则水土混杂、运势杂乱',
   },
@@ -735,7 +735,7 @@ export const MOCK_EARTHLY_BRANCHES: IEarthlyBranch[] = [
     element: 'earth',
     yinYang: 'yin',
     hiddenStems: ['己', '丁', '乙'],
-    xiang: '燥土藏木火、夏末余燥，主积淀、收敛、守成',
+    xiang: '藏木火、夏末余热，主积淀、收敛、守成',
     deYong: '得用则踏实守福、财运稳固',
     shiYong: '失用则燥热闭塞、心胸狭隘',
   },
@@ -762,7 +762,7 @@ export const MOCK_EARTHLY_BRANCHES: IEarthlyBranch[] = [
     element: 'earth',
     yinYang: 'yang',
     hiddenStems: ['戊', '辛', '丁'],
-    xiang: '燥土藏火金、秋末肃敛，主厚重、坚守、担当',
+    xiang: '藏火金、秋末肃敛，主厚重、坚守、担当',
     deYong: '得用则稳重靠谱、基业稳固',
     shiYong: '失用则固执死板、运势阻滞',
   },
@@ -814,7 +814,7 @@ export const MOCK_MONTH_QI: IMonthQi[] = [
     yangState: 'strong',
     yinState: 'weak',
     fourSymbol: '少阳',
-    description: '暮春戊土当令、温湿交接，辰为湿土藏癸，气机模糊（辰戌无贵），核心在救癸水、存阴气；喜甲木克土救水、庚金泄土生水，忌戊土无制',
+    description: '暮春戊土当令、温湿交接，辰土藏癸，气机模糊（辰戌无贵），核心在救癸水、存阴气；喜甲木克土救水、庚金泄土生水，忌戊土无制',
     detailedDesc: '辰月为三月，清明之后，戊土当令、气进五阳，温而不热、润而不寒，阴阳不显、气机呆滞。辰中戊土克癸水，癸水为唯一贵气来源，无需常规体用判断：①甲木克土救水为第一救应，木须得水润，木旺无润则生火助土、徒劳无功；②庚金泄土生水，辛金无力。戊土无制则晦火克水、阴阳俱伤、无富无贵；癸水有气则局活、富贵可成。辰中戊癸自合主暗昧，辰戌相见主情感婚姻破败，多由后天环境导致，不影响富贵格局。',
     coreXiJi: '用神：癸水（唯一贵气来源）、甲木（第一救应，克土救水）、庚金（泄土生水，辛金无力）。忌神：戊土无制（晦火克水、阴阳俱伤）。注：木须得水润方有效',
   },
@@ -986,7 +986,7 @@ export const MOCK_SHIGAN_XIJI: IShiGanXiJi[] = [
   },
   {
     stem: '己',
-    nature: '己土为阴土，田园湿土、温润之土',
+    nature: '己土为阴土，田园之土、温润之土',
     xi: ['丙火（火暖田园）', '甲木（疏土成田）'],
     ji: ['水旺过湿（淤堵不通）'],
     features: '己土务实善于积累；己土过湿消极纠结',
@@ -1109,11 +1109,11 @@ export const GANZHI_ZIHE: IGanZhiZiHe[] = [
   { ganzhi: '戊子', he: '戊合子中癸', description: '天干戊土与子中癸水五合，土克水与合意并存，合而不化，水火之气同柱互牵。' },
   { ganzhi: '壬午', he: '壬合午中丁', description: '丁壬太极干支自合——余热（丁）与布凉（壬）在同一柱内互锁，寒温须视柱中态势分主次。' },
   { ganzhi: '丁亥', he: '丁合亥中壬', description: '丁壬太极自合，亥为壬临官之地，自合最实；丁火余热与亥水之凉相互锁定。' },
-  { ganzhi: '辛巳', he: '辛合巳中丙', description: '燥湿互制：巳中丙火与辛金相合，巳中庚金受辛金引动，金气得显。' },
+  { ganzhi: '辛巳', he: '辛合巳中丙', description: '火金相制：巳中丙火与辛金相合，巳中庚金受辛金引动，金气得显。' },
   { ganzhi: '癸巳', he: '癸合巳中戊', description: '水火既济之象：土晦火、水制土，热气与阴气相济。' },
-  { ganzhi: '己亥', he: '己合亥中甲', description: '湿土合甲木，土培木根，木气得养。' },
+  { ganzhi: '己亥', he: '己合亥中甲', description: '己土合甲木，土培木根，木气得养。' },
   { ganzhi: '甲午', he: '甲合午中己', description: '「阳过之木」典型：甲木所布乙木与午中丁火落实热气相联，木不去克土，源源生助阳气。' },
-  { ganzhi: '丙戌', he: '丙合戌中辛', description: '戌燥土藏丁，丙火得地自根，库气得藏；须冲刑引动方开库。', openCondition: '逢辰冲（辰戌冲）或丑未刑引动，库气方开。' },
+  { ganzhi: '丙戌', he: '丙合戌中辛', description: '戌土藏丁，丙火得地自根，库气得藏；须冲刑引动方开库。', openCondition: '逢辰冲（辰戌冲）或丑未刑引动，库气方开。' },
   { ganzhi: '壬戌', he: '壬合戌中丁', description: '寒水落戌，得戌中丁火与戊土之根，寒势敛而不狂，为玄武贵格之象。', openCondition: '逢辰冲戌，库火透出则暖局有成。' },
 ]
 
@@ -1175,7 +1175,7 @@ export const CHUNQIU_MONTH_FACTORS: IChunQiuMonthFactor[] = [
     taijiName: '秋月丁壬太极', yangYi: '丁', yinYi: '壬',
     general: '秋为「夏之余热未尽与秋凉渐生」的拉锯，二气丁（阳仪·余热）、壬（阴仪·布凉）。申宫金水同行、煞印相资为绝处逢生，但秋水性寒滋木不秀，必得土培根。',
     twoRounds: {
-      judge: '年月透丙丁、或支见巳午未（且未被湿土晦尽）→ 余热局；年月火不显、金气当权 → 成凉局。两局取用完全相反，须先辨局再取用。',
+      judge: '年月透丙丁、或支见巳午未（且未被土晦尽）→ 余热局；年月火不显、金气当权 → 成凉局。两局取用完全相反，须先辨局再取用。',
       hot: { name: '余热局', judge: '夏气未退、火土仍显', usage: '按夏月思路，以「存阴」为主：庚金立足、凉土晦火、通水发贵；忌再助火（丙丁透干熔金）。' },
       cool: { name: '成凉局', judge: '秋凉已成、申酉金气当权', usage: '以「布凉」为主：壬水有制为贵；忌金水太盛（寒重），用得火暖土为佐。' },
     },
@@ -1185,7 +1185,7 @@ export const CHUNQIU_MONTH_FACTORS: IChunQiuMonthFactor[] = [
     taijiName: '秋月丁壬太极', yangYi: '丁', yinYi: '壬',
     general: '酉月金气纯粹当权，丁壬二气定格局。白露后、秋分前桂蕊未开，重癸水滋根；秋分后桂蕊已开，喜向阳而宜用丙。',
     twoRounds: {
-      judge: '同申月：年月透丙丁或支见巳午未（未被湿土晦尽）→ 余热局；否则 → 成凉局。',
+      judge: '同申月：年月透丙丁或支见巳午未（未被土晦尽）→ 余热局；否则 → 成凉局。',
       hot: { name: '余热局', judge: '火气未除、燥热尚存', usage: '存阴为主：庚金立足、通水发贵，忌火土熔金。' },
       cool: { name: '成凉局', judge: '金水当权、肃杀偏重', usage: '布凉为主而须有制：壬水有制为贵，忌金水太盛，用得火暖土为佐。' },
     },
@@ -1198,7 +1198,7 @@ export const CHUNQIU_MONTH_FACTORS: IChunQiuMonthFactor[] = [
   {
     monthName: '戌月', monthBranch: '戌', season: 'mixed',
     taijiName: '戌月丁壬太极（余温·制水）', yangYi: '丁', yinYi: '壬',
-    general: '戌为金之余气、火之墓库，属阳土；五阴剥落、阳气潜藏，性燥而不和润。甲木为第一用神（破阴辅火，称「甲贵」）；阴仪壬水喜土制——透而有制为贵、无制则助寒。',
+    general: '戌为金之余气、火之墓库，属阴土；五阴剥落、阳气潜藏，性燥而不和润。甲木为第一用神（破阴辅火，称「甲贵」）；阴仪壬水喜土制——透而有制为贵、无制则助寒。',
   },
 ]
 
@@ -1271,8 +1271,8 @@ export const STEM_QI_XING: IStemQiXing[] = [
   { stem: '乙', qiXing: '形干', group: '阳', note: '含气少而精，稳定专一；脆弱惧怕克泄' },
   { stem: '丙', qiXing: '气干', group: '阳', note: '含气多而杂，发散普照' },
   { stem: '丁', qiXing: '形干', group: '阳', note: '含气少而精，内敛专注' },
-  { stem: '戊', qiXing: '气干', group: '阳', note: '燥土，阳集团平台，执行火的意志' },
-  { stem: '己', qiXing: '形干', group: '阴', note: '湿土，阴集团平台，左右逢源' },
+  { stem: '戊', qiXing: '气干', group: '阳', note: '阳土，阳集团平台，执行火的意志' },
+  { stem: '己', qiXing: '形干', group: '阴', note: '阴土，阴集团平台，左右逢源' },
   { stem: '庚', qiXing: '气干', group: '阴', note: '刚硬之金，执行力强' },
   { stem: '辛', qiXing: '形干', group: '阴', note: '精致之金，精细技艺精英' },
   { stem: '壬', qiXing: '气干', group: '阴', note: '江河大水，野心谋略' },
@@ -1588,7 +1588,7 @@ export const WU_XING_QU_XIANG = {
 // 本表为「各月太极二气代表字 + 定局方式」的唯一真源（可进化契约）：
 //   computeTaiJiQi 依据本表 + 十二长生「绝为起点」环序 + 柱位权重，量化本盘二气存量与配比，
 //   作为 analyzeYongJi「大方向判据来源」的候选；是否启用由 YONG_JI_MODE 逐月灰度开关控制。
-// 注：元素归方（木火→阳、金水→阴、土按燥湿折算）严格遵循两仪口径，与本表 yang/yin 代表字解耦——
+// 注：元素归方（木火→阳、金水→阴、土按刚柔归方）严格遵循两仪口径，与本表 yang/yin 代表字解耦——
 //     本表 yang/yin 仅用于标记「该月最有力的两股太极气」及春秋/救应等定局方式。
 // ============================================================
 export interface ITaiJiQiPair {

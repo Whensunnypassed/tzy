@@ -124,14 +124,17 @@ const MONTH_QI_INFO: Record<number, MonthQiInfo> = MOCK_MONTH_QI.reduce<Record<n
 
 // 五行与阴阳归属
 // 木火属阳（温→热），金属阴（凉→寒）
-// 阳气 = 木火 + 燥土（戊、未、戌），阴气 = 金水 + 湿土（己、丑、辰）
-// 土不再作为中性第三元（文献：戊=阳土、己=阴土；未戌燥土=阳、丑辰湿土=阴，燥湿对应寒热）
+// 阳气 = 木火 + 阳土（戊、辰、未），阴气 = 金水 + 阴土（己、丑、戌）
+// 土的阴阳不看燥湿（2026-10-20 老高校订：燥湿二分作废），按「受哪股气影响」分——
+//   阳土 = 受阳气影响多（戊、辰、未；未虽气进二阴，底下四阳还在，本质阳气主导，克水力强）；
+//   阴土 = 受阴气影响多（己、丑、戌；丑虽气进二阳，冬末阴气仍主，本质阴气主导）。
+// 注意：不管阴阳土，「晦火、克水、生金」三样本事都有，只是效率不同；木克土不会抹掉本事，只会阻碍它发挥。
 const YANG_ELEMENTS = new Set(['wood', 'fire']);
 const YIN_ELEMENTS = new Set(['metal', 'water']);
 
-// 土的阴阳归属（燥湿对应寒热）
-const EARTH_YANG_GANZHI = new Set(['戊', '未', '戌']); // 阳土/燥土
-const EARTH_YIN_GANZHI = new Set(['己', '丑', '辰']); // 阴土/湿土
+// 土的阴阳归属（按刚柔/承水，不按燥湿）
+const EARTH_YANG_GANZHI = new Set(['戊', '辰', '未']); // 阳土：受阳气影响多，克水力强
+const EARTH_YIN_GANZHI = new Set(['己', '丑', '戌']); // 阴土：受阴气影响多，晦火存金效率高
 
 // 土的喜用判断（按月令季节 + 干支级 + 命局水气/阴阳占比）
 //   冬月(亥子丑)：走土吉，四土皆可止寒制水（辰未首选、丑戌次之、戊己皆可用）
@@ -226,8 +229,8 @@ function pickSeasonSegment(chart: BaZiChart, season: 'spring' | 'autumn'): IChun
 }
 
 // 申酉月「余热 / 成凉」两局判定：年月透丙丁、或支见巳午未 → 余热局；否则 → 成凉局
-// 注：资料库判据另含「且未被湿土晦尽」的细化条件，此处先按粗判据落地，
-// 湿土晦尽（辰丑晦火）的动态取舍待方案 B（条件性取舍）一并实现。
+// 注：资料库判据另含「且未被土晦尽」的细化条件，此处先按粗判据落地，
+// 土晦尽（辰丑晦火）的动态取舍待方案 B（条件性取舍）一并实现。
 function detectAutumnHotRound(chart: BaZiChart): boolean {
   const stems = [chart.year.stem, chart.month.stem];
   const branches = [chart.year.branch, chart.month.branch];
@@ -531,13 +534,13 @@ const ZHUZI_XIJI_REF: Record<string, ZhuZiMonthRef> = {
     branches: {
       寅: ['xi', '阳仪之地，藏甲丙戊，气进三阳'],
       卯: ['xi', '木之成气，助布温'],
-      辰: ['dai', '湿土晦火蓄水，须视态势'],
+      辰: ['dai', '阳土晦火蓄水，须视态势'],
       巳: ['xi', '火之温助阳仪（巳藏庚，防带凉气）'],
       午: ['xi', '火气炽助布温'],
-      未: ['dai', '燥土藏火亦藏水，取舍未定'],
+      未: ['dai', '阳土藏火亦藏水，取舍未定'],
       申: ['ji', '金凉否定温气'],
       酉: ['ji', '金旺克木'],
-      戌: ['dai', '土双面：燥土晦初生之火，亦藏丁火，助损随势'],
+      戌: ['dai', '土双面：阴土晦初生之火，亦藏丁火，助损随势'],
       亥: ['ji', '水寒助余寒'],
       子: ['ji', '余寒成气，否定温气'],
       丑: ['xi', '按大方向补：寅丑同为艮卦止寒，丑土接续冬末止寒之功；唯藏癸水余寒'],
@@ -560,16 +563,16 @@ const ZHUZI_XIJI_REF: Record<string, ZhuZiMonthRef> = {
     branches: {
       寅: ['xi', '木之地助成温'],
       卯: ['xi', '温气落实之本气'],
-      辰: ['dai', '湿土晦火'],
+      辰: ['dai', '阳土晦火'],
       巳: ['xi', '火助温'],
       午: ['xi', '火气助阳'],
-      未: ['dai', '燥土，势未定'],
+      未: ['dai', '阳土，势未定'],
       申: ['dai', '金落实与否定成温与否'],
       酉: ['dai', '同申（辛绝力薄）'],
-      戌: ['dai', '燥土晦火'],
+      戌: ['dai', '阴土晦火'],
       亥: ['ji', '水寒否定温气'],
       子: ['ji', '水沐浴之地，否定成温'],
-      丑: ['dai', '湿土蓄水'],
+      丑: ['dai', '阴土蓄水'],
     },
   },
   辰: {
@@ -598,7 +601,7 @@ const ZHUZI_XIJI_REF: Record<string, ZhuZiMonthRef> = {
       戌: ['xi', '用戌冲辰开水库，借辛金成气平衡乙木温气；救水之力不及甲庚'],
       亥: ['xi', '癸水之地，阴气得根'],
       子: ['xi', '水气得助，贵气有源'],
-      丑: ['dai', '湿土蓄水，助损未定'],
+      丑: ['dai', '阴土蓄水，助损未定'],
     },
   },
   巳: {
@@ -618,10 +621,10 @@ const ZHUZI_XIJI_REF: Record<string, ZhuZiMonthRef> = {
     branches: {
       寅: ['dai', '孤木生火助纣'],
       卯: ['dai', '同寅'],
-      辰: ['dai', '湿土晦火亦蓄水'],
+      辰: ['dai', '阳土晦火亦蓄水'],
       巳: ['ji', '本气火土炽盛'],
       午: ['ji', '火气极盛熔金涸水'],
-      未: ['ji', '按大方向补：未当夏末燥土助火党，非丑戌晦火存金之比'],
+      未: ['ji', '按大方向补：未当夏末阳土助火党，非丑戌晦火存金之比'],
       申: ['xi', '动申如透庚，立成富局'],
       酉: ['xi', '按大方向补：巳酉半合金局，助庚辛清气'],
       戌: ['xi', '阴土晦火存金，反成富基'],
@@ -650,7 +653,7 @@ const ZHUZI_XIJI_REF: Record<string, ZhuZiMonthRef> = {
       辰: ['dai', '水库亦晦火克水，助损并存'],
       巳: ['ji', '火助阳极'],
       午: ['ji', '火气极盛'],
-      未: ['ji', '按大方向补：午未合火土，当令燥土助旺克水，非丑戌晦火存金之比'],
+      未: ['ji', '按大方向补：午未合火土，当令阳土助旺克水，非丑戌晦火存金之比'],
       申: ['xi', '金气得地，发用通水'],
       酉: ['xi', '金凉辅庚辛'],
       戌: ['xi', '晦火存金，取贵'],
@@ -666,8 +669,8 @@ const ZHUZI_XIJI_REF: Record<string, ZhuZiMonthRef> = {
       乙: ['dai', '同甲（养地力弱）'],
       丙: ['ji', '衰而仍炽，助火党'],
       丁: ['ji', '司令成气，透无制则熔金壮土'],
-      戊: ['ji', '燥土助火克水'],
-      己: ['ji', '当令燥土，极热'],
+      戊: ['ji', '阳土助火克水'],
+      己: ['ji', '当令阴土，极热'],
       庚: ['xi', '首用：冠带有气，平衡火、泄土、生水'],
       辛: ['xi', '按大方向补：同庚泄土生水，唯辛在未为衰地，辅庚力薄'],
       壬: ['dai', '养地微弱，须庚引水藏根'],
@@ -676,10 +679,10 @@ const ZHUZI_XIJI_REF: Record<string, ZhuZiMonthRef> = {
     branches: {
       寅: ['dai', '孤木生火'],
       卯: ['dai', '同寅'],
-      辰: ['dai', '湿土晦火，见水则凶'],
+      辰: ['dai', '阳土晦火，见水则凶'],
       巳: ['ji', '火助火党'],
       午: ['ji', '火土炽盛'],
-      未: ['ji', '当令燥土，火库'],
+      未: ['ji', '当令阳土，火库'],
       申: ['xi', '泄土生水，富局可立'],
       酉: ['xi', '同申制燥'],
       戌: ['xi', '晦火藏辛，阴中藏贵'],
@@ -708,13 +711,13 @@ const ZHUZI_XIJI_REF: Record<string, ZhuZiMonthRef> = {
       辰: ['dai', '土双面＋水库，随局定助损'],
       巳: ['dai', '两局相反：火制金（成凉喜），火助余热（余热忌）'],
       午: ['dai', '同巳'],
-      未: ['dai', '燥土晦火，随局定'],
+      未: ['dai', '阳土晦火，随局定'],
       申: ['dai', '两局相反：本气庚金，成凉为忌、余热为用'],
       酉: ['dai', '同申'],
-      戌: ['dai', '燥土藏火藏金，随局定'],
+      戌: ['dai', '阴土藏火藏金，随局定'],
       亥: ['dai', '壬甲同藏，水忌木喜交战，趋向成凉'],
       子: ['dai', '见水趋成凉，须先定局'],
-      丑: ['dai', '湿土蓄水，随局定'],
+      丑: ['dai', '阴土蓄水，随局定'],
     },
   },
   酉: {
@@ -734,16 +737,16 @@ const ZHUZI_XIJI_REF: Record<string, ZhuZiMonthRef> = {
     branches: {
       寅: ['xi', '木之生气助火'],
       卯: ['xi', '同寅'],
-      辰: ['dai', '湿土晦火亦藏金'],
+      辰: ['dai', '阳土晦火亦藏金'],
       巳: ['xi', '火制金'],
       午: ['xi', '火旺制金'],
-      未: ['dai', '燥土晦火'],
+      未: ['dai', '阳土晦火'],
       申: ['ji', '金之地专旺'],
       酉: ['ji', '本气凉气已成'],
       戌: ['dai', '火库藏金'],
       亥: ['dai', '水藏木，势未定'],
       子: ['ji', '水助凉'],
-      丑: ['dai', '湿土生金助凉'],
+      丑: ['dai', '阴土生金助凉'],
     },
   },
   戌: {
@@ -763,16 +766,16 @@ const ZHUZI_XIJI_REF: Record<string, ZhuZiMonthRef> = {
     branches: {
       寅: ['xi', '甲木之地，破阴有源'],
       卯: ['xi', '木助甲制土'],
-      辰: ['dai', '水库湿土，助损未定'],
+      辰: ['dai', '水库阳土，助损未定'],
       巳: ['xi', '火助阳'],
       午: ['xi', '火旺救丁'],
-      未: ['dai', '土双面：燥土晦火，亦藏乙木，须辨'],
+      未: ['dai', '土双面：阳土晦火，亦藏乙木，须辨'],
       申: ['ji', '按大方向补：申藏庚壬，金寒水冷助阴，须火制'],
       酉: ['ji', '金旺克木'],
       戌: ['ji', '本气土旺晦火'],
       亥: ['dai', '壬藏甲，须看制化'],
       子: ['ji', '寒水无制'],
-      丑: ['dai', '湿土晦火助寒'],
+      丑: ['dai', '阴土晦火助寒'],
     },
   },
   亥: {
@@ -798,10 +801,10 @@ const ZHUZI_XIJI_REF: Record<string, ZhuZiMonthRef> = {
       未: ['xi', '阳土燥，制水止寒'],
       申: ['ji', '按大方向补：申藏庚壬，金生水助寒'],
       酉: ['ji', '金凉生水'],
-      戌: ['dai', '土双面：燥土火库可止寒，亦晦火助损，势未定'],
+      戌: ['dai', '土双面：阴土火库可止寒，亦晦火助损，势未定'],
       亥: ['ji', '本气极寒'],
       子: ['ji', '水旺无制，奔波之象'],
-      丑: ['dai', '土双面：湿土蓄水助寒，亦能止寒'],
+      丑: ['dai', '土双面：阴土蓄水助寒，亦能止寒'],
     },
   },
   子: {
@@ -812,7 +815,7 @@ const ZHUZI_XIJI_REF: Record<string, ZhuZiMonthRef> = {
       丙: ['xi', '解冻太阳之火，肯定土气之关键'],
       丁: ['xi', '助丙，绝地利薄须有根'],
       戊: ['xi', '阳土制水止寒'],
-      己: ['dai', '湿土冻结，止寒力不明'],
+      己: ['dai', '阴土冻结，止寒力不明'],
       庚: ['ji', '金生水增寒，动金主贫困劳碌'],
       辛: ['ji', '同庚'],
       壬: ['ji', '帝旺泛滥，无戊制则奔波到老'],
@@ -827,7 +830,7 @@ const ZHUZI_XIJI_REF: Record<string, ZhuZiMonthRef> = {
       未: ['xi', '阳土燥，制水'],
       申: ['ji', '金生水助寒'],
       酉: ['ji', '同申'],
-      戌: ['xi', '按大方向补：燥土含火库可止寒，唯力逊辰未阳土'],
+      戌: ['xi', '按大方向补：阴土含火库可止寒，唯力逊辰未阳土'],
       亥: ['ji', '壬藏甲，助寒'],
       子: ['ji', '本气老阴极寒'],
       丑: ['dai', '矛盾：子丑合，化土则止寒、蓄水则助寒，须辨合化'],
@@ -850,13 +853,13 @@ const ZHUZI_XIJI_REF: Record<string, ZhuZiMonthRef> = {
     branches: {
       寅: ['xi', '木之温气助火'],
       卯: ['xi', '按大方向补：木生火助阳，唯冬木气弱，吉力打折'],
-      辰: ['dai', '土双面：湿土同气可止寒，亦为水库助水'],
+      辰: ['dai', '土双面：阳土同气可止寒，亦为水库助水'],
       巳: ['xi', '火暖局'],
       午: ['xi', '火旺土得生'],
-      未: ['dai', '燥土制水，亦冲丑'],
+      未: ['dai', '阳土制水，亦冲丑'],
       申: ['ji', '金生水助寒'],
       酉: ['ji', '同申'],
-      戌: ['dai', '燥土火库'],
+      戌: ['dai', '阴土火库'],
       亥: ['ji', '极水助寒'],
       子: ['ji', '寒冰同气'],
       丑: ['xi', '本气止寒，亦藏己'],
@@ -1768,7 +1771,7 @@ export function computeTaiJiQi(chart: BaZiChart, monthQi: MonthQiResult): TaiJiQ
     pos: string, char: string, element: string, kind: TaiJiQiContribution['kind'],
     stage: string, weight: number, anchorOne: boolean, huiHuo: boolean,
   ) => {
-    // 元素归方：木火→阳、金水→阴（严格两仪口径）；土不整体归方——按燥湿（戊未戌偏纳阳、己丑辰偏纳阴）
+    // 元素归方：木火→阳、金水→阴（严格两仪口径）；土不整体归方——按刚柔（阳土戊辰未纳阳、阴土己丑戌纳阴）
     // 并以折算系数 k 并入二气（土无阴阳偏性、纳阴纳阳）。
     let qi: 'yang' | 'yin';
     let k = 1;
@@ -1873,7 +1876,7 @@ export function computeTaiJiQi(chart: BaZiChart, monthQi: MonthQiResult): TaiJiQ
     band,
     recommendedDirection,
     threshold: params.theta,
-    earthNote: `土不整体归方：戊未戌偏纳阳、己丑辰偏纳阴，并按折算系数 ${params.earthK} 并入二气（纳阴纳阳）。${params.huiHuoStoreJin.note}`,
+    earthNote: `土不整体归方：阳土（戊、辰、未）纳阳、阴土（己、丑、戌）纳阴，并按折算系数 ${params.earthK} 并入二气（纳阴纳阳）。${params.huiHuoStoreJin.note}`,
     hardCondition,
     contributions,
     verdict,
@@ -1996,7 +1999,7 @@ export function calculateElementPower(chart: BaZiChart): {
   return normalized;
 }
 
-// 阴阳平衡计算（土不再作为中性第三元：燥土未戌/阳土戊→阳，湿土丑辰/阴土己→阴）
+// 阴阳平衡计算（土不再作为中性第三元：阳土戊辰未→阳，阴土己丑戌→阴）
 export function calculateYinYangBalance(chart: BaZiChart): { yang: number; yin: number } {
   let yang = 0;
   let yin = 0;
@@ -2035,7 +2038,7 @@ export function calculateYinYangBalance(chart: BaZiChart): { yang: number; yin: 
 
 // 寒热气计算（《自然易鉴》核心：寒热 = 水火配比，是格局的第一标尺）
 // 热气 = 丙丁火 + 巳午未（火之根）；寒气 = 壬癸水 + 亥子丑（水之根）
-// 木（温，助热）、金（凉，助寒）；土不再计为中性：戊/未/戌燥土→热，己/丑/辰湿土→寒
+// 木（温，助热）、金（凉，助寒）；土不分燥湿（2026-10-20 校订），寒热按「纳阴纳阳」各半计，不替它预判冷热
 export function calculateColdHotBalance(chart: BaZiChart): { hot: number; cold: number } {
   let hot = 0;
   let cold = 0;
@@ -2045,17 +2048,13 @@ export function calculateColdHotBalance(chart: BaZiChart): { hot: number; cold: 
 
   pillars.forEach((pillar, idx) => {
     const w = weights[idx];
-    // 天干：丙丁→热，壬癸→寒，甲乙→助热（温），庚辛→助寒（凉），戊→热（阳土），己→寒（湿土）
+    // 天干：丙丁→热，壬癸→寒，甲乙→助热（温），庚辛→助寒（凉），戊己之土寒热各半
     const sEl = pillar.stemElement;
-    let sScore = 0;
-    let sCat: 'hot' | 'cold' = 'hot';
-    if (sEl === 'fire') { sScore = w * 1.2; sCat = 'hot'; }
-    else if (sEl === 'water') { sScore = w * 1.2; sCat = 'cold'; }
-    else if (sEl === 'wood') { sScore = w * 0.6; sCat = 'hot'; }
-    else if (sEl === 'metal') { sScore = w * 0.6; sCat = 'cold'; }
-    else { sScore = w * 0.4; sCat = pillar.stem === '戊' ? 'hot' : 'cold'; }
-    if (sCat === 'hot') hot += sScore;
-    else cold += sScore;
+    if (sEl === 'fire') hot += w * 1.2;
+    else if (sEl === 'water') cold += w * 1.2;
+    else if (sEl === 'wood') hot += w * 0.6;
+    else if (sEl === 'metal') cold += w * 0.6;
+    else { hot += w * 0.2; cold += w * 0.2; }
 
     // 地支：巳午未→热（火局），亥子丑→寒（水局），寅卯辰→助热（温），申酉戌→助寒（凉）
     const bEl = pillar.branchElement;
@@ -2065,16 +2064,17 @@ export function calculateColdHotBalance(chart: BaZiChart): { hot: number; cold: 
     if (['巳', '午', '未'].includes(branch)) bBase *= 1.3;
     else if (['亥', '子', '丑'].includes(branch)) bBase *= 1.3;
     let bCat: 'hot' | 'cold' = 'hot';
+    let earthNeutral = false;
     if (bEl === 'fire') bCat = 'hot';
     else if (bEl === 'water') bCat = 'cold';
     else if (bEl === 'wood') bCat = 'hot';
     else if (bEl === 'metal') bCat = 'cold';
-    else { // 土：未戌偏热（燥土），丑辰偏寒（湿土）
-      if (['未', '戌'].includes(branch)) bCat = 'hot';
-      else bCat = 'cold';
+    else { // 土：不分燥湿，寒热各半（纳阴纳阳）
+      earthNeutral = true;
       bBase *= 0.55;
     }
-    if (bCat === 'hot') hot += bBase;
+    if (earthNeutral) { hot += bBase / 2; cold += bBase / 2; }
+    else if (bCat === 'hot') hot += bBase;
     else cold += bBase;
 
     // 藏干：比例加权（戊→热，己→寒）
@@ -2086,8 +2086,7 @@ export function calculateColdHotBalance(chart: BaZiChart): { hot: number; cold: 
       else if (hEl === 'water') cold += hw;
       else if (hEl === 'wood') hot += hw * 0.5;
       else if (hEl === 'metal') cold += hw * 0.5;
-      else if (st === '戊') hot += hw * 0.4;
-      else cold += hw * 0.4;
+      else { hot += hw * 0.2; cold += hw * 0.2; } // 土藏干：寒热各半
     });
   });
 
@@ -2506,7 +2505,7 @@ export function analyzeDayStemBranch(chart: BaZiChart, yongJi: YongJiResult): {
       : '丁火为阴火，灯火烛光、温润之火。得用心思缜密、温文尔雅、才华内敛、技艺傍身、稳步致富；失用自卑怯懦、才华埋没、心力不足、运势低迷',
     earth: day.stemYinYang === 'yang'
       ? '戊土为阳土，高山厚土、城墙之土。得地忠厚踏实、格局厚重、聚财守福、根基稳固、一生安稳富贵；失用固执愚钝、封闭保守、不思变通、财运阻滞'
-      : '己土为阴土，田园湿土、温润之土。得用心思细腻、踏实肯干、善于积累、家庭和睦、福禄绵长；失用消极纠结、心胸狭隘、多思多虑、琐事缠身',
+      : '己土为阴土，田园之土、温润之土。得用心思细腻、踏实肯干、善于积累、家庭和睦、福禄绵长；失用消极纠结、心胸狭隘、多思多虑、琐事缠身',
     metal: day.stemYinYang === 'yang'
       ? '庚金为阳金，刀剑矿石、刚硬之金。得炼杀伐有度、智勇双全、执行力强、事业有成、掌权得势；失用刚硬刻薄、争强好胜、冲动惹祸、刑伤不断'
       : '辛金为阴金，珠宝首饰、精致之金。得用气质高雅、心思缜密、才华出众、名利兼得、人缘优越；失用敏感多疑、虚荣狭隘、自我内耗、难得顺遂',
@@ -2575,9 +2574,9 @@ const getDirectReading = (stem: string, branch: string, gender: string): string 
     '甲戌': '木坐土上，木克土为财，财务之事，肠胃之疾',
     '甲申': '木坐金上，金克木伤，官杀压身，压力重重',
     '甲午': '木坐火上，木火通明，文章学业，名声远扬',
-    '甲辰': '木坐湿土，培木之基，事业稳进，家财渐丰',
+    '甲辰': '木坐辰土，培木之基，事业稳进，家财渐丰',
     '甲寅': '木坐木上，干支一气，身强气盛，独立自主',
-    '乙丑': '木坐湿土，财库之象，理财有道，积蓄颇丰',
+    '乙丑': '木坐丑土，财库之象，理财有道，积蓄颇丰',
     '乙亥': '木坐水上，水生木旺，智慧生发，贵人相助',
     '乙酉': '木坐金上，七杀当头，果敢勇毅，但易受伤',
     '乙未': '木坐土上，食神生财，技艺谋生，财源不绝',
@@ -2589,7 +2588,7 @@ const getDirectReading = (stem: string, branch: string, gender: string): string 
     '丙午': '火坐火上，干支一气，阳刚热烈，性情豪爽',
     '丙申': '火坐金上，财星在支，求财欲望，经济头脑',
     '丙戌': '火坐土上，火土相生，食伤生财，事业有成',
-    '丁丑': '火坐湿土，食神生财，细水长流，稳扎稳打',
+    '丁丑': '火坐丑土，食神生财，细水长流，稳扎稳打',
     '丁卯': '火坐木上，印星生身，文采飞扬，学业优秀',
     '丁巳': '火坐火上，干支一气，热情奔放，积极向上',
     '丁未': '火坐土上，食神生财，技艺得财，名声渐起',
@@ -2625,7 +2624,7 @@ const getDirectReading = (stem: string, branch: string, gender: string): string 
     '壬午': '水坐火上，财星在支，理财能力，求财欲望',
     '壬申': '水坐金上，印星生身，贵人相助，智慧通达',
     '壬戌': '水坐土上，土克水官，事业责任，稳重务实',
-    '癸丑': '水坐湿土，官杀混杂，压力与机遇并存',
+    '癸丑': '水坐丑土，官杀混杂，压力与机遇并存',
     '癸卯': '水坐木上，食伤泄秀，文才出众，聪明灵秀',
     '癸巳': '水坐火上，财星在支，生财有道，经济头脑',
     '癸未': '水坐土上，官星克身，事业压力，责任心强',
@@ -2933,7 +2932,7 @@ export function analyzeSevenCategories(
   interaction: string;
 } {
   // 阴阳二气（融合《自然易鉴》第三章第四节·阴阳对应人事万象：心性/事业/健康/祸福）
-  // 土不再作为中性第三元：木火与燥土（戊未戌）归阳，金水与湿土（己丑辰）归阴
+  // 土不再作为中性第三元：木火与阳土（戊辰未）归阳，金水与阴土（己丑戌）归阴
   const { yang: yangPower, yin: yinPower } = calculateYinYangBalance(chart);
 
   // 对应心性（第三章第四节·一）
@@ -2957,7 +2956,7 @@ export function analyzeSevenCategories(
       ? '阴寒无制倾向：易患肾虚、脾胃、风湿、气血不足、妇科、寒湿淤堵之疾（《自然易鉴》：阴寒无制，水寒土冻、木火无力）。'
       : '阴阳相对平衡，健康总体平顺，注意保养即可。';
 
-  const yinYang = `命局阳气占约 ${yangPower}%，阴气占约 ${yinPower}%（木火与燥土归阳，金水与湿土归阴）。月气${monthQi.yangState === 'strong' ? '阳气盛旺' : '阴气强盛'}，以${monthQi.usageDirection === 'yin' ? '阴气' : '阳气'}为用神平衡阴阳。《自然易鉴》：阳气主富，阴气主贵寿，二者平衡则吉，失衡则凶。—— 心性倾向：${xinXing} 事业适配：${shiYe} 健康提示：${jianKangHint}`;
+  const yinYang = `命局阳气占约 ${yangPower}%，阴气占约 ${yinPower}%（木火与阳土归阳，金水与阴土归阴）。月气${monthQi.yangState === 'strong' ? '阳气盛旺' : '阴气强盛'}，以${monthQi.usageDirection === 'yin' ? '阴气' : '阳气'}为用神平衡阴阳。《自然易鉴》：阳气主富，阴气主贵寿，二者平衡则吉，失衡则凶。—— 心性倾向：${xinXing} 事业适配：${shiYe} 健康提示：${jianKangHint}`;
 
   // 五行内容
   const fiveElements = `五行力量分布：木(${elementPower.wood}%)、火(${elementPower.fire}%)、土(${elementPower.earth}%)、金(${elementPower.metal}%)、水(${elementPower.water}%)。${elementPower.wood + elementPower.fire > 50 ? '木火偏旺，阳气充足。' : ''}${elementPower.metal + elementPower.water > 50 ? '金水偏旺，阴气强盛。' : ''}土主承载运化，占比 ${elementPower.earth}%。土多则塞，土少则松。`;
@@ -3516,7 +3515,7 @@ export function scoreMingPan(
   const pillars: Pillar[] = [chart.year, chart.month, chart.day, chart.hour];
   const pillarNames = ['年', '月', '日', '时'];
 
-  // —— 维度1：阴阳平衡度（±11）—— 土已并入阴阳（燥土/阳土归阳，湿土/阴土归阴）
+  // —— 维度1：阴阳平衡度（±11）—— 土已并入阴阳（阳土归阳，阴土归阴）
   const { yang, yin } = calculateYinYangBalance(chart);
   const yinYangDiff = Math.abs(yang - yin); // 0(均衡) ~ 100(彻底偏枯)
   const balanceScore = Math.round((11 - yinYangDiff * 0.22) * 10) / 10; // 0→+11, 100→-11
@@ -3669,14 +3668,14 @@ export function scoreGanZhiImpact(
   const branchEl = BRANCH_ELEMENTS[branch];
   const stemMark = markStem(stem);
   const branchMark = markBranch(branch);
-  // 补偏用「用阴阳」（寒暖之象）：木火=阳、金水=阴；土干戊阳己阴、土支未戌燥=阳/丑辰湿=阴。
+  // 补偏用「用阴阳」：木火=阳、金水=阴；土按刚柔归类（阳土戊辰未=阳，阴土己丑戌=阴）。
   // 注意不能用干支奇偶「体阴阳」（壬阳干而气寒、子阳支而象老阴），否则补阴气会错奖阳体寒字。
   const stemYY = stemEl === 'wood' || stemEl === 'fire' ? 'yang'
     : stemEl === 'metal' || stemEl === 'water' ? 'yin'
     : STEM_YINYANG[stem];
   const branchYY = branchEl === 'wood' || branchEl === 'fire' ? 'yang'
     : branchEl === 'metal' || branchEl === 'water' ? 'yin'
-    : (['未', '戌'].includes(branch) ? 'yang' : 'yin');
+    : (['辰', '未'].includes(branch) ? 'yang' : 'yin');
 
   // —— A. 月令逐字喜忌 × 干支一体落实修正（主分量A：支±10、干±3） ——
   // 六十甲子单柱原理（reference/docs/六十甲子.md）：天干之功须看地支环境是否落实——
@@ -3684,6 +3683,8 @@ export function scoreGanZhiImpact(
   //   盖头（干克支）：支之质被干所盖，支分减半（来源否定落实）；
   //   布气（干生支）：干气下布外泄，干分减半（功能泄于支）。
   // 月令用阴/用阳大方向已含于 marks；不再按奇偶「体阴阳」重复加减。
+  // 「木克土」对四种土都成立，不分阴阳（2026-10-20 老高口径）：
+  //   只要是土就会晦火、克水、生金，只是效率不同；木克土的作用是「阻碍」土去晦火、克水（打折），而不是把克这条抹掉。
   const branchKeStem    = isKeyu(branchEl, stemEl);
   const stemKeBranch    = isKeyu(stemEl, branchEl);
   const stemShengBranch = isShengyu(stemEl, branchEl);
@@ -3724,10 +3725,10 @@ export function scoreGanZhiImpact(
 
   if (stemUndecided) {
     // 天干补偏（权重小：天干主象）
-    if (yangShort && stemYY === 'yang') { const s = SCORING_CFG.refine.stemPositive*half*conf; score += s; pushSum(`天干${stem}月令待定·气暖（木火/燥土），补原局阳气不足`, +s); }
-    if (yangShort && stemYY === 'yin')  { const s = SCORING_CFG.refine.stemNegative*half*conf; score += s; pushSum(`天干${stem}月令待定·气寒（金水/湿土），再增阴气→偏`, s); }
-    if (yinShort  && stemYY === 'yin')  { const s = SCORING_CFG.refine.stemPositive*half*conf; score += s; pushSum(`天干${stem}月令待定·气寒（金水/湿土），补原局阴气不足`, +s); }
-    if (yinShort  && stemYY === 'yang') { const s = SCORING_CFG.refine.stemNegative*half*conf; score += s; pushSum(`天干${stem}月令待定·气暖（木火/燥土），再增阳气→偏`, s); }
+    if (yangShort && stemYY === 'yang') { const s = SCORING_CFG.refine.stemPositive*half*conf; score += s; pushSum(`天干${stem}月令待定·气暖（木火/阳土），补原局阳气不足`, +s); }
+    if (yangShort && stemYY === 'yin')  { const s = SCORING_CFG.refine.stemNegative*half*conf; score += s; pushSum(`天干${stem}月令待定·气寒（金水/阴土），再增阴气→偏`, s); }
+    if (yinShort  && stemYY === 'yin')  { const s = SCORING_CFG.refine.stemPositive*half*conf; score += s; pushSum(`天干${stem}月令待定·气寒（金水/阴土），补原局阴气不足`, +s); }
+    if (yinShort  && stemYY === 'yang') { const s = SCORING_CFG.refine.stemNegative*half*conf; score += s; pushSum(`天干${stem}月令待定·气暖（木火/阳土），再增阳气→偏`, s); }
     if (balanced) {
       const yangDom = yinYangPct.yang > yinYangPct.yin;
       if (yangDom && stemYY === 'yang') { const s = SCORING_CFG.refine.stemEvenNegative*conf; score += s; pushSum(`原局阳气略多，待定干${stem}再气暖易失衡`, s); }
@@ -3736,10 +3737,10 @@ export function scoreGanZhiImpact(
   }
   if (branchUndecided) {
     // 地支补偏（权重大：地支主实，大运重地支）
-    if (yangShort && branchYY === 'yang') { const s = SCORING_CFG.refine.branchPositive*half*conf; score += s; pushSum(`地支${branch}月令待定·气暖（木火/燥土），补原局阳气不足`, +s); }
-    if (yangShort && branchYY === 'yin')  { const s = SCORING_CFG.refine.branchNegative*half*conf; score += s; pushSum(`地支${branch}月令待定·气寒（金水/湿土），再增阴气→偏`, s); }
-    if (yinShort  && branchYY === 'yin')  { const s = SCORING_CFG.refine.branchPositive*half*conf; score += s; pushSum(`地支${branch}月令待定·气寒（金水/湿土），补原局阴气不足`, +s); }
-    if (yinShort  && branchYY === 'yang') { const s = SCORING_CFG.refine.branchNegative*half*conf; score += s; pushSum(`地支${branch}月令待定·气暖（木火/燥土），再增阳气→偏`, s); }
+    if (yangShort && branchYY === 'yang') { const s = SCORING_CFG.refine.branchPositive*half*conf; score += s; pushSum(`地支${branch}月令待定·气暖（木火/阳土），补原局阳气不足`, +s); }
+    if (yangShort && branchYY === 'yin')  { const s = SCORING_CFG.refine.branchNegative*half*conf; score += s; pushSum(`地支${branch}月令待定·气寒（金水/阴土），再增阴气→偏`, s); }
+    if (yinShort  && branchYY === 'yin')  { const s = SCORING_CFG.refine.branchPositive*half*conf; score += s; pushSum(`地支${branch}月令待定·气寒（金水/阴土），补原局阴气不足`, +s); }
+    if (yinShort  && branchYY === 'yang') { const s = SCORING_CFG.refine.branchNegative*half*conf; score += s; pushSum(`地支${branch}月令待定·气暖（木火/阳土），再增阳气→偏`, s); }
     if (balanced) {
       const yangDom = yinYangPct.yang > yinYangPct.yin;
       if (yangDom && branchYY === 'yang') { const s = SCORING_CFG.refine.branchEvenNegative*conf; score += s; pushSum(`原局阳气略多，待定支${branch}再气暖易失衡`, s); }
@@ -4755,7 +4756,7 @@ const SHI_GAN_XI_JI_DATA: Record<string, ShiGanXiJiItem> = {
     },
     己: {
       stem: '己',
-      nature: '己土为阴土，田园湿土、温润之土',
+      nature: '己土为阴土，田园之土、温润之土',
       xi: ['丙火（火暖田园）', '甲木（疏土成田）'],
       ji: ['水旺过湿（淤堵不通）'],
       features: '己土务实善于积累；过湿消极纠结。己土如田园，主包容滋养，对应脾。',
