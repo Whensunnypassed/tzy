@@ -3122,6 +3122,43 @@ export default function BaZiAnalyzerPage() {
                                                   {dy.startAge} 岁起 · {dy.startYear}-{dy.endYear}
                                                 </div>
                                               </div>
+                                              {/* 吉凶分记：同一运里吉项与凶项各自成立，不互相抵消（老高口径） */}
+                                              <div className="mb-3 grid gap-2 md:grid-cols-2">
+                                                <div className="rounded-none border p-2.5" style={{ borderColor: 'rgba(46,118,84,.35)', background: 'rgba(46,118,84,.06)' }}>
+                                                  <div className="mb-1 flex items-baseline justify-between">
+                                                    <span className="label-mono text-[10px] font-black" style={{ color: '#2E7654' }}>吉项</span>
+                                                    <span className="text-[10px] font-bold tabular-nums" style={{ color: '#2E7654' }}>
+                                                      {Array.isArray(dy.jiItems) ? dy.jiItems.length : 0} 条
+                                                    </span>
+                                                  </div>
+                                                  {Array.isArray(dy.jiItems) && dy.jiItems.length > 0 ? (
+                                                    <ul className="space-y-0.5 text-[11px] leading-snug text-foreground/90">
+                                                      {dy.jiItems.map((t: string, i: number) => (
+                                                        <li key={i} className="whitespace-normal break-words">{t}</li>
+                                                      ))}
+                                                    </ul>
+                                                  ) : (
+                                                    <div className="text-[11px] text-muted-foreground">本运无明显吉项</div>
+                                                  )}
+                                                </div>
+                                                <div className="rounded-none border p-2.5" style={{ borderColor: 'rgba(227,28,41,.35)', background: 'rgba(227,28,41,.05)' }}>
+                                                  <div className="mb-1 flex items-baseline justify-between">
+                                                    <span className="label-mono text-[10px] font-black" style={{ color: '#E31C29' }}>凶项</span>
+                                                    <span className="text-[10px] font-bold tabular-nums" style={{ color: '#E31C29' }}>
+                                                      {Array.isArray(dy.xiongItems) ? dy.xiongItems.length : 0} 条
+                                                    </span>
+                                                  </div>
+                                                  {Array.isArray(dy.xiongItems) && dy.xiongItems.length > 0 ? (
+                                                    <ul className="space-y-0.5 text-[11px] leading-snug text-foreground/90">
+                                                      {dy.xiongItems.map((t: string, i: number) => (
+                                                        <li key={i} className="whitespace-normal break-words">{t}</li>
+                                                      ))}
+                                                    </ul>
+                                                  ) : (
+                                                    <div className="text-[11px] text-muted-foreground">本运无明显凶项</div>
+                                                  )}
+                                                </div>
+                                              </div>
                                               {/* 按容器实际宽度自适应列数（卡最小 96px），避免窄主内容列下强制 10 列把卡片压到文字竖排 */}
                                               <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))' }}>
                                                 {dy.liuNian10.map((ln: any) => {

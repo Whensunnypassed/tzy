@@ -16,8 +16,6 @@ import {
   calculateYinYangBalance,
   DI_ZHI_LIU_HE,
   LIU_CHONG_PAIRS,
-  SAN_HE_GROUPS,
-  SAN_HUI_GROUPS,
   type MonthQiResult,
 } from './baziAnalyzer';
 import {
@@ -220,7 +218,6 @@ export interface RomanceVerdict {
   marriagePalace: string;        // 夫妻宫（日支）
   heBranch: string;              // 与日支六合的地支（无则为空）
   chongBranch: string;           // 与日支相冲的地支（无则为空）
-  sanHeBranches: string[];       // 与日支三合/三会的其余地支（逗号分隔字符串）
 }
 
 export function analyzeRomanceVerdict(
@@ -244,15 +241,11 @@ export function analyzeRomanceVerdict(
   const palaceTriggered = branches.some((b) => b !== dayBranch && (
     DI_ZHI_LIU_HE[b + dayBranch] || DI_ZHI_LIU_HE[dayBranch + b] || LIU_CHONG_PAIRS[b + dayBranch] || LIU_CHONG_PAIRS[dayBranch + b]
   ));
-  // —— 情缘应期：与夫妻宫（日支）六合 / 相冲 / 三合·三会 的地支 ——
+  // —— 情缘应期：与夫妻宫（日支）六合 / 相冲的地支（半合/半会的「拱气」不采用，故不列三合三会应期） ——
   const heEntry = Object.entries(DI_ZHI_LIU_HE).find(([k]) => k.includes(dayBranch));
   const heBranch = heEntry ? heEntry[0].replace(dayBranch, '') : '';
   const chongEntry = Object.entries(LIU_CHONG_PAIRS).find(([k]) => k.includes(dayBranch));
   const chongBranch = chongEntry ? chongEntry[0].replace(dayBranch, '') : '';
-  const sanHeBranches = [
-    ...SAN_HE_GROUPS.filter((g) => g.members.includes(dayBranch)).flatMap((g) => g.members.filter((m) => m !== dayBranch)),
-    ...SAN_HUI_GROUPS.filter((g) => g.members.includes(dayBranch)).flatMap((g) => g.members.filter((m) => m !== dayBranch)),
-  ];
   const oppositeElementName = ELEMENT_CN[oppositeEl];
 
   const inputs = [
@@ -294,13 +287,11 @@ export function analyzeRomanceVerdict(
   if (peach.length > 0) loveTiming += `逢${peach.join('、')}桃花之年异性缘最旺、最易动情；`;
   if (oppositeElementName) loveTiming += `逢${oppositeElementName}干/支流年（${oppositeName}现）恋爱运开；`;
   if (heBranch) loveTiming += `逢${heBranch}年（六合夫妻宫${dayBranch}）情感涌动；`;
-  if (sanHeBranches.length > 0) loveTiming += `逢${Array.from(new Set(sanHeBranches)).join('、')}三合/三会之年情缘聚拢；`;
   if (!loveTiming) loveTiming = '恋爱应期需逢岁运桃花或异性星引动之年方显，无明显固定旺年。';
 
   let marriageTiming = '';
   if (heBranch) marriageTiming += `逢${heBranch}年（与日支${dayBranch}六合）最利婚定；`;
   if (chongBranch) marriageTiming += `逢${chongBranch}年（冲动夫妻宫${dayBranch}）婚姻易成或变动；`;
-  if (sanHeBranches.length > 0) marriageTiming += `逢${Array.from(new Set(sanHeBranches)).join('、')}三合/三会之年亦利婚姻合和；`;
   if (spouseInPalace) marriageTiming += ` ${oppositeName}已入夫妻宫，逢${oppositeElementName}流年引动即为婚姻应期；`;
   if (hasChenXu) marriageTiming += ' 辰戌相见者，逢辰戌之年人事与婚恋波动最显；';
   if (!marriageTiming) marriageTiming = '结婚应期需逢岁运合冲夫妻宫之年方显，无明显固定婚年。';
@@ -328,7 +319,6 @@ export function analyzeRomanceVerdict(
     marriagePalace: dayBranch,
     heBranch,
     chongBranch,
-    sanHeBranches,
   };
 }
 
@@ -537,12 +527,9 @@ export function scoreRomanceForYear(stem: string, branch: string, chart: BaZiCha
   const isHe = DI_ZHI_LIU_HE[branch + dayBranch] || DI_ZHI_LIU_HE[dayBranch + branch];
   const isChong = LIU_CHONG_PAIRS[branch + dayBranch] || LIU_CHONG_PAIRS[dayBranch + branch];
   const isFuYin = branch === dayBranch;
-  const isSanHe = SAN_HE_GROUPS.some((g) => g.members.includes(branch) && g.members.includes(dayBranch));
-  const isSanHui = SAN_HUI_GROUPS.some((g) => g.members.includes(branch) && g.members.includes(dayBranch));
   const chenXu = (dayBranch === '辰' && branch === '戌') || (dayBranch === '戌' && branch === '辰');
 
   if (isHe) { loveScore += 5; loveHits.push(`六合夫妻宫${dayBranch}`); }
-  if (isSanHe || isSanHui) { loveScore += 3; loveHits.push(`三合/三会夫妻宫`); }
   if (isChong) { loveScore += 2; loveHits.push(`冲夫妻宫${dayBranch}`); }
   if (isFuYin) { loveScore += 2; loveHits.push(`夫妻宫伏吟${dayBranch}`); }
   if (chenXu) { loveScore += 2; loveHits.push(`辰戌相见`); }
@@ -551,13 +538,6 @@ export function scoreRomanceForYear(stem: string, branch: string, chart: BaZiCha
   if (isHe && oppositeMet) { marriageScore += 12; marriageHits.push(`六合夫妻宫+${oppositeName}现`); }
   else if (isHe && PEACH_BRANCHES.includes(branch)) { marriageScore += 9; marriageHits.push(`六合夫妻宫+桃花${branch}`); }
   else if (isHe) { marriageScore += 5; marriageHits.push(`六合夫妻宫（弱：无异性星/桃花）`); }
-
-  if (isSanHe && oppositeMet) { marriageScore += 9; marriageHits.push(`三合夫妻宫+${oppositeName}现`); }
-  else if (isSanHe && PEACH_BRANCHES.includes(branch)) { marriageScore += 7; marriageHits.push(`三合夫妻宫+桃花${branch}`); }
-  else if (isSanHe) { marriageScore += 4; marriageHits.push(`三合夫妻宫（弱）`); }
-
-  if (isSanHui && oppositeMet) { marriageScore += 8; marriageHits.push(`三会夫妻宫+${oppositeName}现`); }
-  else if (isSanHui) { marriageScore += 3; marriageHits.push(`三会夫妻宫`); }
 
   if (isChong && oppositeMet) { marriageScore += 8; marriageHits.push(`冲夫妻宫+${oppositeName}现`); }
   else if (isChong && PEACH_BRANCHES.includes(branch)) { marriageScore += 6; marriageHits.push(`冲夫妻宫+桃花${branch}`); }
@@ -722,16 +702,14 @@ export function evaluateRomanceForGZ(
     love = true;
     reasons.push(`${oppositeName}(${ELEMENT_CN[oppositeEl]})现于干支，异性缘引动`);
   }
-  // 夫妻宫（日支）被合/冲/伏吟/三合引动 → 婚姻应期
+  // 夫妻宫（日支）被合/冲/伏吟引动 → 婚姻应期（半合半会的拱气不采用）
   const isHe = DI_ZHI_LIU_HE[branch + dayBranch] || DI_ZHI_LIU_HE[dayBranch + branch];
   const isChong = LIU_CHONG_PAIRS[branch + dayBranch] || LIU_CHONG_PAIRS[dayBranch + branch];
   const isFuYin = branch === dayBranch;
-  const isSanHe = SAN_HE_GROUPS.some((g) => g.members.includes(branch) && g.members.includes(dayBranch));
-  const isSanHui = SAN_HUI_GROUPS.some((g) => g.members.includes(branch) && g.members.includes(dayBranch));
-  const palaceMoved = isHe || isChong || isFuYin || isSanHe || isSanHui;
+  const palaceMoved = isHe || isChong || isFuYin;
   if (palaceMoved) {
     love = true;
-    const how = isHe ? `六合${DI_ZHI_LIU_HE[branch + dayBranch] || DI_ZHI_LIU_HE[dayBranch + branch]}` : isChong ? '相冲' : isFuYin ? '伏吟' : isSanHe ? '三合' : '三会';
+    const how = isHe ? `六合${DI_ZHI_LIU_HE[branch + dayBranch] || DI_ZHI_LIU_HE[dayBranch + branch]}` : isChong ? '相冲' : '伏吟';
     reasons.push(`${branch}与夫妻宫${dayBranch}${how}，婚姻宫被引动`);
     // 结婚：婚姻宫被引动 且 异性星现（或桃花强）
     if (oppositeMet || PEACH_BRANCHES.includes(branch)) {

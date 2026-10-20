@@ -44,6 +44,7 @@ import {
   SCORING_CFG,
   COLD_HOT_CFG,
   WOOD_KE_EARTH_CFG,
+  LAO_GAO_KOU_JING_CFG,
   type IChunQiuSegment,
   type IWuXingQuXiang,
   type ITaiJiQiPair,
@@ -628,7 +629,7 @@ const ZHUZI_XIJI_REF: Record<string, ZhuZiMonthRef> = {
       午: ['ji', '火气极盛熔金涸水'],
       未: ['ji', '按大方向补：未当夏末阳土助火党，非丑戌晦火存金之比'],
       申: ['xi', '动申如透庚，立成富局'],
-      酉: ['xi', '按大方向补：巳酉半合金局，助庚辛清气'],
+      酉: ['xi', '按大方向补：酉金清肃，助庚辛凉气'],
       戌: ['xi', '阴土晦火存金，反成富基'],
       亥: ['dai', '水木暗藏，须看态势'],
       子: ['dai', '孤水被旺土克'],
@@ -1053,7 +1054,7 @@ export function analyzeNianYueTaiJi(
     yearStemFactors.push(`十二长生：年干落月令为「${yearStemChangSheng}」`);
     yearStemFactors.push('定论：先天年平，根基平常，吉凶全凭岁运引动');
   }
-  evidence.push(`年干定位：${yearStemReason}`);
+  evidence.push(`年干定位：${LAO_GAO_KOU_JING_CFG.yearPillar.twoSteps[0]}${yearStemReason}`);
 
   // ④ 年支作用：年干主天象契机，年支主落地成形（在天成象，在地成形）
   // 判定优先级（按《太极阴阳法》甲X年·丙寅月案例校准）：
@@ -1128,7 +1129,7 @@ export function analyzeNianYueTaiJi(
     yearBranchReason = `年干先天年平，年支${chart.year.branch}为${monthQi.monthName}${markLabel}${zzBranchNote ? `（${zzBranchNote}）` : ''}，落地平常，吉凶视岁运引动。`;
     yearBranchFactors.push('定论：年干年平、年支无确定扶抑，落地平常，吉凶视岁运引动');
   }
-  evidence.push(`年支作用：${yearBranchReason}`);
+  evidence.push(`年支作用：${LAO_GAO_KOU_JING_CFG.yearPillar.twoSteps[1]}年柱本身无吉凶，只是一种作用模式，吉凶到月令里才产生。${yearBranchReason}`);
 
   // ⑤ 两仪气机厚薄评估（十二长生为唯一气机强弱标准 + 透干/藏干/无现）
   const evalYi = (yiStem: string, role: string): NianYueYiGong => {
@@ -1246,6 +1247,16 @@ export function analyzeNianYueTaiJi(
     riShiYiNian = riShi.some((r) => KE_MAP[r.el] === yearStemEl);
   }
   if (riShiYiNian) evidence.push('宜年：日时干支对年干起吉作用（生扶年吉所需，或克制伤年/年忌因素），先天吉气得后天维护。');
+
+  // 时柱对年柱的同气/反气（老高口径）：时柱与年柱同气＝对年柱作用的肯定，反其气＝否定
+  {
+    const hourEl = chart.hour.stemElement;
+    const tongQi = chart.hour.stem === chart.year.stem || chart.hour.branch === chart.year.branch
+      || (hourEl === yearStemEl && chart.hour.branchElement === chart.year.branchElement);
+    const fanQi = !tongQi && (KE_MAP[hourEl] === yearStemEl || KE_MAP[chart.hour.branchElement] === yearBranchEl);
+    if (tongQi) evidence.push(`时柱同气：时柱${chart.hour.stem}${chart.hour.branch}与年柱${chart.year.stem}${chart.year.branch}同气，是对年柱作用的肯定（${LAO_GAO_KOU_JING_CFG.shiYearTongQi.principle}）。`);
+    else if (fanQi) evidence.push(`时柱反气：时柱${chart.hour.stem}${chart.hour.branch}反年柱${chart.year.stem}${chart.year.branch}之气，是对年柱作用的否定——前段吉气须打折看落地。`);
+  }
 
   // ⑧ 综合结论
   const matched = NIAN_YUE_TAIJI_CASES.find((c) => c.yearGZ === `${chart.year.stem}${chart.year.branch}` && c.monthGZ === `${chart.month.stem}${chart.month.branch}`) ?? null;
@@ -1963,26 +1974,42 @@ export function analyzeWuXingQuXiang(
   };
 }
 
-// 木克土的「打折」判定（2026-10-20 老爹口径：木克土会阻碍土晦火克水，按八折算）
-//   口径要点：土的三样本事（晦火、克水、生金）不会被木抹掉，只是发挥受阻；
-//   阴土性缓，木克它不成立 → 阴土（己、丑、戌）不参与打折，只折阳土（戊、辰、未）。
+// 木克土的「打折」判定（2026-10-20 老爹口径 + 学习笔记两条路径）
+//   路径一：成气木温克土（乙卯之象）——乙透干、支藏乙、或见卯，即以温木之形直克土；
+//   路径二：木被水寒控制后克土（癸卯之象）——局中水与木同见，寒制之木得以克土；
+//   甲木是生气布温之木，不直接克土（克＝布成气再对话）；唯甲坐寅/卯落地有根时，柱中带克土之象。
+//   阴土性缓，木克它不成立 → 只折阳土（戊、辰、未）。
 //   边界：本系数只用于五行力量占比，不进入干支级用忌布尔判据。
 function woodKeEarthDampFactor(chart: BaZiChart): number {
   const pillars: Pillar[] = [chart.year, chart.month, chart.day, chart.hour];
-  let woodGan = 0;   // 天干见木（透干有力）
-  let woodRoot = 0;  // 支藏木（有根）
+  let chengQiWood = 0;  // 成气木（乙透干 / 支藏乙 / 卯）
+  let shengQiWood = 0;  // 生气木（甲透干 / 支藏甲 / 寅 / 亥）
+  let water = 0;        // 水寒（壬癸透干 / 支藏壬癸 / 亥子丑）
+  let jiaLuoDi = 0;     // 甲坐寅/卯：落地有根，带克土之象
   let yangEarth = 0;
   let yinEarth = 0;
   pillars.forEach((p) => {
-    if (p.stemElement === 'wood') woodGan += 1;
-    p.hiddenStems.forEach((s) => { if (STEM_ELEMENTS[s] === 'wood') woodRoot += 1; });
+    if (p.stem === '乙') chengQiWood += 1;
+    if (p.stem === '甲') shengQiWood += 1;
+    if (p.stem === '壬' || p.stem === '癸') water += 1;
+    if (p.branch === '卯') chengQiWood += 1;
+    if (p.branch === '寅' || p.branch === '亥') shengQiWood += 1;
+    if (p.branch === '亥' || p.branch === '子' || p.branch === '丑') water += 1;
+    if (p.stem === '甲' && (p.branch === '寅' || p.branch === '卯')) jiaLuoDi += 1;
+    p.hiddenStems.forEach((s) => {
+      if (s === '乙') chengQiWood += 1;
+      if (s === '甲') shengQiWood += 1;
+      if (s === '壬' || s === '癸') water += 1;
+    });
     if (p.stem && EARTH_YANG_GANZHI.has(p.stem)) yangEarth += 1;
     if (p.stem && EARTH_YIN_GANZHI.has(p.stem)) yinEarth += 1;
     if (p.branch && EARTH_YANG_GANZHI.has(p.branch)) yangEarth += 1;
     if (p.branch && EARTH_YIN_GANZHI.has(p.branch)) yinEarth += 1;
   });
-  const hasWood = woodGan + woodRoot > 0;
-  if (!hasWood || yangEarth === 0) return 1;   // 无木，或土全是阴土 → 不打折
+  const path1 = chengQiWood > 0;                              // 成气木温直克土
+  const path2 = water > 0 && chengQiWood + shengQiWood > 0;   // 被水寒控制之木克土
+  const path3 = jiaLuoDi > 0;                                 // 甲坐寅卯落地带象
+  if ((!path1 && !path2 && !path3) || yangEarth === 0) return 1;
   // 木少而阴土多时，折扣按阳土占比摊薄（避免「一点木就折掉全局土气」）
   const earthTotal = yangEarth + yinEarth;
   const yangShare = earthTotal > 0 ? yangEarth / earthTotal : 1;
@@ -3185,7 +3212,8 @@ function analyzeInteractions(pillars: Pillar[]): string {
       const key = branches[i] + branches[j];
       const reverse = branches[j] + branches[i];
       if (liuChong[key] || liuChong[reverse]) {
-        actions.push(`六冲：${posNames[i]}${posNames[j]}${branches[i]}${branches[j]}相冲（冲主动荡、变动、破损、分离；事业调动、搬迁、感情波折，冲吉则动中得贵，冲凶则动中招灾）`);
+        const dir = LAO_GAO_KOU_JING_CFG.chongDirection.pairs.find((p) => p.pair === key || p.pair === reverse);
+        actions.push(`六冲：${posNames[i]}${posNames[j]}${branches[i]}${branches[j]}相冲（冲主动荡、变动、破损、分离；事业调动、搬迁、感情波折。${dir ? `克向：${dir.ke}，${dir.direction}，${dir.verdict}——冲的吉凶看克的方向，落阴阳才有吉凶` : '吉凶须落阴阳而定'}）`);
       }
     }
   }
@@ -3250,11 +3278,9 @@ function analyzeInteractions(pillars: Pillar[]): string {
     const count = branches.filter((b) => triple.includes(b)).length;
     if (count >= 3) {
       const which = branches.filter((b) => triple.includes(b)).join('');
-      actions.push(`三合（全）：${which}${triple[3]}三合局（主人缘和合、团队助力、合作成事、稳中求财；喜用成局则富贵可期，忌神成局则灾祸连绵）`);
-    } else if (count === 2) {
-      const which = branches.filter((b) => triple.includes(b)).join('');
-      actions.push(`三合（半）：${which}${triple[3]}半合局`);
+      actions.push(`三合（全）：${which}${triple[3]}三合局（主人缘和合、团队助力、合作成事、稳中求财；吉凶须落到阴阳，成局所化为用则吉、为忌则凶）`);
     }
+    // 两字相拱的「半合拱气」不采用：落回干支本身的作用来论，故不作半合局判词、不计分
   });
 
   // 地支三会（汇聚一方之气，力量最大）
@@ -3268,11 +3294,9 @@ function analyzeInteractions(pillars: Pillar[]): string {
     const count = branches.filter((b) => quad.includes(b)).length;
     if (count >= 3) {
       const which = branches.filter((b) => quad.includes(b)).join('');
-      actions.push(`三会（全）：${which}${quad[3]}三会局（汇聚一方之气，气场最纯、力量最大，能彻底改变原局气机旺衰；喜成则大成，忌成则大凶）`);
-    } else if (count === 2) {
-      const which = branches.filter((b) => quad.includes(b)).join('');
-      actions.push(`三会（半）：${which}${quad[3]}半会局`);
+      actions.push(`三会（全）：${which}${quad[3]}三会局（汇聚一方之气，气场最纯、力量最大，能彻底改变原局气机旺衰；吉凶须落到阴阳）`);
     }
+    // 两字「半会」同样不采用（与半合拱气同口径）
   });
 
   if (actions.length === 0) {
@@ -3309,7 +3333,7 @@ export function analyzeLiuQin(
   const yearStemShiShen = chart.year.shiShen || '';
   const monthStemShiShen = chart.month.shiShen || '';
   const parentYinMark = yongJi.stemMarks['年干'];
-  const parents = `父母宫以年柱和月柱为用，年柱主祖上与父亲根基，月柱主母亲与家庭环境。《自然易鉴》：原局气机温暖、生克有情、印比得力，长辈缘深、手足和睦、贵人众多；原局气机寒凉、刑冲相克、六亲宫位破损，六亲缘薄、亲人拖累、亲情淡薄。—— 印星为母亲，年干${chart.year.stem}（${yearStemShiShen || '未透'}）、月干${chart.month.stem}（${monthStemShiShen || '未透'}）。${parentYinMark === 'useful' ? '父母宫为用神，父母有助力，家庭条件较好，长辈缘深。' : parentYinMark === 'taboo' ? '父母宫为忌神，父母助力有限，早年家庭压力较大，六亲缘分稍薄。' : '父母宫为中性，父母关系平常，助力一般。'}`;
+  const parents = `父母宫以年柱和月柱为用，年柱主祖上与父亲根基，月柱主母亲与家庭环境。${LAO_GAO_KOU_JING_CFG.centerStar.principle}${LAO_GAO_KOU_JING_CFG.centerStar.anchors.find((a) => a.topic === '母亲健康')?.star ? `母亲健康主看${LAO_GAO_KOU_JING_CFG.centerStar.anchors.find((a) => a.topic === '母亲健康')!.star}、父亲主看${LAO_GAO_KOU_JING_CFG.centerStar.anchors.find((a) => a.topic === '父亲')!.star}。` : ''}《自然易鉴》：原局气机温暖、生克有情、印比得力，长辈缘深、手足和睦、贵人众多；原局气机寒凉、刑冲相克、六亲宫位破损，六亲缘薄、亲人拖累、亲情淡薄。—— 印星为母亲，年干${chart.year.stem}（${yearStemShiShen || '未透'}）、月干${chart.month.stem}（${monthStemShiShen || '未透'}）。${parentYinMark === 'useful' ? '父母宫为用神，父母有助力，家庭条件较好，长辈缘深。' : parentYinMark === 'taboo' ? '父母宫为忌神，父母助力有限，早年家庭压力较大，六亲缘分稍薄。' : '父母宫为中性，父母关系平常，助力一般。'}`;
 
   // 配偶：日支夫妻宫 + 财星（男命）/ 官星（女命）—— 第九章第三节·婚姻吉凶断法
   const spouseStar = isMale ? '财星' : '官星';
@@ -3321,10 +3345,10 @@ export function analyzeLiuQin(
       : '命局阴阳状态中等，婚姻需双方用心经营，方得长久安稳。';
   const spouse = `配偶宫为日支${chart.day.branch}（夫妻宫）。${isMale ? '男命以财星为妻' : '女命以官星为夫'}，${spouseStar}代表配偶。日支${chart.day.branch}五行属${elementName(chart.day.branchElement)}，${dayBranchMark === 'useful' ? '夫妻宫为用神，配偶有助力，婚姻美满。' : dayBranchMark === 'taboo' ? '夫妻宫为忌神，配偶助力弱，婚姻中易有矛盾。' : '夫妻宫为中性，婚姻关系平常。'}日柱${chart.day.stem}${chart.day.branch}干支关系影响夫妻相处模式。《自然易鉴》婚姻断法：格局阴阳均衡、干支有情、合多冲少，婚姻和睦长久；格局阴阳偏枯、干支无情、冲害混杂、刑破严重，婚姻波折。${marriageHint}`;
 
-  // 子女：时柱 + 食伤星
+  // 子女：时柱 + 子女星（男命看官杀、女命看食伤——中心论：男命官杀正是妻财的食伤星，财为妻、妻生者为子）
   const hourStemShiShen = chart.hour.shiShen || '';
   const hourMark = yongJi.stemMarks['时干'];
-  const children = `子女宫为时柱${chart.hour.stem}${chart.hour.branch}。食伤星为子女星，时干${chart.hour.stem}为${hourStemShiShen || '未透'}。${hourMark === 'useful' ? '子女宫为用神，子女贤孝，晚年得子女之力。' : hourMark === 'taboo' ? '子女宫为忌神，子女操心，晚年需注意子女问题。' : '子女宫为中性，子女情况平常。'}时柱也主晚年运，与时柱相关的因素也反映晚年生活状态。`;
+  const children = `子女宫为时柱${chart.hour.stem}${chart.hour.branch}。${isMale ? '男命以官杀为子女星（官杀即妻财之食伤，财为妻、妻生者为子）' : '女命以食伤为子女星'}，时干${chart.hour.stem}为${hourStemShiShen || '未透'}。${hourMark === 'useful' ? '子女宫为用神，子女贤孝，晚年得子女之力。' : hourMark === 'taboo' ? '子女宫为忌神，子女操心，晚年需注意子女问题。' : '子女宫为中性，子女情况平常。'}时柱也主晚年运，与时柱相关的因素也反映晚年生活状态。`;
 
   // 兄弟姐妹：比劫星 + 月柱
   const siblings = `兄弟姐妹以比劫星为代表，月柱为兄弟宫。月干${chart.month.stem}为${monthStemShiShen || '未透'}。${monthStemShiShen?.includes('比肩') || monthStemShiShen?.includes('劫财') ? '月干透比劫，有兄弟姐妹之象，兄弟有助力。' : '比劫不在月干透出，兄弟姐妹缘分稍淡或数量较少。'}比劫为用神则兄弟朋友有助，为忌神则易因朋友破财或竞争。`;
@@ -3682,6 +3706,8 @@ export function scoreGanZhiImpact(
   plusSumRaw: number;       // 原始分：加分项合计（A/B/C 正分）
   minusSumRaw: number;      // 原始分：扣分项合计（A/B/C 负分）
   otherSumRaw: number;      // 恒为 0：刑冲合会不参与评分（保留字段兼容 UI 明细行）
+  jiItems: string[];        // 吉项明细（正分作用逐条列出，不因总分低而被盖掉）
+  xiongItems: string[];     // 凶项明细（负分作用逐条列出，不因总分高而被盖掉）
 } {
   // 用忌标记唯一来源：月令逐字资料库（analyzeYongJi 的 allStemMarks/allBranchMarks）
   // 含天干粒度覆盖（辰月甲=用）、土支逐字定论（辰月戌冲辰=用、夏月丑戌晦火=用）、两局/条件字=中性
@@ -3712,9 +3738,14 @@ export function scoreGanZhiImpact(
   let otherSumRaw = 0; // 刑冲合会不参与评分，恒为 0
 
   const summary: string[] = [];
+  const jiItems: string[] = [];
+  const xiongItems: string[] = [];
   const pushSum = (msg: string, s: number) => {
     if (s > 0) plusSumRaw  += s;
     if (s < 0) minusSumRaw += s; // 负数累加
+    // 吉凶分别记账（老高口径）：吉项与凶项同时存在、互不抵消，展示时两栏并列
+    if (s > 0) jiItems.push(`${compressFmt(s)} ${msg}`);
+    if (s < 0) xiongItems.push(`${compressFmt(s)} ${msg}`);
     summary.push(`${compressFmt(s)} ${msg}`);
   };
 
@@ -3839,6 +3870,8 @@ export function scoreGanZhiImpact(
     plusSumRaw:  Number(plusSumRaw.toFixed(2)),
     minusSumRaw: Number(minusSumRaw.toFixed(2)),
     otherSumRaw: Number(otherSumRaw.toFixed(2)),
+    jiItems,
+    xiongItems,
   };
 }
 
@@ -4108,7 +4141,7 @@ export function analyzeJiXiong(
     for (let j = i + 1; j < 4; j++) {
       const key = branches[i] + branches[j];
       const rev = branches[j] + branches[i];
-      // 六合
+      // 六合（关系本身不带吉凶，不计分；吉凶落到阴阳与岁运引动才产生）
       if (DI_ZHI_LIU_HE[key] || DI_ZHI_LIU_HE[rev]) {
         const hua = DI_ZHI_LIU_HE[key] || DI_ZHI_LIU_HE[rev]!;
         const ordered = DI_ZHI_LIU_HE[key] ? key : rev;
@@ -4117,41 +4150,40 @@ export function analyzeJiXiong(
         };
         const huaEl = huaElMap[hua] || branchEls[i];
         const beneficial = yongJi.usefulElements.includes(huaEl);
-        const nature: '吉' | '凶' | '平' = beneficial ? '吉' : '平';
-        const score = beneficial ? 2 : 1;
         applyToBoth(i, j, '地支六合', (a, b) => ({
-          detailA: `地支六合：${ordered}${hua}（${a} 与 ${b} 相合）。合主凝聚、有情、稳定；化出${elementName(huaEl)}${beneficial ? '为用神，合则聚贵、人缘和合、合作成事' : '虽非用神，亦主人事安稳少动'}。`,
+          detailA: `地支六合：${ordered}${hua}（${a} 与 ${b} 相合）。合主凝聚、有情、稳定；所化${elementName(huaEl)}${beneficial ? '为本盘用神，合则聚气助用、人缘和合、合作成事' : '非本盘用神，合则人事安稳少动、聚而不发'}。合本身不带吉凶，须落到阴阳才有。`,
           detailB: `地支六合：${ordered}${hua}（${b} 与 ${a} 相合）。合主静聚，少动荡、多得贵人扶持与人际缘分。`,
-          nature,
-          score,
+          nature: '平',
+          score: 0,
         }));
       }
-      // 六冲
+      // 六冲（本身不带吉凶，不计分；吉凶看克的方向）
       if (LIU_CHONG_PAIRS[key] || LIU_CHONG_PAIRS[rev]) {
+        const dir = LAO_GAO_KOU_JING_CFG.chongDirection.pairs.find((p) => p.pair === key || p.pair === rev);
         applyToBoth(i, j, '地支六冲', (a, b) => ({
-          detailA: `地支六冲：${a} 冲 ${b}。冲主动荡、变动、冲突、分离、破财、远行；冲吉则旧的不去新的不来、动中得贵；冲凶则破耗连连、人事不和、疾病横生。《自然易鉴》：冲如两军对垒，不死不休，所冲之宫必有变动。`,
-          detailB: `地支六冲：${b} 冲 ${a}。冲主散、动、破、坏；冲破用神则福去，冲破忌神则祸除。`,
-          nature: '凶',
-          score: -2,
+          detailA: `地支六冲：${a} 冲 ${b}。冲主动荡、变动、冲突、分离、远行；冲本身不带吉凶，吉凶看克的方向——${dir ? `${dir.ke}（${dir.direction}）${dir.verdict}` : '阴克阳不吉、阳克阴吉'}。冲吉则旧的不去新的不来、动中得贵；冲凶则破耗连连、人事不和。`,
+          detailB: `地支六冲：${b} 冲 ${a}。冲主散、动、破、坏；冲破用神则福去，冲破忌神则祸除——落阴阳才算数。`,
+          nature: '平',
+          score: 0,
         }));
       }
-      // 六害
+      // 六害（本身不带吉凶，不计分）
       if (LIU_HAI_PAIRS[key] || LIU_HAI_PAIRS[rev]) {
         applyToBoth(i, j, '地支六害', (a, b) => ({
-          detailA: `地支六害：${a} 害 ${b}。害主暗中损耗、暗伤、暗疾、小人、是非，看不见的伤害与隔阂；明枪易躲暗箭难防，所害之宫多有隐形祸端。`,
+          detailA: `地支六害：${a} 害 ${b}。害主暗中损耗、暗伤、暗疾、小人、是非，看不见的伤害与隔阂；所害之宫多有隐形祸端。害本身不带吉凶，落阴阳才见轻重。`,
           detailB: `地支六害：${b} 害 ${a}。害为暗中相克、恩情反怨，主朋友反目、家人隔阂、健康暗耗、财物暗损。`,
-          nature: '凶',
-          score: -2,
+          nature: '平',
+          score: 0,
         }));
       }
-      // 子卯无礼之刑
+      // 子卯无礼之刑（本身不带吉凶，不计分）
       const pairStr = [branches[i], branches[j]].sort().join('');
       if (pairStr === '卯子') {
         applyToBoth(i, j, '地支三刑', (a, b) => ({
-          detailA: `三刑（无礼）：${a} 刑 ${b}（子卯相刑）。主礼仪缺失、言行无状、伦理不顺、子女不孝、感情混乱、失礼招祸。`,
+          detailA: `三刑（无礼）：${a} 刑 ${b}（子卯相刑）。主礼仪缺失、言行无状、伦理不顺、感情混乱、失礼招祸。刑本身不带吉凶，落阴阳才见轻重。`,
           detailB: `三刑（无礼）：${b} 刑 ${a}（子卯相刑）。无礼之刑主上下失序、内外失和，需谨言慎行修德避祸。`,
-          nature: '凶',
-          score: -3,
+          nature: '平',
+          score: 0,
         }));
       }
     }
@@ -4167,9 +4199,9 @@ export function analyzeJiXiong(
         type: '地支三刑',
         from: `地支${others}`,
         to: branchPosNames[idx] + c,
-        detail: `三刑（无恩）：${wuenPresent.join('')}相刑。主忘恩负义、贵人变小人、人际反目、亲情淡薄、恩怨纠缠、事业波折。《自然易鉴》：刑者，伤也、残也，五行伤残、气机破损，需多行善积德方能化解。`,
-        score: -3,
-        nature: '凶',
+        detail: `三刑（无恩）：${wuenPresent.join('')}相刑。主忘恩负义、贵人变小人、人际反目、亲情淡薄、恩怨纠缠；刑本身不带吉凶，落阴阳才见轻重，宜多行善积德化解。`,
+        score: 0,
+        nature: '平',
       });
     });
   }
@@ -4184,9 +4216,9 @@ export function analyzeJiXiong(
         type: '地支三刑',
         from: `地支${others}`,
         to: branchPosNames[idx] + c,
-        detail: `三刑（恃势）：${shishiPresent.join('')}相刑。主仗势欺人、争强好胜、纠纷不断、官非口舌、家业不宁、同辈相克。恃势之刑需谦逊退让，莫与人争。`,
-        score: -3,
-        nature: '凶',
+        detail: `三刑（恃势）：${shishiPresent.join('')}相刑。主仗势欺人、争强好胜、纠纷不断、官非口舌、家业不宁；刑本身不带吉凶，落阴阳才见轻重，宜谦逊退让。`,
+        score: 0,
+        nature: '平',
       });
     });
   }
@@ -4201,59 +4233,57 @@ export function analyzeJiXiong(
           type: '地支三刑',
           from: othersText,
           to: branchPosNames[idx] + c,
-          detail: `自刑：${c}${c}自见（${othersText}）。主自我纠结、内耗严重、多疑多虑、自我施压、无事生非、心病缠身、自作自受；需心量放宽，少钻牛角尖。`,
-          score: -2,
-          nature: '凶',
+          detail: `自刑：${c}${c}自见（${othersText}）。主自我纠结、内耗严重、多疑多虑、自我施压、心病缠身；刑本身不带吉凶，落阴阳才见轻重，宜心量放宽。`,
+          score: 0,
+          nature: '平',
         });
       });
     }
   });
 
-  // 三合局
+  // 三合局（三全成局；两字相拱的「半合拱气」不采用，仅作地支有接触描述、不计分、不成局判词）
   SAN_HE_GROUPS.forEach((group) => {
     const idxs = group.members.map((c) => branches.indexOf(c)).filter((i) => i >= 0);
-    if (idxs.length >= 2) {
-      const present = idxs.map((i) => branches[i]).join('');
-      const quan = group.name;
-      const el = group.element;
-      const beneficial = yongJi.usefulElements.includes(el);
-      const nature: '吉' | '凶' | '平' = beneficial ? '吉' : '平';
-      const score = (idxs.length >= 3 ? 3 : 2) * (beneficial ? 1 : 0.5) * 1;
-      idxs.forEach((idx) => {
-        const others = idxs.filter((x) => x !== idx).map((x) => branchPosNames[x] + branches[x]).join('、');
-        branchSourcesByPos[branchPosNames[idx]].push({
-          type: '地支三合',
-          from: others,
-          to: branchPosNames[idx] + branches[idx],
-          detail: `地支三合：${present}${quan}三合局（${idxs.length >= 3 ? '三全' : '半合'}），汇聚${elementName(el)}之气。${beneficial ? '用神成局则富贵可期，朋友合力、合作成事、贵人众多。' : '虽非用神，亦主人缘聚、事有合和之象。'}`,
-          score: beneficial ? score : 1,
-          nature,
-        });
+    if (idxs.length < 3) return;
+    const present = idxs.map((i) => branches[i]).join('');
+    const quan = group.name;
+    const el = group.element;
+    const beneficial = yongJi.usefulElements.includes(el);
+    const nature: '吉' | '凶' | '平' = beneficial ? '吉' : '平';
+    const score = 3 * (beneficial ? 1 : 0.5);
+    idxs.forEach((idx) => {
+      const others = idxs.filter((x) => x !== idx).map((x) => branchPosNames[x] + branches[x]).join('、');
+      branchSourcesByPos[branchPosNames[idx]].push({
+        type: '地支三合',
+        from: others,
+        to: branchPosNames[idx] + branches[idx],
+        detail: `地支三合：${present}${quan}三合局（三全成局），汇聚${elementName(el)}之气。${beneficial ? '成局所化为本盘用神，富贵可期，朋友合力、合作成事、贵人众多。' : '虽非用神，亦主人缘聚、事有合和之象。'}三合本身不带吉凶，须落到阴阳才算。`,
+        score,
+        nature,
       });
-    }
+    });
   });
-  // 三会局
+  // 三会局（三全成局；两字「半会」亦不采用）
   SAN_HUI_GROUPS.forEach((group) => {
     const idxs = group.members.map((c) => branches.indexOf(c)).filter((i) => i >= 0);
-    if (idxs.length >= 2) {
-      const present = idxs.map((i) => branches[i]).join('');
-      const quan = group.name;
-      const el = group.element;
-      const beneficial = yongJi.usefulElements.includes(el);
-      const nature: '吉' | '凶' | '平' = beneficial ? '吉' : '平';
-      const score = (idxs.length >= 3 ? 4 : 2) * (beneficial ? 1 : 0.5) * 1; // 三会力最大
-      idxs.forEach((idx) => {
-        const others = idxs.filter((x) => x !== idx).map((x) => branchPosNames[x] + branches[x]).join('、');
-        branchSourcesByPos[branchPosNames[idx]].push({
-          type: '地支三会',
-          from: others,
-          to: branchPosNames[idx] + branches[idx],
-          detail: `地支三会：${present}${quan}三会局（${idxs.length >= 3 ? '三全，力量最大' : '半会'}），汇聚一方纯${elementName(el)}之气，能彻底改变原局旺衰。${beneficial ? '用神三会则大成，富贵绵长；忌神三会则大凶，灾祸连绵' : '力大势强，吉凶看引动'}。`,
-          score: beneficial ? score : 1,
-          nature,
-        });
+    if (idxs.length < 3) return;
+    const present = idxs.map((i) => branches[i]).join('');
+    const quan = group.name;
+    const el = group.element;
+    const beneficial = yongJi.usefulElements.includes(el);
+    const nature: '吉' | '凶' | '平' = beneficial ? '吉' : '平';
+    const score = 4 * (beneficial ? 1 : 0.5); // 三会力最大
+    idxs.forEach((idx) => {
+      const others = idxs.filter((x) => x !== idx).map((x) => branchPosNames[x] + branches[x]).join('、');
+      branchSourcesByPos[branchPosNames[idx]].push({
+        type: '地支三会',
+        from: others,
+        to: branchPosNames[idx] + branches[idx],
+        detail: `地支三会：${present}${quan}三会局（三全，力量最大），汇聚一方纯${elementName(el)}之气，能彻底改变原局旺衰。${beneficial ? '成局所化为本盘用神，富贵绵长；若为忌神则灾祸连绵' : '力大势强，吉凶看引动'}。三会本身不带吉凶，须落到阴阳才算。`,
+        score,
+        nature,
       });
-    }
+    });
   });
 
   // --------------------------
@@ -4433,6 +4463,10 @@ export interface DaYunFortuneEntry {
   mingPanBase?: number;
   sPlusCertified?: boolean;
   badYearCount?: number;
+  /** 吉项明细（与本运总分无关，逐条保留；对应老高「吉凶可同时存在、分别记」） */
+  jiItems?: string[];
+  /** 凶项明细（与本运总分无关，逐条保留） */
+  xiongItems?: string[];
 }
 
 // 大运流年吉凶分析（阴阳气喜用关系为核心判断）
@@ -4483,6 +4517,8 @@ export function analyzeDaYunLiuNian(
       plusSumRaw: ps,
       minusSumRaw: ms,
       otherSumRaw: os,
+      jiItems,
+      xiongItems,
     } = scoreGanZhiImpact(dy.stem, dy.branch, chart, yongJi, yinYangPct);
     const liuNian10 = getLiuNianList(dy.startYear, 10).map((ln) => calcLiuNian(ln.year, ln.stem, ln.branch));
 
@@ -4524,6 +4560,8 @@ export function analyzeDaYunLiuNian(
       baseCompress: Math.round(finalCompress * 10) / 10,  // 趋势加成前的基础压缩分（大运本身+十年平均，无趋势bonus）
       selfCompress: dyCompress,            // 大运本身压缩分（仅本柱干支作用，S+ 硬认证用）
       liuNianAvgCompress,                  // 下辖十年流年平均压缩分（S+ 硬认证用）
+      jiItems,                             // 吉项逐条（不因总分低而消失）
+      xiongItems,                          // 凶项逐条（不因总分高而消失）
     };
   });
 
@@ -4548,6 +4586,8 @@ export function analyzeDaYunLiuNian(
     baseCompress: dy.baseCompress,  // 保留：趋势加成前的基础压缩分
     selfCompress: dy.selfCompress,  // 保留：大运本身压缩分（S+ 硬认证用）
     liuNianAvgCompress: dy.liuNianAvgCompress,  // 保留：十年流年平均压缩分（S+ 硬认证用）
+    jiItems: dy.jiItems,            // 保留：吉项逐条
+    xiongItems: dy.xiongItems,      // 保留：凶项逐条
   })));
   // 把 trended 上的 level/displayScore 同步回 fortune/score 字段（UI 用的是 fortune 和 score），同时保留升级信息
   const daYunWithFortune: DaYunFortuneEntry[] = daYunTrended.map(tr => {

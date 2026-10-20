@@ -6,7 +6,7 @@
 >
 > **维护约定**：新增事项写入对应分区；完成后移入「已完成」并注明完成版本；每项必须写清
 > **来源 / 条件 / 当前状态 / 文件锚点**，不留模糊表述。
-> 最后更新：2026-10-19（v2.9.3 已上线；新增 G1「BYOK AI 解读」暂缓方向决策）
+> 最后更新：2026-10-20（学习笔记口径入库 `LAO_GAO_KOU_JING_CFG`；D3 已收敛）
 
 ---
 
@@ -40,6 +40,14 @@
 - **条件**：用户决定是否在象意/五行模块新增对应展示块。
 - **状态**：已入库、未上 UI（可选）。
 
+### B4 · 大运「吉凶并存·分别记」的展示口径 → **已完成（2026-10-20）**
+- **来源**：老高 2026-10-20 现场口径（`docs/学习笔记.md`）——「吉凶可同时存在、互不冲突，两笔分开记，不拿一个盖掉另一个」（如庚辰运：庚金克丙为凶、辰土克水得贵为吉）。
+- **已做**：`scoreGanZhiImpact` 新增 `jiItems` / `xiongItems`（正分、负分作用逐条留档，不受 `summary.slice(0,5)` 截断、也不因总分被另一端盖掉）；`DaYunFortuneEntry` 增同名字段，`analyzeDaYunLiuNian` → `applyForwardTrend` 透传；05 岁运展开区在十年流年网格上方新增「吉项 / 凶项」双栏（绿 `#2E7654` / 朱红 `#E31C29`，各带条数，空态显示「本运无明显吉项 / 凶项」）。
+- **边界**：仅展示层扩展；大运调整分、九档评级、S+ 认证判定链路**均未改动**。
+- **验证（2026-10-20 浏览器实测，dist 构建）**：载入示例 → 开始排盘 → 展开第三步大运「甲申（27 岁起，2017-2026）」，双栏正常渲染（吉项 1 条 / 凶项 1 条），条目文本 `whitespace-normal` 无溢出卡片边框，页面 `hasHorizontalOverflow=false`，控制台无业务报错（仅首次导航的 `ERR_CONNECTION_REFUSED` 瞬时噪声）。
+- **状态**：✅ 已完成。
+- **锚点**：`src/utils/baziAnalyzer.ts`（`scoreGanZhiImpact` L3697 起、`DaYunFortuneEntry`、`analyzeDaYunLiuNian`）；`src/pages/BaZiAnalyzerPage/BaZiAnalyzerPage.tsx`（05 岁运展开区吉凶双栏）；`src/data/baziData.ts`（`LAO_GAO_KOU_JING_CFG.daYunYingQi.splitRule`）。
+
 ---
 
 ## C. 待标定（参数校准，随命例积累推进）
@@ -61,6 +69,15 @@
 - **状态**：已修正为取平均（可继续随命例标定）。
 - **锚点**：`src/data/baziData.ts`（`SCORING_CFG.daYunMix`）；`src/utils/baziAnalyzer.ts`（`analyzeDaYunLiuNian` 的 `finalCompress`）。
 
+### C4 · 木克土按「两条路径」分化折算 → **已完成（2026-10-20）**
+- **来源**：老高 2026-10-20（`docs/学习笔记.md`）——木克土只有两条路径：①成气木温直克土（乙卯）；②木先被水寒控制再克土（癸卯）；甲木为生气布温**不直接克土**（唯坐支落地有根如甲寅时柱中带克土之象）。已入库为 `WOOD_KE_EARTH_CFG.paths` / `jiaDirect`。
+- **已做**：`woodKeEarthDampFactor` 由「局中见木即成」改为按三条成立路径判定 —— ①成气木（乙透干 / 支藏乙 / 见卯）；②寒制之木（水见 壬癸 / 亥子丑 / 藏壬癸，且局中有木）；③甲坐寅卯落地带象。三者皆不成立则**不打折**（`factor=1`）。`dampFactor` 力度仍 0.8，仍只折阳土（戊辰未）、按阳土占比摊薄，不改动阴土。
+- **影响面**：仅 `calculateElementPower` 的五行力量占比（进而间接影响富贵/补偏的读盘输入），**不进入干支级用忌 marks 与评分链路**。
+- **验证（12 例命例回放，2026-10-20）**：1990-05-15 男 / 1985-03-08 女 / 1992-07-20 男 / 1978-11-03 女 / 2000-01-25 男 / 1995-09-12 女 / 1988-04-02 男 / 2003-08-18 女 / 1970-06-30 男 / 1998-12-07 女 / 1982-02-14 男 / 2008-10-09 女，土占比**0 例变化** —— 原因是这些盘均含乙/卯/藏乙，或水与木同见，旧口径与新口径同时命中打折，故实际影响面仅为「孤甲无水且甲不坐寅卯」的少数盘，回归风险为零。
+- **后续**：`dampFactor`(0.8) 力度仍属待标定项，随命例积累再调（只改 `WOOD_KE_EARTH_CFG`，不动引擎）。
+- **状态**：✅ 已完成（口径已落地，力度待标定）。
+- **锚点**：`src/data/baziData.ts`（`WOOD_KE_EARTH_CFG` v1.2.0）；`src/utils/baziAnalyzer.ts`（`woodKeEarthDampFactor` / `calculateElementPower`）。
+
 ---
 
 ## D. 技术债 / 重构（不阻塞功能，但影响可演进性）
@@ -75,6 +92,13 @@
 - **来源**：老高口径（`reference/docs/00_老高意见.md`）——「干支是天干作用到地支之后的结果」。
 - **现状**：`scoreGanZhiImpact` 现为干支一体（截脚作废/盖头减半/布气减半）但仍双向取分；终态应为干→支单向赋分（支仅保留「截脚否决」的隐性影响）。
 - **条件**：**待攒够命例后再改**，勿急于动引擎（改动会波及大运流年全盘评分）。
+
+### D3 · 「冲本身不带吉凶」与逐字吉凶展示的 -2 冲分冲突 → **已收敛（2026-10-20）**
+- **来源**：老高 2026-10-20 口径（`LAO_GAO_KOU_JING_CFG.relationNeutral`）——六合/三合/刑/冲本身不带吉凶，落阴阳才有；冲的吉凶看克的方向（`chongDirection`）。
+- **处置（用户「收敛」）**：逐字吉凶展示中，六合 / 六冲 / 六害 / 三刑（子卯·寅巳申·丑未戌·自刑）**全部改为 `score: 0`、`nature: '平'`**，判词保留克向与象义说明（「本身不带吉凶，落阴阳才见轻重」）；三合 / 三会改为**三全才成局**，两字「半合拱气 / 半会」一律不采用、不再出合局判词、不参与情缘应期与情缘打分。
+- **影响面**：仅象法「干支作用」与「情缘应期/打分」的展示与打分口径；**岁运评分链路、用忌 marks、九档评级均未改动**。
+- **锚点**：`src/utils/baziAnalyzer.ts`（`applyToBoth` 六合/六冲/六害/子卯刑、寅巳申/丑未戌/自刑、三合/三会；`analyzeDiZhiInteractions` 概述）；`src/utils/xiangfaAnalyzer.ts`（情缘 `isSanHe/isSanHui` 与 `sanHeBranches` 已移除）。
+- **状态**：✅ 已完成。
 
 ---
 
@@ -150,3 +174,4 @@
 | 打分链路参数 CFG 化（零行为变更） | v2.9.2 | `SCORING_CFG`（`baziData.ts`，`score-v1.1.0`）集中打分链路全部数值：干支基础分/一体系数/补偏分/流通分/置信降权/大运混合权重/九档阈值（`letterFromScore` + `letterFromCombined`）/S+ 认证阈值 + 同盘配额；`baziAnalyzer.ts` 全链路改读 CFG（`RAW_SCORE_DIVISOR` 与 `analyzeDaYunLiuNian` 内 3.6 均改从 CFG/常量取）；清理 `scoreGanZhiImpact` 与 `analyzeDaYunLiuNian` 两处冗余 `monthQi` 形参。数值逐一核对与原字面量一致，`vite build` 通过 |
 | 版本发布与上线 v2.9.1 → v2.9.3 | v2.9.3 | 三次提交推送 main + gh-pages 上线：打分链路参数 CFG 化 → 大运九档梯度收紧（`daYunMix` 0.5/0.5）→ 六亲换太极标签去歧义 |
 | 系统审查 · 类型缺口修复（2026-10-19） | 未提交 | 全量审查发现 `analyzeShengKeQuan` 的 `cands` 声明为 `{ el: string }`、擦除了五行联合类型，构成 `tsc` 唯一的业务代码错误（TS2322）；改为 `{ el: typeof startEl }` 后 `tsc -p tsconfig.app.json` 归零（零行为变更）。同批订正：BACKLOG A1 锚点清单（原举示例 `analyzeMingJuPattern` 有误）、B1 归并至本表、PROJECT_STATUS / SYNC 过期行 |
+| 学习笔记口径入库（`LAO_GAO_KOU_JING_CFG`） | 未提交 | 将 `docs/学习笔记.md`（老高/老爹 2026-10-20 现场口径）归纳入库：① `baziData.ts` 新增版本化 CFG `LAO_GAO_KOU_JING_CFG`（`laogao-v1.0.0`）——生气/成气对话规则 + 地支藏干生气成气中心表 + 年柱无吉凶与年月两步 + 冲的克向判据（六冲逐对）+ 关系不带吉凶与半合拱气不采用 + 时年同气反气 + 柱意优先（丙戌/辛未/甲寅三例）+ 中心论锚点（父母/学习/精神/子女）+ 十神克向 + 大运吉凶并存 + 平衡阳气不伤阴气 + 主干流程；② `GANZHI_YITI_RULES.subRules` 增补「生气须布成气再对话、合不走这条道、五合不论化」两条；③ `WOOD_KE_EARTH_CFG` 升 `woodkeearth-v1.1.0`，新增 `paths`（成气木温 / 寒制之木）与 `jiaDirect=false`；④ 引擎侧只作**判词/证据层**接线：`analyzeNianYueTaiJi` 补「年月两步、年柱无吉凶、时柱同气反气」三条 evidence，象法六冲判词改按克向（两处），`analyzeLiuQin` 子女星改「男命官杀 / 女命食伤」并补中心论对位——**均未改动用忌 marks、评分链路与九档评级**；⑤ 评分/口径待定项登记 B4 / C4 / D3。`vite build` 通过（1668 modules） |
