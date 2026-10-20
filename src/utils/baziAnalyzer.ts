@@ -42,6 +42,7 @@ import {
   TAI_JI_MODEL_PARAMS,
   YONG_JI_MODE,
   SCORING_CFG,
+  COLD_HOT_CFG,
   type IChunQiuSegment,
   type IWuXingQuXiang,
   type ITaiJiQiPair,
@@ -2009,7 +2010,12 @@ export function calculateYinYangBalance(chart: BaZiChart): { yang: number; yin: 
   const addYang = (v: number) => { yang += v; };
   const addYin = (v: number) => { yin += v; };
   const addByEl = (el: string | undefined, ganzhi: string, v: number) => {
-    if (el === 'earth') { (EARTH_YANG_GANZHI.has(ganzhi) ? addYang : addYin)(v); }
+    if (el === 'earth') {
+      // 阴土全量归阴；阳土按 COLD_HOT_CFG.yinYangYangShare 计入阳侧（默认 1 = 全量归阳，与旧行为等价）
+      const share = EARTH_YIN_GANZHI.has(ganzhi) ? 0 : COLD_HOT_CFG.yinYangYangShare;
+      addYang(v * share);
+      addYin(v * (1 - share));
+    }
     else if (el === 'wood' || el === 'fire') addYang(v);
     else addYin(v);
   };
@@ -2048,13 +2054,21 @@ export function calculateColdHotBalance(chart: BaZiChart): { hot: number; cold: 
 
   pillars.forEach((pillar, idx) => {
     const w = weights[idx];
-    // 天干：丙丁→热，壬癸→寒，甲乙→助热（温），庚辛→助寒（凉），戊己之土寒热各半
+    // 土的寒热按「受哪股气影响多」分（阳土偏热、阴土偏寒），比例见 COLD_HOT_CFG.earthYangShare
+    const earthHotOf = (gz: string | undefined): number =>
+      gz && EARTH_YANG_GANZHI.has(gz) ? COLD_HOT_CFG.earthYangShare : 1 - COLD_HOT_CFG.earthYangShare;
+    // 天干：丙丁→热，壬癸→寒，甲乙→助热（温），庚辛→助寒（凉），戊（阳土）偏热、己（阴土）偏寒
     const sEl = pillar.stemElement;
     if (sEl === 'fire') hot += w * 1.2;
     else if (sEl === 'water') cold += w * 1.2;
     else if (sEl === 'wood') hot += w * 0.6;
     else if (sEl === 'metal') cold += w * 0.6;
-    else { hot += w * 0.2; cold += w * 0.2; }
+    else {
+      const total = w * COLD_HOT_CFG.stemEarthTotal;
+      const share = earthHotOf(pillar.stem);
+      hot += total * share;
+      cold += total * (1 - share);
+    }
 
     // 地支：巳午未→热（火局），亥子丑→寒（水局），寅卯辰→助热（温），申酉戌→助寒（凉）
     const bEl = pillar.branchElement;
@@ -2069,15 +2083,19 @@ export function calculateColdHotBalance(chart: BaZiChart): { hot: number; cold: 
     else if (bEl === 'water') bCat = 'cold';
     else if (bEl === 'wood') bCat = 'hot';
     else if (bEl === 'metal') bCat = 'cold';
-    else { // 土：不分燥湿，寒热各半（纳阴纳阳）
+    else { // 土：不分燥湿，按受阳气/阴气影响分记寒热（未、辰偏热；丑、戌偏寒）
       earthNeutral = true;
-      bBase *= 0.55;
+      bBase *= COLD_HOT_CFG.branchEarthTotal;
     }
-    if (earthNeutral) { hot += bBase / 2; cold += bBase / 2; }
+    if (earthNeutral) {
+      const share = earthHotOf(branch);
+      hot += bBase * share;
+      cold += bBase * (1 - share);
+    }
     else if (bCat === 'hot') hot += bBase;
     else cold += bBase;
 
-    // 藏干：比例加权（戊→热，己→寒）
+    // 藏干：比例加权（戊→偏热，己→偏寒；其余按五行）
     pillar.hiddenStems.forEach((st, i) => {
       const hEl = STEM_ELEMENTS[st];
       const hw = w * 0.35 * (1 - i * 0.15);
@@ -2086,7 +2104,12 @@ export function calculateColdHotBalance(chart: BaZiChart): { hot: number; cold: 
       else if (hEl === 'water') cold += hw;
       else if (hEl === 'wood') hot += hw * 0.5;
       else if (hEl === 'metal') cold += hw * 0.5;
-      else { hot += hw * 0.2; cold += hw * 0.2; } // 土藏干：寒热各半
+      else { // 土藏干：按阴阳倾向分记寒热
+        const total = hw * COLD_HOT_CFG.hiddenEarthTotal;
+        const share = earthHotOf(st);
+        hot += total * share;
+        cold += total * (1 - share);
+      }
     });
   });
 
