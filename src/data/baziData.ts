@@ -185,7 +185,6 @@ export interface IMonthQiExt {
   month: string
   solarTermRange: string    // 节气区间，如 '立春—惊蛰'
   guaXiang: string           // 卦象解释
-  guaName: string            // 卦名 + 卦符，如 '地天泰卦䷊'
   qiJin: string              // 气进说明，如 '三阳'
   hiddenStemsAndChangSheng: string  // 藏干与十二长生
   coreQiJi: string           // 核心气机
@@ -197,7 +196,6 @@ export const MONTH_QI_EXPANDED: IMonthQiExt[] = [
   {
     month: '寅月',
     solarTermRange: '立春—惊蛰',
-    guaName: '地天泰卦䷊',
     qiJin: '气进三阳',
     guaXiang: '三阳在下、三阴在上，天地交融，阴气渐衰、阳气日增，为万物生发、阴阳转换关键期。寅丑同属艮卦，主止寒，冬尽春始。',
     hiddenStemsAndChangSheng: '藏甲、丙、戊；十干状态：甲临官、乙帝旺、丙戊长生、丁己死、庚绝、辛胎、壬病、癸沐浴。',
@@ -208,7 +206,6 @@ export const MONTH_QI_EXPANDED: IMonthQiExt[] = [
   {
     month: '卯月',
     solarTermRange: '惊蛰—清明',
-    guaName: '雷天大壮卦䷡',
     qiJin: '气进四阳',
     guaXiang: '内乾外震，四阳激荡，坤阴初爻转阳，惊雷始发、万物旺盛，春气更深、寒意更退。卯属震卦，为万物生发之源。',
     hiddenStemsAndChangSheng: '独藏乙木；十干状态：甲帝旺、乙临官、丙戊沐浴、丁己病、庚胎、辛绝、壬死、癸长生。',
@@ -219,7 +216,6 @@ export const MONTH_QI_EXPANDED: IMonthQiExt[] = [
   {
     month: '辰月',
     solarTermRange: '清明—立夏',
-    guaName: '泽天夬卦䷪',
     qiJin: '气进五阳',
     guaXiang: '五阳一阴，阳气鼎盛、仅剩残阴；春末夏初，阴阳不明、气机模糊，辰属巽卦，主迷惑、暧昧之象。',
     hiddenStemsAndChangSheng: '藏戊、乙、癸；十干状态：甲衰、乙冠带、丙戊冠带、丁己衰、庚养、辛墓、壬墓、癸养。',
@@ -230,7 +226,6 @@ export const MONTH_QI_EXPANDED: IMonthQiExt[] = [
   {
     month: '巳月',
     solarTermRange: '立夏—芒种',
-    guaName: '乾卦䷀',
     qiJin: '六阳纯阳',
     guaXiang: '六爻纯阳，阳盛阴衰，为温热过渡之地，非极致炎热，"见阳则炎、遇阴则凉"，幻象丛生。巳属巽卦，区别于午火离明真火。',
     hiddenStemsAndChangSheng: '藏丙、戊、庚；十干状态：甲病、乙沐浴、丙戊临官、丁己帝旺、庚长生、辛死、壬绝、癸胎。',
@@ -241,7 +236,6 @@ export const MONTH_QI_EXPANDED: IMonthQiExt[] = [
   {
     month: '午月',
     solarTermRange: '芒种—小暑',
-    guaName: '天风姤卦䷸',
     qiJin: '一阴初生',
     guaXiang: '五阳一阴，阳极阴生，昼长夜短；午为离卦，主光明热能，火势已成真热，非巳月虚浮之热。',
     hiddenStemsAndChangSheng: '藏丁、己；十干状态：甲死、乙长生、丙戊帝旺、丁己临官、庚沐浴、辛病、壬胎、癸绝。',
@@ -252,7 +246,6 @@ export const MONTH_QI_EXPANDED: IMonthQiExt[] = [
   {
     month: '未月',
     solarTermRange: '小暑—立秋',
-    guaName: '天山遁卦䷠',
     qiJin: '二阴生长',
     guaXiang: '四阳二阴，三伏生寒，热极转凉，为天地阴阳转换关键节点；未属坤卦，主承载收纳，蓄热藏凉。',
     hiddenStemsAndChangSheng: '藏己、丁、乙；十干状态：甲癸墓、乙壬养、丙戊辛衰、丁己庚冠带。',
@@ -263,7 +256,6 @@ export const MONTH_QI_EXPANDED: IMonthQiExt[] = [
   {
     month: '申月',
     solarTermRange: '立秋—白露',
-    guaName: '天地否卦䷋',
     qiJin: '三阴生长',
     guaXiang: '三阳三阴，阳气退藏、阴气渐起，热未散尽、凉初成形，阴阳交错、状态不稳；申属坤卦，主传送、变动。',
     hiddenStemsAndChangSheng: '藏庚、戊、壬；十干状态：甲绝、乙胎、丙病、丁沐浴、戊病、己沐浴、庚临官、辛帝旺、壬长生、癸死。',
@@ -274,7 +266,6 @@ export const MONTH_QI_EXPANDED: IMonthQiExt[] = [
   {
     month: '酉月',
     solarTermRange: '白露—寒露',
-    guaName: '风地观卦䷓',
     qiJin: '四阴生长',
     guaXiang: '二阳四阴，阳退阴进、秋气肃杀，昼短夜长、寒气渐显；酉属兑卦，主肃杀、暗藏喜忧。',
     hiddenStemsAndChangSheng: '独藏辛金；十干状态：甲胎、乙绝、丙戊死、丁己长生、庚帝旺、辛冠带、壬沐浴、癸病。',
@@ -285,7 +276,6 @@ export const MONTH_QI_EXPANDED: IMonthQiExt[] = [
   {
     month: '戌月',
     solarTermRange: '寒露—立冬',
-    guaName: '山地剥卦䷖',
     qiJin: '五阴生长',
     guaXiang: '一阳五阴，阳气将绝、阴气鼎盛，秋尽冬临、万物凋零；戌属乾卦，为墓库之地，主孤独、暗藏、权术、文娱幽暗之象。',
     hiddenStemsAndChangSheng: '藏戊、辛、丁；十干状态：甲养、乙墓、丙墓、丁养、戊墓、己养、庚衰、辛冠带、壬冠带、癸衰。',
@@ -296,7 +286,6 @@ export const MONTH_QI_EXPANDED: IMonthQiExt[] = [
   {
     month: '亥月',
     solarTermRange: '立冬—大雪',
-    guaName: '坤卦䷁',
     qiJin: '六阴阴极',
     guaXiang: '六爻全阴，阴气极致、阳气潜藏，阴极阳生；亥属乾卦，主权威贵气，寒冬暗藏甲木少阳生机。',
     hiddenStemsAndChangSheng: '藏壬、甲；十干状态：甲长生、乙死、丙戊绝、丁己胎、庚病、辛沐浴、壬临官、癸帝旺。',
@@ -307,7 +296,6 @@ export const MONTH_QI_EXPANDED: IMonthQiExt[] = [
   {
     month: '子月',
     solarTermRange: '大雪—小寒',
-    guaName: '地雷复卦䷗',
     qiJin: '一阳来复',
     guaXiang: '五阴一阳，阴极阳生，阳气初生、微弱无力；子属坎卦，主陷、险、阴寒暗藏，为一年寒极之点。',
     hiddenStemsAndChangSheng: '藏癸；十干状态：甲沐浴、乙病、丙胎、丁绝、戊胎、己绝、庚死、辛长生、壬帝旺、癸临官。',
@@ -318,7 +306,6 @@ export const MONTH_QI_EXPANDED: IMonthQiExt[] = [
   {
     month: '丑月',
     solarTermRange: '小寒—立春',
-    guaName: '地泽临卦䷒',
     qiJin: '二阳并进',
     guaXiang: '四阴二阳，寒气已极、阳气萌动，土承载、寒温交替；丑属坤艮之间，主收纳、酝酿、转折。',
     hiddenStemsAndChangSheng: '藏己、癸、辛；十干状态：甲冠带、乙衰、丙戊养、丁己墓、庚墓、辛养、壬衰、癸冠带。',
@@ -1673,6 +1660,24 @@ export const COLD_HOT_CFG = {
   /** 土藏干（戊己）：总量系数（× 藏干权重 hw） */
   hiddenEarthTotal: 0.4,
   note: 'earthYangShare 只影响寒热（calculateColdHotBalance）；yinYangYangShare 影响阴阳气占比与补偏打分，默认 1 与旧行为等价。',
+} as const
+
+/**
+ * 木克土「打折」参数（版本化 CFG · 唯一真源）
+ *
+ * 口径来源（老高 2026-10-20）：「只要是土就会晦火克水生金，只不过效率上有差异，
+ *   木克土会阻碍土晦火克水。阴土性缓不厚，克水晦火藏金都有但不重，木克它不成立。」
+ *
+ * 落地范围（当前版本的边界，别误解）：
+ *   · 只作用于「五行力量占比」（calculateElementPower）——土的力量按 dampFactor 折算后再归一化；
+ *   · 用神/忌神的干支级判据是布尔式（谁在场、喜或忌），不乘系数，故不受影响；
+ *   · 木的强弱未细分（透干或藏干见木即算克制），日后标定可再加「木有无根」的门槛。
+ */
+export const WOOD_KE_EARTH_CFG = {
+  version: 'woodkeearth-v1.0.0',
+  /** 木克土时，土的力量折算系数（老爹定的八折） */
+  dampFactor: 0.8,
+  note: 'dampFactor=1 即关闭（等价于「木克土不影响土的力量」）；只在局中同时见木与土时生效。',
 } as const
 
 /**

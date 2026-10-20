@@ -4,14 +4,31 @@
 # fullstack upgrade 的 activateGitHooks 作为兜底（覆盖 install 早于 git init 的时序）。
 [ "$SKIP_GIT_HOOKS" = "1" ] && exit 0
 
-# Git for Windows 的 sh 只能解析 PATH 中无扩展名的 npm，而部分 Node.js 安装只提供 npm.cmd；
-# 两者都找不到时给出提示并放行，避免在没有 Node.js 的终端里把提交彻底卡死。
+# 2026-10-20 修：本机（DSH runtime）装了 node 但没有 npm/npm.cmd，原逻辑会直接「跳过校验」放行，
+# 等于门禁形同虚设。改为三级兜底：
+#   ① npm / npm.cmd（正常安装）→ npm run precommit
+#   ② 只有 node（无 npm）→ 直接跑 node_modules/.bin 里的 tsc + eslint，等价于 npm run lint
+#   ③ 连 node 都找不到 → 才跳过（并明确提示）
 if command -v npm >/dev/null 2>&1; then
   NPM=npm
 elif command -v npm.cmd >/dev/null 2>&1; then
   NPM=npm.cmd
+elif command -v node >/dev/null 2>&1; then
+  echo "› pre-commit: 无 npm，改用 node 直跑 tsc + eslint（等价 npm run lint）" >&2
+  # typecheck（tsconfig.app.json 与本仓库 build 链路一致）
+  if [ -x node_modules/.bin/tsc ]; then
+    node_modules/.bin/tsc --noEmit -p tsconfig.app.json || { echo "✗ pre-commit: typecheck 未通过" >&2; exit 1; }
+  else
+    node node_modules/typescript/bin/tsc --noEmit -p tsconfig.app.json || { echo "✗ pre-commit: typecheck 未通过" >&2; exit 1; }
+  fi
+  # eslint（只报错级，warning 不拦）
+  if [ -f node_modules/eslint/bin/eslint.js ]; then
+    node node_modules/eslint/bin/eslint.js src --max-warnings=9999 || { echo "✗ pre-commit: eslint 有 error" >&2; exit 1; }
+  fi
+  echo "✓ pre-commit: 校验通过（tsc + eslint）" >&2
+  exit 0
 else
-  echo "⚠ pre-commit: PATH 中找不到 npm（Node.js 未安装或本终端未继承其路径），本次跳过校验。装好 Node.js 后会自动恢复强制校验。" >&2
+  echo "⚠ pre-commit: PATH 中既找不到 npm 也找不到 node，本次跳过校验。装好 Node.js 后会自动恢复强制校验。" >&2
   exit 0
 fi
 

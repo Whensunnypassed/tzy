@@ -43,6 +43,7 @@ import {
   YONG_JI_MODE,
   SCORING_CFG,
   COLD_HOT_CFG,
+  WOOD_KE_EARTH_CFG,
   type IChunQiuSegment,
   type IWuXingQuXiang,
   type ITaiJiQiPair,
@@ -1962,6 +1963,33 @@ export function analyzeWuXingQuXiang(
   };
 }
 
+// 木克土的「打折」判定（2026-10-20 老爹口径：木克土会阻碍土晦火克水，按八折算）
+//   口径要点：土的三样本事（晦火、克水、生金）不会被木抹掉，只是发挥受阻；
+//   阴土性缓，木克它不成立 → 阴土（己、丑、戌）不参与打折，只折阳土（戊、辰、未）。
+//   边界：本系数只用于五行力量占比，不进入干支级用忌布尔判据。
+function woodKeEarthDampFactor(chart: BaZiChart): number {
+  const pillars: Pillar[] = [chart.year, chart.month, chart.day, chart.hour];
+  let woodGan = 0;   // 天干见木（透干有力）
+  let woodRoot = 0;  // 支藏木（有根）
+  let yangEarth = 0;
+  let yinEarth = 0;
+  pillars.forEach((p) => {
+    if (p.stemElement === 'wood') woodGan += 1;
+    p.hiddenStems.forEach((s) => { if (STEM_ELEMENTS[s] === 'wood') woodRoot += 1; });
+    if (p.stem && EARTH_YANG_GANZHI.has(p.stem)) yangEarth += 1;
+    if (p.stem && EARTH_YIN_GANZHI.has(p.stem)) yinEarth += 1;
+    if (p.branch && EARTH_YANG_GANZHI.has(p.branch)) yangEarth += 1;
+    if (p.branch && EARTH_YIN_GANZHI.has(p.branch)) yinEarth += 1;
+  });
+  const hasWood = woodGan + woodRoot > 0;
+  if (!hasWood || yangEarth === 0) return 1;   // 无木，或土全是阴土 → 不打折
+  // 木少而阴土多时，折扣按阳土占比摊薄（避免「一点木就折掉全局土气」）
+  const earthTotal = yangEarth + yinEarth;
+  const yangShare = earthTotal > 0 ? yangEarth / earthTotal : 1;
+  const f = WOOD_KE_EARTH_CFG.dampFactor;
+  return 1 - (1 - f) * yangShare;
+}
+
 // 五行力量计算（简化评分）
 export function calculateElementPower(chart: BaZiChart): {
   wood: number;
@@ -1989,6 +2017,12 @@ export function calculateElementPower(chart: BaZiChart): {
       }
     });
   });
+
+  // 木克土：阳土的力量按 WOOD_KE_EARTH_CFG.dampFactor 折算（不影响阴土）
+  const woodKeEarth = woodKeEarthDampFactor(chart);
+  if (woodKeEarth !== 1) {
+    power.earth *= woodKeEarth;
+  }
 
   // 归一化为百分比
   const total = Object.values(power).reduce((a, b) => a + b, 0);

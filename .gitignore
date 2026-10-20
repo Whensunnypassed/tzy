@@ -35,3 +35,8 @@ dist-ssr
 # gh-pages publishing cache
 node_modules/.cache/gh-pages
 .cache
+
+# 本地工具与派生产物（2026-10-20 清账后统一归此）
+.trae/
+dshqqbot/
+docs/待归纳.md
