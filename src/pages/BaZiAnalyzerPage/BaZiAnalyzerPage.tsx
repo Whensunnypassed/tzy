@@ -87,7 +87,7 @@ import {
   getSolarTermThemeByBirthDate,
   type SolarTermTheme,
 } from '@/data/solarTermsTheme';
-import { JIAZI_PILLARS_BY_XUN, MONTH_QI_EXPANDED, ULTIMATE_SUMMARY, ZHI_ZUO_YONG_RULES, type IXunGroup } from '@/data/baziData';
+import { JIAZI_PILLARS_BY_XUN, MONTH_QI_EXPANDED, ULTIMATE_SUMMARY, ZHI_ZUO_YONG_RULES, BIRTH_REGION_CFG, type IXunGroup } from '@/data/baziData';
 
 const ELEMENT_NAMES: Record<string, string> = {
   wood: '木',
@@ -121,6 +121,16 @@ const TERMINAL_PALETTE = {
 
 // 光谱：瑞士平涂五色 + 墨
 const TERMINAL_SPECTRUM = ['#E31C29', '#4A834E', '#B98C31', '#788491', '#31669B', '#1F2937'];
+
+// ============ 流年小卡提示文案 ============
+// 引擎 hint 形如「2026丙午（综合 +2.1，岁运调整 +1.2，B+）：判词。关键阴阳作用：…。」
+// 卡片本身已大字号列出年份 / 干支 / 综合分 / 等级，故小卡只保留「判词 + 关键作用」，
+// 去掉重复前缀后即使窄卡也能把整段话完整排出，不再靠 line-clamp 截断。
+function compactLiuNianHint(hint: unknown): string {
+  const text = typeof hint === 'string' ? hint : '';
+  const cut = text.match(/^[^（]*（[^）]*）：/);
+  return (cut ? text.slice(cut[0].length) : text).trim();
+}
 
 // ============ 报告版块注册表（单一真源） ============
 // 左侧导航 / 正文版块头 / 右侧目录三处共用，禁止各自硬编码编号；
@@ -832,7 +842,7 @@ type ScoreBreakdownRow = {
 };
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.11.0';
+const APP_VERSION = '2.12.0';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -841,6 +851,8 @@ export default function BaZiAnalyzerPage() {
   const [hour, setHour] = useState('0');
   const [minute, setMinute] = useState('0');
   const [gender, setGender] = useState<'male' | 'female'>('male');
+  // 出生地时区板块（真太阳时经度校正）：默认北京，与旧版排盘口径一致
+  const [birthRegion, setBirthRegion] = useState<string>(BIRTH_REGION_CFG.defaultKey);
   const [fullBirthInput, setFullBirthInput] = useState('');
   // —— 手动四柱模式（自选四柱排盘）：mode 切换 + 四柱干支 + 手动出生年份 ——
   const [inputMode, setInputMode] = useState<'date' | 'manual'>('date');
@@ -922,7 +934,7 @@ export default function BaZiAnalyzerPage() {
       return;
     }
 
-    const result = calculateBaZi(y, m, d, h, min, gender, '北京');
+    const result = calculateBaZi(y, m, d, h, min, gender, birthRegion);
     setChart(result);
     // 根据命主出生日月日切换节气配色与诗句主题
     setSolarTermTheme(getSolarTermThemeByBirthDate(y, m, d));
@@ -1253,6 +1265,22 @@ export default function BaZiAnalyzerPage() {
   const analyzedBoolean = analyzed && chart && monthQi && yongJi && elementPower && pattern && wealthNobility && daYunAnalysis;
   // 全量视图：依据类折叠块默认展开（结论视图默认收起）
   const fullView = reportView === 'full';
+
+  // 出生地时区板块 → 经度 → 真太阳时校正分钟
+  const selectedRegion = BIRTH_REGION_CFG.regions.find((r) => r.key === birthRegion)
+    ?? BIRTH_REGION_CFG.regions.find((r) => r.key === BIRTH_REGION_CFG.defaultKey)
+    ?? BIRTH_REGION_CFG.regions[0];
+  const regionOffsetMinutes = Math.round(
+    (selectedRegion.longitude - BIRTH_REGION_CFG.standardMeridian) * BIRTH_REGION_CFG.minutesPerDegree,
+  );
+  const regionOffsetText = (() => {
+    const abs = Math.abs(regionOffsetMinutes);
+    const h = Math.floor(abs / 60);
+    const mi = abs % 60;
+    const sign = regionOffsetMinutes < 0 ? '−' : regionOffsetMinutes > 0 ? '+' : '±';
+    const parts = [h > 0 ? `${h} 时` : '', mi > 0 ? `${mi} 分` : ''].filter(Boolean).join(' ');
+    return `${sign}${parts || '0 分'}`;
+  })();
 
   // 角标统一不透明白底 + 实色描边彩字：无论压在描边天干块还是实心地支块上，视觉完全一致
   // 排盘总览只出「用/忌/中」三态：月令逐字资料库中的「待定（dai）」不在总览显示问号，
@@ -1881,6 +1909,38 @@ export default function BaZiAnalyzerPage() {
                       </div>
                     </div>
 
+                    {/* 出生地时区板块：经度决定真太阳时校正 */}
+                    <div className="border border-border bg-muted/40 p-3">
+                      <div className="mb-2 flex items-baseline justify-between gap-3">
+                        <div className="label-mono">
+                          出生地 / REGION
+                        </div>
+                        <div className="label-mono text-muted-foreground">
+                          {selectedRegion.longitude}°E · 真太阳时 {regionOffsetText}
+                        </div>
+                      </div>
+                      <Select value={birthRegion} onValueChange={setBirthRegion}>
+                        <SelectTrigger
+                          className="!h-11 !w-full !justify-between !rounded-none !border-2 !border-foreground/20 !bg-white !text-sm font-bold focus-visible:!border-foreground [&>svg]:opacity-60"
+                          style={{ fontFamily: 'var(--font-mono)' }}
+                        >
+                          <SelectValue>{selectedRegion.name}</SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {BIRTH_REGION_CFG.regions.map((r) => (
+                            <SelectItem key={r.key} value={r.key} className="!rounded-none !text-sm font-medium">
+                              {r.name} · {r.longitude}°E · {r.cities}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="mt-2 text-[11px] leading-snug text-muted-foreground">
+                        <span className="label-mono">{selectedRegion.span}</span>
+                        <span className="mx-1">·</span>
+                        {selectedRegion.note}
+                      </div>
+                    </div>
+
                     {/* 排盘大按钮 */}
                     <div className="pt-2">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1991,6 +2051,9 @@ export default function BaZiAnalyzerPage() {
                   </div>
                   <span className="num-tabular text-xs font-medium text-muted-foreground" style={{ fontFamily: 'var(--font-mono)' }}>
                     {chart.birthInfo.solarDate} · {chart.gender === 'male' ? '乾造' : '坤造'} · 真太阳时 {chart.birthInfo.trueSolarTime}
+                    {chart.birthInfo.birthPlace && chart.birthInfo.birthPlace !== BIRTH_REGION_CFG.defaultKey
+                      ? ` · 出生地 ${chart.birthInfo.birthPlace}`
+                      : ''}
                   </span>
                 </div>
 
@@ -3159,8 +3222,8 @@ export default function BaZiAnalyzerPage() {
                                                   )}
                                                 </div>
                                               </div>
-                                              {/* 按容器实际宽度自适应列数（卡最小 96px），避免窄主内容列下强制 10 列把卡片压到文字竖排 */}
-                                              <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))' }}>
+                                              {/* 按容器实际宽度自适应列数（卡最小 132px），保证卡内判词能整句排下不被截断 */}
+                                              <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(132px, 1fr))' }}>
                                                 {dy.liuNian10.map((ln: any) => {
                                                   const lmeta = m(ln);
                                                   return (
@@ -3204,8 +3267,8 @@ export default function BaZiAnalyzerPage() {
                                                         </div>
                                                       </div>
                                                       <ScoreBreakdown row={ln} stacked />
-                                                      <div className="mt-1 line-clamp-2 text-[10px] leading-snug text-muted-foreground/90">
-                                                        {ln.hint}
+                                                      <div className="mt-1 break-words text-[10px] leading-snug text-muted-foreground/90">
+                                                        {compactLiuNianHint(ln.hint)}
                                                       </div>
                                                     </div>
                                                   );
@@ -3224,7 +3287,8 @@ export default function BaZiAnalyzerPage() {
 
                         <div>
                           <div className="mb-2 text-sm font-bold"><span className="mark-highlight">近年流年</span>提示（{currentYear - 1}-{currentYear + 4}）</div>
-                          <div className="grid gap-2 md:grid-cols-6">
+                          {/* 6 张近年卡：桌面 3 列、平板 2 列，卡宽足够让判词整段排下（不再 6 列挤成窄条） */}
+                          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                             {daYunAnalysis.recentLiuNian.map((ln: any) => {
                               const meta = m(ln);
                               return (
@@ -3253,7 +3317,7 @@ export default function BaZiAnalyzerPage() {
                                     </span>
                                   </div>
                                   <ScoreBreakdown row={ln} stacked />
-                                  <div className="mt-1 line-clamp-3 text-[10px] leading-snug font-bold text-muted-foreground">{ln.hint}</div>
+                                  <div className="mt-1 break-words text-[10px] leading-snug font-bold text-muted-foreground">{compactLiuNianHint(ln.hint)}</div>
                                 </div>
                               );
                             })}

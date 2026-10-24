@@ -5,6 +5,7 @@
 import {
   MOCK_HEAVENLY_STEMS,
   MOCK_EARTHLY_BRANCHES,
+  birthRegionLongitude,
   type IHeavenlyStem,
   type IEarthlyBranch,
 } from '@/data/baziData';
@@ -441,7 +442,8 @@ export function calculateBaZi(
   gender: 'male' | 'female',
   birthPlace: string = '北京',
 ): BaZiChart {
-  const longitude = CITY_LONGITUDE[birthPlace] ?? 116.41;
+  // 经度优先级：城市表 → 出生地时区板块（BIRTH_REGION_CFG）→ 默认北京
+  const longitude = CITY_LONGITUDE[birthPlace] ?? birthRegionLongitude(birthPlace);
 
   // 真太阳时校正
   const trueSolar = adjustTrueSolarTime(year, month, day, hour, minute, longitude);

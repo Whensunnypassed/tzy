@@ -1865,3 +1865,76 @@ export const LAO_GAO_KOU_JING_CFG = {
     '吉凶富贵确定之后才套十神取象，落到具体事件。',
   ],
 } as const
+
+// ============================================================
+// 出生地时区板块（真太阳时经度校正）· 版本化 CFG
+// ------------------------------------------------------------
+// 我国横跨东五区至东九区（约 73°E-135°E），标准时间却是统一的东八区（东经 120°）。
+// 真太阳时按经度每差 1° 折 4 分钟校正，故出生地只按「大块时区」选择即可覆盖全国，
+// 不必逐城市列举。经纬度取各时区在中国的代表性经度（区内主要城市均值）。
+// 边界：本 CFG 只提供「出生地 → 经度」的映射，不改任何命理判定与评分。
+// ============================================================
+export const BIRTH_REGION_CFG = {
+  version: 'region-v1.0.0',
+  standardMeridian: 120,      // 北京时间基准经度（东八区中央经线）
+  minutesPerDegree: 4,        // 经度每差 1°，真太阳时差 4 分钟
+  defaultKey: '北京',
+  regions: [
+    {
+      key: '东五区',
+      name: '东五区',
+      longitude: 76,
+      span: '73.5°E - 82.5°E',
+      cities: '喀什、和田、塔什库尔干',
+      note: '新疆西南，全国最西，真太阳时比北京时间约慢 2 小时 56 分',
+    },
+    {
+      key: '东六区',
+      name: '东六区',
+      longitude: 90,
+      span: '82.5°E - 97.5°E',
+      cities: '乌鲁木齐、拉萨、喀什以北、青海西部',
+      note: '新疆大部与西藏西部，真太阳时比北京时间约慢 2 小时',
+    },
+    {
+      key: '东七区',
+      name: '东七区',
+      longitude: 105,
+      span: '97.5°E - 112.5°E',
+      cities: '成都、重庆、昆明、西安、银川、呼和浩特',
+      note: '西南、西北与内蒙中部，真太阳时比北京时间约慢 1 小时',
+    },
+    {
+      key: '东八区',
+      name: '东八区',
+      longitude: 120,
+      span: '112.5°E - 127.5°E',
+      cities: '上海、广州、武汉、长沙、杭州、南京、天津、沈阳',
+      note: '华北、华中、华东、华南大部，与北京时间基准一致，校正约 0 分钟',
+    },
+    {
+      key: '东九区',
+      name: '东九区',
+      longitude: 135,
+      span: '127.5°E - 142.5°E',
+      cities: '佳木斯、牡丹江、抚远、长白山以东',
+      note: '黑龙江东部与吉林东部，真太阳时比北京时间约快 1 小时',
+    },
+    {
+      key: '北京',
+      name: '北京（精确）',
+      longitude: 116.41,
+      span: '116.41°E',
+      cities: '北京',
+      note: '默认项，与旧版排盘口径完全一致（真太阳时约慢 14 分钟）',
+    },
+  ] as const,
+} as const
+
+/** 出生地 → 经度；未收录的名称回退默认项（北京，与旧版口径一致） */
+export function birthRegionLongitude(place: string | undefined | null): number {
+  const hit = BIRTH_REGION_CFG.regions.find((r) => r.key === place);
+  if (hit) return hit.longitude;
+  const def = BIRTH_REGION_CFG.regions.find((r) => r.key === BIRTH_REGION_CFG.defaultKey);
+  return def ? def.longitude : 116.41;
+}
