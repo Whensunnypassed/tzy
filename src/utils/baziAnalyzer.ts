@@ -45,9 +45,13 @@ import {
   COLD_HOT_CFG,
   WOOD_KE_EARTH_CFG,
   LAO_GAO_KOU_JING_CFG,
+  ZHUZI_XIJI_CFG,
   type IChunQiuSegment,
   type IWuXingQuXiang,
   type ITaiJiQiPair,
+  type ZhuZiMark,
+  type ZhuZiMonthRef,
+  type ZhuZiRefRow,
 } from '../data/baziData';
 import { getBirthJulianDay, getTermJulianDay } from './solarTermsCalc';
 
@@ -495,7 +499,6 @@ const BRANCHES_ORDER = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', 
 // xi=喜用 / ji=忌 / dai=待定（取用须视柱中态势、组合或格局两局而定，参考资料无无条件定论）
 // 与四柱总览的「月令大方向」互补：大方向定元素二分，逐字表定每个字的详细取舍。
 // ============================================================
-export type ZhuZiMark = 'xi' | 'ji' | 'dai';
 export interface ZhuZiEntry {
   char: string;
   element: string;
@@ -512,378 +515,10 @@ export interface ZhuZiXiJiResult {
   source: string;
 }
 
-type ZhuZiRefRow = [ZhuZiMark, string];
-interface ZhuZiMonthRef {
-  patternNote: string;
-  stems: Record<string, ZhuZiRefRow>;
-  branches: Record<string, ZhuZiRefRow>;
-}
+// 逐字月令资料库与申月两局落定表已迁入数据层：ZHUZI_XIJI_CFG（zhuzi-v1.0.0）
+const ZHUZI_XIJI_REF: Record<string, ZhuZiMonthRef> = ZHUZI_XIJI_CFG.months;
+const ZHUZI_ROUND_MARKS: Record<string, Record<string, { hot: ZhuZiMark; cool: ZhuZiMark }>> = ZHUZI_XIJI_CFG.rounds;
 
-const ZHUZI_XIJI_REF: Record<string, ZhuZiMonthRef> = {
-  寅: {
-    patternNote: '寅月余寒与布温太极：阳仪甲丙布温，阴仪癸水余寒。取用以护温气、不被金水阴气否定为要；丙癸对比即见吉凶，丙为富基、癸为贵基，两不伤则富贵双全。',
-    stems: {
-      甲: ['xi', '阳仪：甲木布温、少阳生发，去平衡冬天余寒'],
-      乙: ['xi', '木之成气在寅帝旺，同甲助布温'],
-      丙: ['xi', '阳仪核心、富之基础；长生之气布温渐强'],
-      丁: ['xi', '同气丙火扶阳仪（丁在寅为死地，力薄）'],
-      戊: ['xi', '按大方向补：寅丑同为止寒，戊土长生，丙火之温落实于土；唯寅木旺而克土，力有折扣'],
-      己: ['dai', '土双面：己在寅为死地，止寒力弱，木克土重，须视柱中火气'],
-      庚: ['ji', '金克木，否定阳仪温气（庚在寅为绝地）'],
-      辛: ['ji', '同庚（辛在寅为胎地，力薄）'],
-      壬: ['ji', '水助余寒、熄灭丙火温气（壬在寅为病地）'],
-      癸: ['ji', '余寒成气，阴仪不可再增（癸沐浴）'],
-    },
-    branches: {
-      寅: ['xi', '阳仪之地，藏甲丙戊，气进三阳'],
-      卯: ['xi', '木之成气，助布温'],
-      辰: ['dai', '阳土晦火蓄水，须视态势'],
-      巳: ['xi', '火之温助阳仪（巳藏庚，防带凉气）'],
-      午: ['xi', '火气炽助布温'],
-      未: ['dai', '阳土藏火亦藏水，取舍未定'],
-      申: ['ji', '金凉否定温气'],
-      酉: ['ji', '金旺克木'],
-      戌: ['dai', '土双面：阴土晦初生之火，亦藏丁火，助损随势'],
-      亥: ['ji', '水寒助余寒'],
-      子: ['ji', '余寒成气，否定温气'],
-      丑: ['xi', '按大方向补：寅丑同为艮卦止寒，丑土接续冬末止寒之功；唯藏癸水余寒'],
-    },
-  },
-  卯: {
-    patternNote: '卯月四阳之气成温，癸水余寒长生尚存；一般以成温为标准：年月不否定乙木温气即为成温，见水即体阴用阳，见金须看是否落实年支。',
-    stems: {
-      甲: ['xi', '帝旺持续布温，成温之标准'],
-      乙: ['xi', '卯之本气，温气已落实'],
-      丙: ['xi', '沐浴有气，布温之力渐强'],
-      丁: ['xi', '同气丙火（丁在卯为病地，力薄）'],
-      戊: ['dai', '春月之土须视阴气显否'],
-      己: ['dai', '同戊'],
-      庚: ['dai', '见金看是否落实年支：落实则不以成温论'],
-      辛: ['dai', '同庚（辛在卯为绝地，力薄）'],
-      壬: ['ji', '水生木而克木之阳气，否定温气'],
-      癸: ['ji', '余寒长生有气，不可再增'],
-    },
-    branches: {
-      寅: ['xi', '木之地助成温'],
-      卯: ['xi', '温气落实之本气'],
-      辰: ['dai', '阳土晦火'],
-      巳: ['xi', '火助温'],
-      午: ['xi', '火气助阳'],
-      未: ['dai', '阳土，势未定'],
-      申: ['dai', '金落实与否定成温与否'],
-      酉: ['dai', '同申（辛绝力薄）'],
-      戌: ['dai', '阴土晦火'],
-      亥: ['ji', '水寒否定温气'],
-      子: ['ji', '水沐浴之地，否定成温'],
-      丑: ['dai', '阴土蓄水'],
-    },
-  },
-  辰: {
-    patternNote: '辰月温重阴阳不明，富贵关键在救癸水令水有气：甲木疏土救水为第一救应，庚金泄土生水次之；忌戊土无制晦火克水、阴阳全伤。',
-    stems: {
-      甲: ['xi', '第一救应：甲木穿土救水（乙木力弱不预，以忌论）'],
-      乙: ['ji', '成气而力弱难救水，仍以忌论'],
-      丙: ['ji', '按大方向补：火生土助克水；须水气充足，火暖方得既济'],
-      丁: ['ji', '按大方向补：同丙，衰地助土'],
-      戊: ['ji', '当令晦火克水，透而无制则阴阳全伤'],
-      己: ['ji', '同气戊土，埋光克水'],
-      庚: ['xi', '生气养地，泄土生水自然顺畅'],
-      辛: ['xi', '按大方向补：金可泄土气，唯辛在辰墓地无力、有埋金之嫌，吉力打折'],
-      壬: ['xi', '水气得助，阴仪不绝则贵气有根'],
-      癸: ['xi', '所救之对象：癸水得救则灵慧可现'],
-    },
-    branches: {
-      寅: ['dai', '木克土须得水润方救水；孤木生火反害'],
-      卯: ['dai', '同寅，亦须水润'],
-      辰: ['ji', '本气戊土，晦火克水'],
-      巳: ['dai', '火土同宫，须辨阴阳明暗'],
-      午: ['ji', '按大方向补：火旺助土克水，须柱中木水救应'],
-      未: ['dai', '双面：本气己土助辰土克水为忌向，藏乙木疏土存阴为喜向；亥卯未合木局则克土救水转喜，须视合化'],
-      申: ['xi', '庚金之地，泄土生水'],
-      酉: ['xi', '按大方向补：辰酉合金有生水之象，唯易被辰土所埋，难起大用'],
-      戌: ['xi', '用戌冲辰开水库，借辛金成气平衡乙木温气；救水之力不及甲庚'],
-      亥: ['xi', '癸水之地，阴气得根'],
-      子: ['xi', '水气得助，贵气有源'],
-      丑: ['dai', '阴土蓄水，助损未定'],
-    },
-  },
-  巳: {
-    patternNote: '巳月六阳炽盛、水绝胎虚设：首用庚金凉土存水，如钥启枢立成富局；用水木须齐见（孤水被土克、孤木生火助土），阴土丑戌晦火存金为另一路。',
-    stems: {
-      甲: ['dai', '孤木生火助土克水；与水齐见方为救阴'],
-      乙: ['dai', '同甲'],
-      丙: ['ji', '当令炽盛；透干则金无救应、金熔火海'],
-      丁: ['ji', '帝旺虚张，热极伤阴'],
-      戊: ['ji', '虎踞滴水立涸，绝阴气'],
-      己: ['ji', '按大方向补：己土帝旺助火土克水（阴土晦火之功只在丑戌支位）'],
-      庚: ['xi', '首用：长生在巳，凉土晦火、保证水有气，富贵相依'],
-      辛: ['xi', '按大方向补：同庚泄土生水，唯辛在巳为死地，力薄'],
-      壬: ['dai', '绝地孤水必败；须水木齐见有根'],
-      癸: ['dai', '胎地，同壬'],
-    },
-    branches: {
-      寅: ['dai', '孤木生火助纣'],
-      卯: ['dai', '同寅'],
-      辰: ['dai', '阳土晦火亦蓄水'],
-      巳: ['ji', '本气火土炽盛'],
-      午: ['ji', '火气极盛熔金涸水'],
-      未: ['ji', '按大方向补：未当夏末阳土助火党，非丑戌晦火存金之比'],
-      申: ['xi', '动申如透庚，立成富局'],
-      酉: ['xi', '按大方向补：酉金清肃，助庚辛凉气'],
-      戌: ['xi', '阴土晦火存金，反成富基'],
-      亥: ['dai', '水木暗藏，须看态势'],
-      子: ['dai', '孤水被旺土克'],
-      丑: ['xi', '阴土晦火，亦藏癸水之气'],
-    },
-  },
-  午: {
-    patternNote: '午月阳极阴生、丁己一气真热：庚金首用（孤金成富），丑戌晦火存金得富；壬癸水须慎用——土晦火同时克水失贵，须庚辛通关无虑；土克水态势明确时方取木救水。',
-    stems: {
-      甲: ['dai', '孤木生火助纣；土克水态势明确时方为救'],
-      乙: ['dai', '同甲'],
-      丙: ['ji', '帝旺阳极熔金，须有制'],
-      丁: ['ji', '司令极热，旺而无制为灼'],
-      戊: ['ji', '土克水晦火，得富亦伤贵'],
-      己: ['ji', '同气戊土，热土助火'],
-      庚: ['xi', '首用：沐浴有气，抗火、稳财、通水发贵'],
-      辛: ['xi', '辅庚金通关生水；有庚辛则水不足虑'],
-      壬: ['dai', '胎地慎用：无庚辛通关则被旺土克'],
-      癸: ['dai', '绝地，同壬慎用'],
-    },
-    branches: {
-      寅: ['dai', '木救有条件，孤木生火'],
-      卯: ['dai', '同寅'],
-      辰: ['dai', '水库亦晦火克水，助损并存'],
-      巳: ['ji', '火助阳极'],
-      午: ['ji', '火气极盛'],
-      未: ['ji', '按大方向补：午未合火土，当令阳土助旺克水，非丑戌晦火存金之比'],
-      申: ['xi', '金气得地，发用通水'],
-      酉: ['xi', '金凉辅庚辛'],
-      戌: ['xi', '晦火存金，取贵'],
-      亥: ['dai', '孤水慎用'],
-      子: ['dai', '水在阳刃之地，须看态势'],
-      丑: ['xi', '晦火存金得富，亦藏癸'],
-    },
-  },
-  未: {
-    patternNote: '未月极热二阴、火土成党：首用庚金调燥泄土，次水木并见（孤水被克、孤木生火皆败），阴土丑戌晦火藏金；忌丁火透无制熔金壮土。用土晦火须防水伤——富而不久之诫。',
-    stems: {
-      甲: ['dai', '孤木生火旺土；水木齐见方用'],
-      乙: ['dai', '同甲（养地力弱）'],
-      丙: ['ji', '衰而仍炽，助火党'],
-      丁: ['ji', '司令成气，透无制则熔金壮土'],
-      戊: ['ji', '阳土助火克水'],
-      己: ['ji', '当令阴土，极热'],
-      庚: ['xi', '首用：冠带有气，平衡火、泄土、生水'],
-      辛: ['xi', '按大方向补：同庚泄土生水，唯辛在未为衰地，辅庚力薄'],
-      壬: ['dai', '养地微弱，须庚引水藏根'],
-      癸: ['dai', '墓地，同壬'],
-    },
-    branches: {
-      寅: ['dai', '孤木生火'],
-      卯: ['dai', '同寅'],
-      辰: ['dai', '阳土晦火，见水则凶'],
-      巳: ['ji', '火助火党'],
-      午: ['ji', '火土炽盛'],
-      未: ['ji', '当令阳土，火库'],
-      申: ['xi', '泄土生水，富局可立'],
-      酉: ['xi', '同申制燥'],
-      戌: ['xi', '晦火藏辛，阴中藏贵'],
-      亥: ['dai', '水木暗藏须势'],
-      子: ['dai', '弱水须引'],
-      丑: ['xi', '冲未晦火，阴气露出'],
-    },
-  },
-  申: {
-    patternNote: '申月余热／成凉两局取用完全相反，须先定局再论逐字：土得火烘、火土旺为余热局（喜金水泄土、忌木火克金）；年月无火或水透水藏、金气得布为成凉局（喜木火扶阳炼金、忌金水再旺）。两局未定之前，逐字喜忌一律存疑标「？」。丁壬为秋之太极。',
-    stems: {
-      甲: ['dai', '两局相反：成凉局木生火助阳为喜；余热局须水润之木制土，孤木生火克金则忌'],
-      乙: ['dai', '同甲而力弱，且须看落实'],
-      丙: ['dai', '两局相反：成凉局火克金调候为喜；余热局透火熔金大凶'],
-      丁: ['dai', '两局相反：丁为秋太极阳仪，成凉局制金，余热局则为忌'],
-      戊: ['dai', '土双面：制水则有贵，晦火则失富，再随两局反转'],
-      己: ['dai', '同戊，沐浴余气'],
-      庚: ['dai', '两局相反：成凉局金旺克木为忌；余热局庚为首用'],
-      辛: ['dai', '两局相反：同庚，帝旺力强'],
-      壬: ['dai', '两局相反：成凉局水克火为忌；余热局金生水取贵'],
-      癸: ['dai', '两局相反：死地力弱，亦须先定局'],
-    },
-    branches: {
-      寅: ['dai', '两局相反：木火助阳制金（成凉喜），木生火克金（余热忌）'],
-      卯: ['dai', '同寅'],
-      辰: ['dai', '土双面＋水库，随局定助损'],
-      巳: ['dai', '两局相反：火制金（成凉喜），火助余热（余热忌）'],
-      午: ['dai', '同巳'],
-      未: ['dai', '阳土晦火，随局定'],
-      申: ['dai', '两局相反：本气庚金，成凉为忌、余热为用'],
-      酉: ['dai', '同申'],
-      戌: ['dai', '阴土藏火藏金，随局定'],
-      亥: ['dai', '壬甲同藏，水忌木喜交战，趋向成凉'],
-      子: ['dai', '见水趋成凉，须先定局'],
-      丑: ['dai', '阴土蓄水，随局定'],
-    },
-  },
-  酉: {
-    patternNote: '酉月四阴成凉、金气专旺，多数成凉为体（体阴用阳）：火克金、木生火；土两面（制水有贵、晦火失富），水助凉。若土得火烘为余热局，喜忌相反。',
-    stems: {
-      甲: ['xi', '木生火助阳，制金凉'],
-      乙: ['xi', '同甲（绝地力薄）'],
-      丙: ['xi', '火可调候，制专旺之金'],
-      丁: ['xi', '长生有气，秋太极阳仪，成凉局制金'],
-      戊: ['dai', '两面：制水有贵，晦火失富'],
-      己: ['dai', '同戊（长生助火）'],
-      庚: ['ji', '帝旺金旺无制'],
-      辛: ['ji', '司令凉气专旺'],
-      壬: ['ji', '水助凉克火'],
-      癸: ['ji', '同壬（病地力薄）'],
-    },
-    branches: {
-      寅: ['xi', '木之生气助火'],
-      卯: ['xi', '同寅'],
-      辰: ['dai', '阳土晦火亦藏金'],
-      巳: ['xi', '火制金'],
-      午: ['xi', '火旺制金'],
-      未: ['dai', '阳土晦火'],
-      申: ['ji', '金之地专旺'],
-      酉: ['ji', '本气凉气已成'],
-      戌: ['dai', '火库藏金'],
-      亥: ['dai', '水藏木，势未定'],
-      子: ['ji', '水助凉'],
-      丑: ['dai', '阴土生金助凉'],
-    },
-  },
-  戌: {
-    patternNote: '戌月五阴剥落、阳气潜藏：首用甲木克旺土辅弱火破阴显阳（戌月之甲有贵说），火助阳救丁；忌土旺晦火、金旺克木；壬水透而有制为玄武贵。',
-    stems: {
-      甲: ['xi', '第一用神：穿土辅火制凉金，「甲木在戌，有甲贵之说」'],
-      乙: ['ji', '墓地伏藏，成气不能破阴'],
-      丙: ['xi', '墓地力薄，得甲木之生方助阳'],
-      丁: ['xi', '养地余温，所救之阳仪'],
-      戊: ['ji', '当令土旺晦火，阴阳皆伤'],
-      己: ['ji', '同气戊土'],
-      庚: ['ji', '金凉泄土，阳气愈衰'],
-      辛: ['ji', '冠带旺，金旺克木低层次'],
-      壬: ['dai', '透而有戌土制为玄武贵；无制则助寒'],
-      癸: ['ji', '衰地寒水，无气可制'],
-    },
-    branches: {
-      寅: ['xi', '甲木之地，破阴有源'],
-      卯: ['xi', '木助甲制土'],
-      辰: ['dai', '水库阳土，助损未定'],
-      巳: ['xi', '火助阳'],
-      午: ['xi', '火旺救丁'],
-      未: ['dai', '土双面：阳土晦火，亦藏乙木，须辨'],
-      申: ['ji', '按大方向补：申藏庚壬，金寒水冷助阴，须火制'],
-      酉: ['ji', '金旺克木'],
-      戌: ['ji', '本气土旺晦火'],
-      亥: ['dai', '壬藏甲，须看制化'],
-      子: ['ji', '寒水无制'],
-      丑: ['dai', '阴土晦火助寒'],
-    },
-  },
-  亥: {
-    patternNote: '亥月六阴极寒、壬水当令藏甲：用土克水（阳土戊、未辰尤贵），用木泄水（甲优于乙），用火肯定土；火土并行名利双收，动木见水则多贫困。',
-    stems: {
-      甲: ['xi', '长生少阳之木泄水寒，「甲木动者优于乙木」'],
-      乙: ['ji', '死地，无力泄水'],
-      丙: ['xi', '火肯定土，暖局之源'],
-      丁: ['xi', '按大方向补：同丙火暖局肯定土气，唯丁在亥为胎地，力弱须土扶'],
-      戊: ['xi', '阳土制水止寒，贵气之源'],
-      己: ['dai', '土双面：阴湿之土助水，止寒制力不明'],
-      庚: ['ji', '金生水助寒'],
-      辛: ['ji', '同庚（沐浴力薄）'],
-      壬: ['ji', '当令极旺，泛滥伤阳'],
-      癸: ['ji', '帝旺冰冻，须制'],
-    },
-    branches: {
-      寅: ['xi', '甲木之地泄水，藏火'],
-      卯: ['dai', '条件矛盾：亥卯合木泄水本吉，水旺而动木不见火土则多贫困'],
-      辰: ['xi', '阳土水库，制寒有贵'],
-      巳: ['xi', '火土并行，肯定土气'],
-      午: ['xi', '火旺土得生'],
-      未: ['xi', '阳土燥，制水止寒'],
-      申: ['ji', '按大方向补：申藏庚壬，金生水助寒'],
-      酉: ['ji', '金凉生水'],
-      戌: ['dai', '土双面：阴土火库可止寒，亦晦火助损，势未定'],
-      亥: ['ji', '本气极寒'],
-      子: ['ji', '水旺无制，奔波之象'],
-      丑: ['dai', '土双面：阴土蓄水助寒，亦能止寒'],
-    },
-  },
-  子: {
-    patternNote: '子月老阴当权、癸水冰冻，一阳来复：首用辰未阳土止寒，次用丙丁火肯定土气生扶土；庚辛金、壬癸水皆忌；木须去生火方为用，水生木而木克土则不吉（与亥月甲木泄水不同）。',
-    stems: {
-      甲: ['dai', '须入火链（木生火、火扶土）方用；得水生而克土则不吉'],
-      乙: ['dai', '同甲，力更弱'],
-      丙: ['xi', '解冻太阳之火，肯定土气之关键'],
-      丁: ['xi', '助丙，绝地利薄须有根'],
-      戊: ['xi', '阳土制水止寒'],
-      己: ['dai', '阴土冻结，止寒力不明'],
-      庚: ['ji', '金生水增寒，动金主贫困劳碌'],
-      辛: ['ji', '同庚'],
-      壬: ['ji', '帝旺泛滥，无戊制则奔波到老'],
-      癸: ['ji', '临官冰冻成气'],
-    },
-    branches: {
-      寅: ['xi', '木之温气，「一寅破百寒」，先苦后甜'],
-      卯: ['dai', '水生木、木克土之虞'],
-      辰: ['xi', '阳土第一用：止寒有贵气之象'],
-      巳: ['xi', '火土并行，助阳止寒'],
-      午: ['xi', '火之地解冻'],
-      未: ['xi', '阳土燥，制水'],
-      申: ['ji', '金生水助寒'],
-      酉: ['ji', '同申'],
-      戌: ['xi', '按大方向补：阴土含火库可止寒，唯力逊辰未阳土'],
-      亥: ['ji', '壬藏甲，助寒'],
-      子: ['ji', '本气老阴极寒'],
-      丑: ['dai', '矛盾：子丑合，化土则止寒、蓄水则助寒，须辨合化'],
-    },
-  },
-  丑: {
-    patternNote: '丑月阴极阳动、己土司令止寒为贵气之根：丙火助之，甲木动而生火、火助土克水则富贵双全；尤忌辛金泄土生水，助寒为祸。',
-    stems: {
-      甲: ['xi', '冠带有气，动木生火、火助土克水'],
-      乙: ['xi', '按大方向补：同甲生火助土，唯乙在丑为衰地，力弱'],
-      丙: ['xi', '解冻助土，「见火不孤」'],
-      丁: ['xi', '墓地力薄，亦助丙'],
-      戊: ['xi', '透戊清贵，助土制水'],
-      己: ['xi', '本气止寒，贵气之根'],
-      庚: ['ji', '墓地亦泄土生水'],
-      辛: ['ji', '养地为寒中变数：泄己土、助癸水'],
-      壬: ['ji', '衰地，「见壬为水浸湖田」'],
-      癸: ['ji', '冠带寒成气至极'],
-    },
-    branches: {
-      寅: ['xi', '木之温气助火'],
-      卯: ['xi', '按大方向补：木生火助阳，唯冬木气弱，吉力打折'],
-      辰: ['dai', '土双面：阳土同气可止寒，亦为水库助水'],
-      巳: ['xi', '火暖局'],
-      午: ['xi', '火旺土得生'],
-      未: ['dai', '阳土制水，亦冲丑'],
-      申: ['ji', '金生水助寒'],
-      酉: ['ji', '同申'],
-      戌: ['dai', '阴土火库'],
-      亥: ['ji', '极水助寒'],
-      子: ['ji', '寒冰同气'],
-      丑: ['xi', '本气止寒，亦藏己'],
-    },
-  },
-};
-
-// 申月「余热 / 成凉」两局落定表：hot=余热局、cool=成凉局。
-// 依据逐字资料库中「成凉局…为喜／余热局…为忌」的明确表述逐个落定，
-// 资料未给方向者（戊己癸辰未戌亥子丑，土双面或须看态势）不入表，保留 dai 以条件说明呈现。
-const ZHUZI_ROUND_MARKS: Record<string, Record<string, { hot: ZhuZiMark; cool: ZhuZiMark }>> = {
-  申: {
-    甲: { hot: 'ji', cool: 'xi' }, 乙: { hot: 'ji', cool: 'xi' },
-    丙: { hot: 'ji', cool: 'xi' }, 丁: { hot: 'ji', cool: 'xi' },
-    庚: { hot: 'xi', cool: 'ji' }, 辛: { hot: 'xi', cool: 'ji' },
-    壬: { hot: 'xi', cool: 'ji' },
-    寅: { hot: 'ji', cool: 'xi' }, 卯: { hot: 'ji', cool: 'xi' },
-    巳: { hot: 'ji', cool: 'xi' }, 午: { hot: 'ji', cool: 'xi' },
-    申: { hot: 'xi', cool: 'ji' }, 酉: { hot: 'xi', cool: 'ji' },
-  },
-};
 
 // 申月两局判定（余热/成凉）→ 'hot' | 'cool'；非申月返回 null
 function autumnRoundKey(chart: BaZiChart, monthBranch: string): 'hot' | 'cool' | null {
@@ -1520,10 +1155,10 @@ export function analyzeGenBenJiXiong(
 
 // ============================================================
 // 六亲换太极（亲情灾坎）· 判定内核增量 v1.0.0
-// 理论：《阴阳法基础·食伤/印绶篇》——「食伤」为命主所生、是命局的寿元星；看六亲的灾坎，
+// 理论：《阴阳法基础·食伤/印绶篇》——「食伤」为命主所生、是命局的灾坎星；看六亲的灾坎，
 //       须对六亲星「换太极」：以六亲星为新太极点，观察其「食伤」的状态好坏。
 //       换太极链：财星的食伤是官杀，官杀的食伤是印绶，印绶的食伤是比劫（可续推）。
-// 实现：以日主五行 + 十神定义推导每个六亲星及其「食伤」（换太极后的寿元/灾坎星）之五行，
+// 实现：以日主五行 + 十神定义推导每个六亲星及其「食伤」（换太极后的灾坎星）之五行，
 //       再以月令逐字喜忌（allStemMarks，与全链路同源）判该星喜忌，并结合盘中透藏给出亲缘倾向。
 //       不改动既有 marks 与评分；输出一律「倾向 + 可调」语气（guardrail）。
 // ============================================================
@@ -1601,7 +1236,7 @@ export function analyzeLiuQinHuanTaiJi(
         ? `${a.name}之身心或亲缘关系倾向易有起伏，宜多沟通、以关照调之`
         : `${a.name}之身心与亲缘平常，成色视岁运引动`;
 
-    const reading = `以${a.name}为太极点，其十神为${a.star}（${elementName(anchorElement)}）；换太极后其「食伤」为${outputStar}（${elementName(outputElement)}），即${a.name}的寿元/灾坎星。该星在本命月令为「${markLabel(outputMark)}」，${presence}——${assess}。`;
+    const reading = `以${a.name}为太极点，其十神为${a.star}（${elementName(anchorElement)}）；换太极后其「食伤」为${outputStar}（${elementName(outputElement)}），即${a.name}的灾坎星。该星在本命月令为「${markLabel(outputMark)}」，${presence}——${assess}。`;
 
     return {
       name: a.name,
@@ -2438,7 +2073,7 @@ export function analyzeTaiJiInChart(
   const loss: string[] = [];
   if (jiXiong === '大吉') {
     gain.push('太极成局（含月令专属真机），富贵根基稳固，名利双收之象');
-    gain.push('阴阳二气有制有化，身体康健、福寿绵长');
+    gain.push('阴阳二气有制有化，身体康健、福泽绵长');
     gain.push('事业多遇贵人提挈，可成大器');
   } else if (jiXiong === '吉') {
     gain.push('太极成立，可保事业小成、衣食丰足');
@@ -2585,7 +2220,7 @@ export function analyzeDayStemBranch(chart: BaZiChart, yongJi: YongJiResult): {
       ? '甲木为阳木，参天大树、栋梁之木，少阳阳气。得令得地为栋梁之才，胸怀大志、格局开阔、能担大任；虚浮无根则眼高手低、心高气傲、有志难伸'
       : '乙木为阴木，花草藤蔓、柔顺之木。得用聪慧灵巧、人缘极佳、善于借力、稳中求富；失用优柔寡断、软弱纠结、依附他人、难成大器',
     fire: day.stemYinYang === 'yang'
-      ? '丙火为阳火，太阳烈火、普照之火，老阳纯阳。得令气场强大、光明磊落、贵人云集、名利双收、福寿双全；失用张扬急躁、刚愎自用、是非缠身、起伏极大'
+      ? '丙火为阳火，太阳烈火、普照之火，老阳纯阳。得令气场强大、光明磊落、贵人云集、名利双收、福泽深厚；失用张扬急躁、刚愎自用、是非缠身、起伏极大'
       : '丁火为阴火，灯火烛光、温润之火。得用心思缜密、温文尔雅、才华内敛、技艺傍身、稳步致富；失用自卑怯懦、才华埋没、心力不足、运势低迷',
     earth: day.stemYinYang === 'yang'
       ? '戊土为阳土，高山厚土、城墙之土。得地忠厚踏实、格局厚重、聚财守福、根基稳固、一生安稳富贵；失用固执愚钝、封闭保守、不思变通、财运阻滞'
@@ -2783,7 +2418,7 @@ export function analyzeMingJuPattern(chart: BaZiChart, monthQi: MonthQiResult, y
     description = `命局用神忌神力量相对均衡，整体以阴阳平衡为主要变化方式。用神与忌神相互制约，保持命局动态平衡。运年助用则吉，助忌则凶，平衡为吉，失衡为凶。${nianYueTaiJi.verdict}${yueLingText}`;
   } else if (usefulCount > tabooCount) {
     patternType = '得用模式（偏上等）';
-    description = `命局用神多于忌神，用神有力且无大破损。对应《自然易鉴》格局判定：月令得气、阴阳基本均衡——上等格局特征（富贵双全、福寿绵长）的基础。${nianYueTaiJi.verdict}${yueLingText}`;
+    description = `命局用神多于忌神，用神有力且无大破损。对应《自然易鉴》格局判定：月令得气、阴阳基本均衡——上等格局特征（富贵双全）的基础。${nianYueTaiJi.verdict}${yueLingText}`;
   } else {
     patternType = '得失模式（忌神偏盛）';
     description = `命局忌神稍占上风，主要变化方式为得失模式。得用神之助或制忌神之喜，为命局主要得吉方式；反之则为得凶方式。整体格局高低，取决于《自然易鉴》三大要点：月令气机是否纯粹、阴阳水火是否平衡、全局气机是否流通。${nianYueTaiJi.verdict}`;
@@ -2808,8 +2443,8 @@ export function analyzeWealthNobility(
   wealthScore: number;    // 财富分（0-100）
   wealthLevel: string;    // 财富档位（保留文案方便 UI）
   wealthDesc: string;
-  nobilityScore: number;  // 贵寿分（0-100）
-  nobilityLevel: string;  // 贵寿档位（保留文案方便 UI）
+  nobilityScore: number;  // 贵气分（0-100）
+  nobilityLevel: string;  // 贵气档位（保留文案方便 UI）
   nobilityDesc: string;
   overallScore: number;   // 格局综合分（0-100，金字塔分布）
   overallLevel: string;   // 综合档位（保留旧五档名兼容，UI 可优先用分数）
@@ -2817,7 +2452,7 @@ export function analyzeWealthNobility(
 } {
   // 阳气状态→财富程度（木火为阳气，主富）
   const yangPower = elementPower.wood + elementPower.fire;
-  // 阴气状态→贵寿程度（金水为阴气，主贵寿）
+  // 阴气状态→贵气/地位程度（金水为阴气，主贵）
   const yinPower = elementPower.metal + elementPower.water;
   // 阴阳力量差（取绝对值）
   const powerDiff = Math.abs(yangPower - yinPower);
@@ -2892,15 +2527,15 @@ export function analyzeWealthNobility(
     : '财运较薄，求财辛苦，容易因财生灾，宜守不宜攻，以稳为主、勤勉积福。'
   }`;
 
-  // ================ 贵寿分（0-100）：基础分 50，按阴气力量与用神情况浮动 ================
+  // ================ 贵气分（0-100）：基础分 50，按阴气力量与用神情况浮动 ================
   let nobilityScore: number;
   let nobilityLevel: string;
   let nobilityDesc: string;
   if (monthQi.usageDirection === 'yang') {
-    // 阴气旺（当令），贵寿基础好：阴 50→95，阴 30→72，阴 0→28
+    // 阴气旺（当令），贵气基础好：阴 50→95，阴 30→72，阴 0→28
     if (yinPower >= 50) {
       nobilityScore = 88 + Math.min(12, Math.round((yinPower - 50) * 0.5));
-      nobilityLevel = '贵寿';
+      nobilityLevel = '贵';
     } else if (yinPower >= 30) {
       nobilityScore = 68 + Math.round((yinPower - 30) / (50 - 30) * 20); // 68~88
       nobilityLevel = '平常';
@@ -2909,7 +2544,7 @@ export function analyzeWealthNobility(
       nobilityLevel = '平常';
     } else {
       nobilityScore = Math.max(12, 32 + Math.round((yinPower - 15) * 1.3)); // 12~50
-      nobilityLevel = '夭';
+      nobilityLevel = '偏弱';
     }
   } else {
     // 阳气旺（当令），阴气为用神
@@ -2924,17 +2559,17 @@ export function analyzeWealthNobility(
       nobilityLevel = '偏弱';
     } else {
       nobilityScore = Math.max(10, 40 - Math.round((8 - yinPower) * 3)); // 10~40
-      nobilityLevel = '夭';
+      nobilityLevel = '偏弱';
     }
   }
   nobilityScore = Math.max(0, Math.min(100, nobilityScore));
   const nobilityScoreText = `【${nobilityScore}分】`;
   nobilityDesc = `${nobilityScoreText} 阴气(金水)${yinPower}% — ${
-    nobilityScore >= 85 ? '贵气深厚，寿命绵长。社会地位较高，名声好，受人尊敬，健康长寿。'
-    : nobilityScore >= 70 ? '贵气不错，事业有位可得，名声良好，健康方面注意节制即可。'
-    : nobilityScore >= 60 ? '贵气中等，事业平稳，职位不高但稳定，健康总体尚可，需靠个人努力。'
-    : nobilityScore >= 45 ? '贵气偏弱，健康需要注意保养，事业地位一般，宜循序渐进。'
-    : '寿元有损，身体底子较弱，需特别注意养生，忌过度操劳，定期检查调养。'
+    nobilityScore >= 85 ? '贵气深厚，社会地位较高，名声好，受人尊敬，事业成就突出。'
+    : nobilityScore >= 70 ? '贵气不错，事业有位可得，名声良好，宜持续精进。'
+    : nobilityScore >= 60 ? '贵气中等，事业平稳，职位不高但稳定，需靠个人努力。'
+    : nobilityScore >= 45 ? '贵气偏弱，事业地位一般，宜循序渐进。'
+    : '贵气较弱，地位根基尚浅，宜沉潜积累、借岁运扶助提升。'
   }`;
 
   // ================ 格局综合分 overallScore（0-100，金字塔分布） ================
@@ -3033,14 +2668,14 @@ export function analyzeSevenCategories(
     ? '阳暖格局渐成，适合公职、管理、教育、传媒、公开行业，利扬名、利仕途、利贵人帮扶（《自然易鉴》：阳为显、为明、为主动，阳吉则事业扬名、贵人相助、人前显贵）。'
     : '阴润格局渐成，适合技术、金融、策划、幕后、精密行业，利深耕、利偏财、利专业成事（《自然易鉴》：阴为隐、为暗、为被动，阴吉则根基稳固、财运内敛、私下得福）。';
 
-  // 对应健康（第三章第四节·三 + 第九章第四节·健康寿夭断法）
+  // 对应健康（第三章第四节·三 + 第九章第四节·健康断法）
   const jianKangHint = yangPower - yinPower > 20
     ? '阳燥无制倾向：易患心火、炎症、血压、视力、皮肤、肝胆燥热之疾（《自然易鉴》：阳燥无制，火炎土燥、金水受损）。'
     : yinPower - yangPower > 20
       ? '阴寒无制倾向：易患肾虚、脾胃、风湿、气血不足、妇科、寒湿淤堵之疾（《自然易鉴》：阴寒无制，水寒土冻、木火无力）。'
       : '阴阳相对平衡，健康总体平顺，注意保养即可。';
 
-  const yinYang = `命局阳气占约 ${yangPower}%，阴气占约 ${yinPower}%（木火与阳土归阳，金水与阴土归阴）。月气${monthQi.yangState === 'strong' ? '阳气盛旺' : '阴气强盛'}，以${monthQi.usageDirection === 'yin' ? '阴气' : '阳气'}为用神平衡阴阳。《自然易鉴》：阳气主富，阴气主贵寿，二者平衡则吉，失衡则凶。—— 心性倾向：${xinXing} 事业适配：${shiYe} 健康提示：${jianKangHint}`;
+  const yinYang = `命局阳气占约 ${yangPower}%，阴气占约 ${yinPower}%（木火与阳土归阳，金水与阴土归阴）。月气${monthQi.yangState === 'strong' ? '阳气盛旺' : '阴气强盛'}，以${monthQi.usageDirection === 'yin' ? '阴气' : '阳气'}为用神平衡阴阳。《自然易鉴》：阳气主富，阴气主贵，二者平衡则吉，失衡则凶。—— 心性倾向：${xinXing} 事业适配：${shiYe} 健康提示：${jianKangHint}`;
 
   // 五行内容
   const fiveElements = `五行力量分布：木(${elementPower.wood}%)、火(${elementPower.fire}%)、土(${elementPower.earth}%)、金(${elementPower.metal}%)、水(${elementPower.water}%)。${elementPower.wood + elementPower.fire > 50 ? '木火偏旺，阳气充足。' : ''}${elementPower.metal + elementPower.water > 50 ? '金水偏旺，阴气强盛。' : ''}土主承载运化，占比 ${elementPower.earth}%。土多则塞，土少则松。`;
@@ -3052,6 +2687,11 @@ export function analyzeSevenCategories(
   pillars.forEach((p, i) => {
     ganzhi += `${pillarNames[i]}${p.stem}${p.branch}：天干${elementName(p.stemElement)}${p.stemYinYang === 'yang' ? '阳' : '阴'}，地支${elementName(p.branchElement)}${p.branchYinYang === 'yang' ? '阳' : '阴'}，藏干${p.hiddenStems.join('、')}；`;
   });
+  // 柱意优先（老高口径）：先读每柱想表达的阴阳状态，命中资料库案例时补柱意说明
+  const zhuYiHits = zhuYiCaseHits(pillars);
+  if (zhuYiHits.length > 0) {
+    ganzhi += `柱意优先：${zhuYiHits.map((c) => `${c.ganzhi}——${c.note.replace(/。$/, '')}`).join('；')}。`;
+  }
 
   // 宫位内容
   const gongwei = `年柱为祖上父母宫，主早年运、头部；月柱为父母兄弟宫，主青年运、胸部；日柱为自己与配偶宫，主中年运、腹部；时柱为子女宫，主晚年运、脚部。各宫位的五行旺衰与用忌标记，反映了相应六亲与身体部位的吉凶状态。`;
@@ -3157,7 +2797,13 @@ export function analyzeSevenCategories(
     ? presentList.map((s) => `【${s.name}】主${s.desc}。${s.deYong}；${s.weiJi}。`).slice(0, 3).join(' ')
     : '';
   const comboText = hitCombos.length > 0 ? `命中十神组合：${hitCombos.join('；')}。` : '';
-  const shiShen = `命局动应十神：${names.join('、') || '（无明显透出）'}。《自然易鉴》核心：十神无固定吉凶，吉凶只在阴阳平衡、格局适配。喜用十神则吉，忌神十神则凶，不可以十神名称定祸福。${shiShenIntro}${comboText}`;
+  // 十神取象·克向（老高口径）：食伤克官杀为吉、财克印为凶、财泄食伤为凶；
+  // 只作「吉凶既定后的社会属性取象」，不参与富贵贫贱与评分
+  const keNotes = shiShenKeXiangNotes(names);
+  const keXiangText = keNotes.length > 0
+    ? `${LAO_GAO_KOU_JING_CFG.shiShenKeDirection.principle} 本盘：${keNotes.join('；')}。`
+    : '';
+  const shiShen = `命局动应十神：${names.join('、') || '（无明显透出）'}。《自然易鉴》核心：十神无固定吉凶，吉凶只在阴阳平衡、格局适配。喜用十神则吉，忌神十神则凶，不可以十神名称定祸福。${shiShenIntro}${comboText}${keXiangText}`;
 
   // 干支作用（刑冲合害 - 简化版）
   const interaction = analyzeInteractions(pillars);
@@ -3700,6 +3346,8 @@ export function scoreGanZhiImpact(
   chart: BaZiChart,
   yongJi: YongJiResult,
   yinYangPct: { yang: number; yin: number },
+  /** 岁运同参用：只评天干 / 只评地支 / 干支整体（默认整体） */
+  only: 'both' | 'stem' | 'branch' = 'both',
 ): {
   score: number;            // 原始分 ±27 级（内部使用）
   summary: string[];        // 展示给用户的 Top 作用（已是 ÷3.6 的压缩分，与综合分同口径）
@@ -3778,7 +3426,7 @@ export function scoreGanZhiImpact(
   const stemShengBranch = isShengyu(stemEl, branchEl);
   const branchShengStem = isShengyu(branchEl, stemEl);
 
-  if (stemMark === 'useful' || stemMark === 'taboo') {
+  if (only !== 'branch' && (stemMark === 'useful' || stemMark === 'taboo')) {
     const base  = stemMark === 'useful' ? SCORING_CFG.base.stem : -SCORING_CFG.base.stem;
     const label = stemMark === 'useful' ? `天干${stem}属月令用神（${elementName(stemEl)}）` : `天干${stem}属月令忌神（${elementName(stemEl)}）`;
     if (branchKeStem) {
@@ -3790,7 +3438,7 @@ export function scoreGanZhiImpact(
       score += base; pushSum(label, base);
     }
   }
-  if (branchMark === 'useful' || branchMark === 'taboo') {
+  if (only !== 'stem' && (branchMark === 'useful' || branchMark === 'taboo')) {
     const base  = branchMark === 'useful' ? SCORING_CFG.base.branch : -SCORING_CFG.base.branch;
     const label = branchMark === 'useful' ? `地支${branch}属月令用神（${elementName(branchEl)}）` : `地支${branch}属月令忌神（${elementName(branchEl)}）`;
     if (stemKeBranch) {
@@ -3811,7 +3459,7 @@ export function scoreGanZhiImpact(
   const stemUndecided = stemMark === 'neutral';
   const branchUndecided = branchMark === 'neutral';
 
-  if (stemUndecided) {
+  if (only !== 'branch' && stemUndecided) {
     // 天干补偏（权重小：天干主象）
     if (yangShort && stemYY === 'yang') { const s = SCORING_CFG.refine.stemPositive*half*conf; score += s; pushSum(`天干${stem}月令待定·气暖（木火/阳土），补原局阳气不足`, +s); }
     if (yangShort && stemYY === 'yin')  { const s = SCORING_CFG.refine.stemNegative*half*conf; score += s; pushSum(`天干${stem}月令待定·气寒（金水/阴土），再增阴气→偏`, s); }
@@ -3823,7 +3471,7 @@ export function scoreGanZhiImpact(
       if (!yangDom && stemYY === 'yin') { const s = SCORING_CFG.refine.stemEvenNegative*conf; score += s; pushSum(`原局阴气略多，待定干${stem}再气寒易失衡`, s); }
     }
   }
-  if (branchUndecided) {
+  if (only !== 'stem' && branchUndecided) {
     // 地支补偏（权重大：地支主实，大运重地支）
     if (yangShort && branchYY === 'yang') { const s = SCORING_CFG.refine.branchPositive*half*conf; score += s; pushSum(`地支${branch}月令待定·气暖（木火/阳土），补原局阳气不足`, +s); }
     if (yangShort && branchYY === 'yin')  { const s = SCORING_CFG.refine.branchNegative*half*conf; score += s; pushSum(`地支${branch}月令待定·气寒（金水/阴土），再增阴气→偏`, s); }
@@ -3841,14 +3489,16 @@ export function scoreGanZhiImpact(
 
   // -------- C. 干支相生 · 气机流通（小分量C，±3；克的关系已由 A 段落实修正承接，不重复计分） --------
   // 待定字（dai→neutral）不作「气顺加分」的强判——其利害本身存疑，按不增减处理。
-  if (stemShengBranch) {
-    if (branchMark === 'useful')     { const s = SCORING_CFG.flow.generatesUseful*conf; score += s; pushSum(`干生支（${stem}生${branch}），支为月令用神→气流通`, +s); }
-    else if (branchMark === 'taboo') { const s = SCORING_CFG.flow.generatesTaboo*conf; score += s; pushSum(`干生支（${stem}生${branch}），支为月令忌神→助忌`, s); }
-    else                             { pushSum(`干生支（${stem}生${branch}），支为月令待定→气机之益存疑（不增减）`, 0); }
-  } else if (branchShengStem) {
-    if (stemMark === 'useful')       { const s = SCORING_CFG.flow.generatesUseful*conf; score += s; pushSum(`支生干（${branch}生${stem}），干为月令用神→得根落实`, +s); }
-    else if (stemMark === 'taboo')   { const s = SCORING_CFG.flow.generatesTaboo*conf; score += s; pushSum(`支生干（${branch}生${stem}），干为月令忌神→助忌`, s); }
-    else                             { pushSum(`支生干（${branch}生${stem}），干为月令待定→气机之益存疑（不增减）`, 0); }
+  if (only === 'both') {
+    if (stemShengBranch) {
+      if (branchMark === 'useful')     { const s = SCORING_CFG.flow.generatesUseful*conf; score += s; pushSum(`干生支（${stem}生${branch}），支为月令用神→气流通`, +s); }
+      else if (branchMark === 'taboo') { const s = SCORING_CFG.flow.generatesTaboo*conf; score += s; pushSum(`干生支（${stem}生${branch}），支为月令忌神→助忌`, s); }
+      else                             { pushSum(`干生支（${stem}生${branch}），支为月令待定→气机之益存疑（不增减）`, 0); }
+    } else if (branchShengStem) {
+      if (stemMark === 'useful')       { const s = SCORING_CFG.flow.generatesUseful*conf; score += s; pushSum(`支生干（${branch}生${stem}），干为月令用神→得根落实`, +s); }
+      else if (stemMark === 'taboo')   { const s = SCORING_CFG.flow.generatesTaboo*conf; score += s; pushSum(`支生干（${branch}生${stem}），干为月令忌神→助忌`, s); }
+      else                             { pushSum(`支生干（${branch}生${stem}），干为月令待定→气机之益存疑（不增减）`, 0); }
+    }
   }
 
   // -------- D. 刑冲合会：不参与评分（用户定标：非本体系逐字判定依据） --------
@@ -3875,6 +3525,71 @@ export function scoreGanZhiImpact(
   };
 }
 
+// 生气/成气「对话」门控（老高口径，2026-10-27 程序化）：
+//   同气类（生气↔生气、成气↔成气）可直接作用；
+//   跨气类须先布出对应成气（甲→乙、丙→丁、戊→己、庚→辛、壬→癸），局中可见该成气才成立；
+//   五合不走这条道（另行处理），故本函数只用于「克」。
+function stemKeQiGate(
+  a: string,
+  b: string,
+  present: Set<string>,
+): { allowed: boolean; note: string } {
+  const Q = LAO_GAO_KOU_JING_CFG.qiXingInteraction;
+  const shengQi = Q.shengQi as readonly string[];
+  const aIsSheng = shengQi.includes(a);
+  const bIsSheng = shengQi.includes(b);
+  if (aIsSheng === bIsSheng) return { allowed: true, note: '' };
+  const buQiMap = Q.buQiMap as Record<string, string>;
+  const required = aIsSheng ? buQiMap[a] : buQiMap[b];
+  if (!required) return { allowed: true, note: '' };
+  if (present.has(required)) return { allowed: true, note: '' };
+  return {
+    allowed: false,
+    note: `${a}为${aIsSheng ? '生气' : '成气'}、${b}为${bIsSheng ? '生气' : '成气'}，跨气类须先布出${required}；局中未见${required}，此克不成立`,
+  };
+}
+
+// 柱意优先案例命中（老高口径，唯一实现，供七类分析与判词复核共用）
+function zhuYiCaseHits(pillars: Pillar[]): Array<{ ganzhi: string; note: string }> {
+  return LAO_GAO_KOU_JING_CFG.zhuYi.cases
+    .filter((c) => pillars.some((p) => `${p.stem}${p.branch}` === c.ganzhi))
+    .map((c) => ({ ganzhi: c.ganzhi, note: c.note }));
+}
+
+// 十神取象·克向（老高口径，唯一实现）：食伤克官杀吉、财克印凶、财泄食伤凶
+function shiShenKeXiangNotes(names: string[]): string[] {
+  const has = (kw: string) => names.some((n) => n.includes(kw));
+  const hasShiShang = has('食') || has('伤'); // 食神 / 伤官
+  const notes: string[] = [];
+  if (hasShiShang && (has('官') || has('杀'))) notes.push('食伤克官杀为吉：以才华制约束，利专业立身');
+  if (has('财') && has('印')) notes.push('财克印为凶：重实利而轻学养，防因财损名');
+  if (has('财') && hasShiShang) notes.push('财泄食伤为凶：才华过度外泄于财，防精力消耗');
+  return notes;
+}
+
+export function analyzeLaoGaoRules(
+  chart: BaZiChart,
+  yongJi: YongJiResult,
+): {
+  zhuYi: Array<{ ganzhi: string; note: string }>;
+  shiShen: string[];
+  blockedKe: Array<{ from: string; to: string; note: string }>;
+} {
+  const pillars = [chart.year, chart.month, chart.day, chart.hour];
+  const zhuYi = zhuYiCaseHits(pillars);
+
+  const names = pillars.map((p) => p.shiShen).filter((n): n is string => !!n);
+  const shiShen = shiShenKeXiangNotes(names);
+
+  const jx = analyzeJiXiong(chart, yongJi);
+  const blockedKe = jx.stems
+    .flatMap((s) => s.sources)
+    .filter((s) => s.type === '天干克' && s.detail.includes('不成立'))
+    .map((s) => ({ from: s.from, to: s.to, note: s.detail }));
+
+  return { zhuYi, shiShen, blockedKe };
+}
+
 export function analyzeJiXiong(
   chart: BaZiChart,
   yongJi: YongJiResult,
@@ -3890,6 +3605,11 @@ export function analyzeJiXiong(
   const branches = pillars.map((p) => p.branch);
   const stemEls = stems.map((s) => STEM_ELEMENTS[s]);
   const branchEls = branches.map((b) => BRANCH_ELEMENTS[b]);
+  // 生气/成气对话门控用的「局中可见天干」：四柱天干 + 全部藏干
+  const allPresentStems = new Set<string>([
+    ...stems,
+    ...pillars.flatMap((p) => p.hiddenStems),
+  ]);
 
   const stemSourcesByPos: Record<string, JiXiongSource[]> = { 年干: [], 月干: [], 日干: [], 时干: [] };
   const branchSourcesByPos: Record<string, JiXiongSource[]> = { 年支: [], 月支: [], 日支: [], 时支: [] };
@@ -4033,12 +3753,21 @@ export function analyzeJiXiong(
         let nature: '吉' | '凶' | '平' = '平';
         if (mark === 'useful') nature = '凶';
         else if (mark === 'taboo') nature = '吉';
-        const score = nature === '吉' ? 2 : nature === '凶' ? -2 : 0;
+        // 生气/成气对话门控（老高口径）：跨气类的克须先布出对应成气；
+        // 局中未见对应成气则该克不成立（记 0 分、判平），只保留倾向说明
+        const gate = stemKeQiGate(a, b, allPresentStems);
+        let score = nature === '吉' ? 2 : nature === '凶' ? -2 : 0;
+        let gateNote = '';
+        if (!gate.allowed) {
+          nature = '平';
+          score = 0;
+          gateNote = ` ${gate.note}。`;
+        }
         stemSourcesByPos[stemPosNames[j]].push({
           type: '天干克',
           from: `${stemPosNames[i]}${a}`,
           to: `${stemPosNames[j]}${b}`,
-          detail: `${stemPosNames[i]}${a}（${elementName(aEl)}）克 ${stemPosNames[j]}${b}（${elementName(bEl)}）。克为抑制、约束、压力、阻力、小人。${nature === '吉' ? '克去忌神为美：官杀制比劫、食神制七杀，制凶则吉' : nature === '凶' ? '用神被克为凶：如用神受小人压制、事业受制、才华难伸' : '克制中性，压力与制衡并存'}。`,
+          detail: `${stemPosNames[i]}${a}（${elementName(aEl)}）克 ${stemPosNames[j]}${b}（${elementName(bEl)}）。克为抑制、约束、压力、阻力、小人。${gateNote}${nature === '吉' ? '克去忌神为美：官杀制比劫、食神制七杀，制凶则吉' : nature === '凶' ? '用神被克为凶：如用神受小人压制、事业受制、才华难伸' : '克制中性，压力与制衡并存'}。`,
           score,
           nature,
         });
@@ -4340,7 +4069,7 @@ export function analyzeJiXiong(
   return { stems: stemsResult, branches: branchesResult, overall };
 }
 
-// 健康分析（融合《自然易鉴》第九章第四节·健康寿夭断法 + 第三章第四节·健康对应）
+// 健康分析（融合《自然易鉴》第九章第四节·健康断法 + 第三章第四节·健康对应）
 export function analyzeHealth(
   chart: BaZiChart,
   yongJi: YongJiResult,
@@ -4349,7 +4078,6 @@ export function analyzeHealth(
   weakElements: string[];
   healthRisks: string[];
   bodyParts: string;
-  shouYuanHint: string;
 } {
   const weakElements: string[] = [];
   const healthRisks: string[] = [];
@@ -4392,20 +4120,9 @@ export function analyzeHealth(
     healthRisks.unshift('【阴寒无制倾向】易患肾虚、脾胃、风湿、气血不足、妇科、寒湿淤堵之疾——《自然易鉴》：阴寒无制，水寒土冻、木火无力。');
   }
 
-  // 寿夭判断（第九章第四节：阴阳平衡、气机流通、五行有生、格局不破则福寿绵长）
-  const yongCount = Object.values(yongJi.stemMarks).filter((v) => v === 'useful').length
-    + Object.values(yongJi.branchMarks).filter((v) => v === 'useful').length;
-  const tabooCount = Object.values(yongJi.stemMarks).filter((v) => v === 'taboo').length
-    + Object.values(yongJi.branchMarks).filter((v) => v === 'taboo').length;
-  const shouYuanHint = yongCount >= tabooCount + 2
-    ? '《自然易鉴》寿夭断法：阴阳平衡、气机流通、五行有生、格局不破——生机绵长、福寿绵长。'
-    : tabooCount >= yongCount + 2
-      ? '《自然易鉴》寿夭断法：阴阳隔绝、气机闭塞、五行无生、格局大破倾向——生机易损，建议修身立德、定期体检、调养身心，改运转运之大道在勤勉精进、积善修福。'
-      : '《自然易鉴》寿夭断法：阴阳略有偏颇、气机稍有阻滞——寿元总体平顺，后天养生、修身养性可添福延寿。';
-
   const bodyParts = '年柱对应头部（头、面、骨、脑），月柱对应胸背（肩、手、肺、心），日柱对应腰腹（腹、腰、肝、肾、脾、胃），时柱对应腿脚（足、下肢）。各柱干支的用忌与受克情况，对应身体相应部位的健康隐患。忌神被制为吉，反而是健康之处；用神被克为凶，对应部位易出问题。《自然易鉴》：健康核心在于水火平衡、寒热适度。';
 
-  return { weakElements, healthRisks, bodyParts, shouYuanHint };
+  return { weakElements, healthRisks, bodyParts };
 }
 
 /**
@@ -4490,18 +4207,51 @@ export function analyzeDaYunLiuNian(
   const mingPan = scoreMingPan(chart, yongJi);
   const mingPanCompress = mingPan.displayScore;
 
-  // 把「阴阳作用→某流年/某运」的映射抽象成一个小工具，避免重复
-  const calcLiuNian = (year: number, stem: string, branch: string) => {
-    const {
-      score: rawScore,
-      summary,
-      plusSumRaw,
-      minusSumRaw,
-      otherSumRaw,
-    } = scoreGanZhiImpact(stem, branch, chart, yongJi, yinYangPct);
+  // 岁运同参：流年 = 本柱 × yearWeight + 大运当值半柱 × yunHalfWeight（前五年取干、后五年取支）；
+  // 岁运并临额外加成，最终钳制在 ±maxAbs，保持与 letterFromCombined 阈值同尺。
+  const calcLiuNian = (
+    year: number,
+    stem: string,
+    branch: string,
+    dyStem: string,
+    dyBranch: string,
+    yearOffset: number,
+  ) => {
+    const yearRes = scoreGanZhiImpact(stem, branch, chart, yongJi, yinYangPct);
+    const halfIsStem = yearOffset < 5;
+    const halfRes = scoreGanZhiImpact(
+      dyStem,
+      dyBranch,
+      chart,
+      yongJi,
+      yinYangPct,
+      halfIsStem ? 'stem' : 'branch',
+    );
+    const mix = SCORING_CFG.suiYunMix;
+    const isBingLin = stem === dyStem && branch === dyBranch;
+    let finalCompress = mix.yearWeight * (yearRes.score / RAW_SCORE_DIVISOR)
+      + mix.yunHalfWeight * (halfRes.score / RAW_SCORE_DIVISOR);
+    if (isBingLin) finalCompress += mix.bingLinBonus;
+    finalCompress = Math.max(-mix.maxAbs, Math.min(mix.maxAbs, finalCompress));
+    const rawScore = finalCompress * RAW_SCORE_DIVISOR;
+
     const { level, band, displayScore } = wuDangFromScore(rawScore);
+    const halfLabel = halfIsStem ? `大运${dyStem}干（前五年）` : `大运${dyBranch}支（后五年）`;
+    const summary = [
+      ...(isBingLin ? [`+${mix.bingLinBonus.toFixed(1)} 岁运并临（流年${stem}${branch}与大运同柱，引动加倍）`] : []),
+      ...yearRes.summary,
+      ...(Math.abs(halfRes.score) > 0.01
+        ? halfRes.summary.map((s) => `${s}｜${halfLabel}环境`)
+        : []),
+    ];
     const topReasons = summary.length > 0 ? summary : ['阴阳气平常，吉凶平静'];
     const hint = `${year}${stem}${branch}（分 ${displayScore >= 0 ? '+' : ''}${displayScore}，${level}）：${band}。关键阴阳作用：${topReasons.slice(0, 2).join('；')}。`;
+
+    const plusSumRaw = mix.yearWeight * yearRes.plusSumRaw + mix.yunHalfWeight * halfRes.plusSumRaw;
+    const minusSumRaw = mix.yearWeight * yearRes.minusSumRaw + mix.yunHalfWeight * halfRes.minusSumRaw;
+    // 「其他」承接并临加成与钳制差额，保证 UI 明细四项相加等于综合分
+    const otherSumRaw = rawScore - plusSumRaw - minusSumRaw;
+
     return {
       year, ganzhi: stem + branch, fortune: level, score: displayScore,
       rawScore, plusSumRaw, minusSumRaw, otherSumRaw,
@@ -4520,27 +4270,26 @@ export function analyzeDaYunLiuNian(
       jiItems,
       xiongItems,
     } = scoreGanZhiImpact(dy.stem, dy.branch, chart, yongJi, yinYangPct);
-    const liuNian10 = getLiuNianList(dy.startYear, 10).map((ln) => calcLiuNian(ln.year, ln.stem, ln.branch));
+    const liuNian10 = getLiuNianList(dy.startYear, 10)
+      .map((ln, i) => calcLiuNian(ln.year, ln.stem, ln.branch, dy.stem, dy.branch, i));
 
-    // —— 大运总判口径：rawScore = 大运本身分 与 下辖10年流年平均分 的加权合成（压缩分口径） ——
-    // 权重取 `SCORING_CFG.daYunMix`（0.5 / 0.5 = 取平均）：使大运调整分满量程回到 ±4.4，
-    // 与流年同一把尺子、与 letterFromCombined 阈值设计一致（避免两分相加把量程翻倍致 S/A+ 偏松）。
-    // 先统一为压缩分（÷3.6）加权后，再乘回 3.6 还原 rawScore，后续 wuDangFromScore 走同一套映射逻辑。
+    // —— 大运总判口径（岁运同参）：大运由本柱干支独立定档，不再被十年流年平均稀释；
+    //    流年侧另按 suiYunMix 计入大运当值半柱（前五年干、后五年支）与岁运并临。
+    //    这样「大运定环境、流年定引动」才成立，且两者共用 ±4.4 压缩分量程。 ——
     const dyCompress = rawScoreDY / RAW_SCORE_DIVISOR;
     const liuNianAvgCompress = liuNian10.reduce((s, ln) => s + (ln.rawScore / RAW_SCORE_DIVISOR), 0) / liuNian10.length;
-    const finalCompress = SCORING_CFG.daYunMix.selfWeight * dyCompress
-      + SCORING_CFG.daYunMix.liuNianAvgWeight * liuNianAvgCompress;
-    const rawScore = finalCompress * RAW_SCORE_DIVISOR;
+    const finalCompress = dyCompress;
+    const rawScore = rawScoreDY;
 
     const base = wuDangFromScore(rawScore);
     const topReasons = summary.length > 0 ? summary : ['阴阳气平常，吉凶平静'];
-    // 在"大运本身分 + 十年平均"新口径下，把十年平均分作为明细展示给用户，避免遗漏
+    // 大运本柱分即定档依据；十年平均仅作参考展示，不再参与大运评级
     const finalTopReasons = [
       ...topReasons,
-      `大运本身分 ${dyCompress >= 0 ? '+' : ''}${Math.round(dyCompress * 10) / 10}（${dy.stem}${dy.branch}作用）`,
-      `下辖十年平均 ${liuNianAvgCompress >= 0 ? '+' : ''}${Math.round(liuNianAvgCompress * 10) / 10}（${liuNian10.length}年流年平均分）`,
+      `大运本柱分 ${dyCompress >= 0 ? '+' : ''}${Math.round(dyCompress * 10) / 10}（${dy.stem}${dy.branch}作用，定档依据）`,
+      `下辖十年平均 ${liuNianAvgCompress >= 0 ? '+' : ''}${Math.round(liuNianAvgCompress * 10) / 10}（${liuNian10.length}年流年，参考）`,
     ];
-    const description = `${dy.stem}${dy.branch}运（综合分 ${base.displayScore >= 0 ? '+' : ''}${base.displayScore}，${base.level}）：${base.band}。关键阴阳作用：${topReasons.slice(0, 3).join('；')}。此运天干管前五年，地支管后五年，各有侧重。`;
+    const description = `${dy.stem}${dy.branch}运（本柱分 ${base.displayScore >= 0 ? '+' : ''}${base.displayScore}，${base.level}）：${base.band}。关键阴阳作用：${topReasons.slice(0, 3).join('；')}。此运天干管前五年、地支管后五年，流年按岁运同参计入当值半柱。`;
     return {
       ...dy,
       fortune: base.level,
@@ -4666,10 +4415,26 @@ export function analyzeDaYunLiuNian(
   }
 
   // 近5年流年：year-1 ~ year+4，整条小序列单独再走一遍 applyForwardTrend（好→坏的红感叹号、拉→夯加成）
+  // 岁运同参：每一流年先定位其所属大运与该运内的第几年（前五年取干、后五年取支）
+  const daYunForYear = (year: number): { stem: string; branch: string; offset: number } => {
+    for (const dy of chart.daYun) {
+      if (year >= dy.startYear && year <= dy.endYear) {
+        return { stem: dy.stem, branch: dy.branch, offset: Math.max(0, Math.min(9, year - dy.startYear)) };
+      }
+    }
+    const first = chart.daYun[0];
+    if (first && year < first.startYear) return { stem: first.stem, branch: first.branch, offset: 0 };
+    const last = chart.daYun[chart.daYun.length - 1] ?? first;
+    return {
+      stem: last?.stem ?? '',
+      branch: last?.branch ?? '',
+      offset: last ? Math.max(0, Math.min(9, year - last.startYear)) : 0,
+    };
+  };
   const liuNianList = getLiuNianList(currentYear - 1, 6);
   const recentBase = liuNianList.map((ln) => {
-    const c = calcLiuNian(ln.year, ln.stem, ln.branch);
-    return c;
+    const dy = daYunForYear(ln.year);
+    return calcLiuNian(ln.year, ln.stem, ln.branch, dy.stem, dy.branch, dy.offset);
   });
   const recentTrended = applyForwardTrend(recentBase.map(c => ({
     rawScore: c.rawScore,
@@ -4830,7 +4595,7 @@ const SHI_GAN_XI_JI_DATA: Record<string, ShiGanXiJiItem> = {
       xi: ['壬水（平衡寒气，成太极）', '甲木（引丙有根，土不伤水）'],
       ji: ['戊土（泄阳太重，土多火晦）', '火旺无制（燥热招灾）'],
       features: '丙不离甲；得令名利双收，失用张扬招灾。丙火如太阳，主光明热烈，对应小肠、肩、舌。',
-      deYong: '热情阳光、气场强大、光明磊落、贵人云集、名利双收、福寿双全',
+      deYong: '热情阳光、气场强大、光明磊落、贵人云集、名利双收、福泽深厚',
       shiYong: '张扬急躁、刚愎自用、是非缠身、心性浮躁、做事虎头蛇尾',
     },
     丁: {

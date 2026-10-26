@@ -61,13 +61,13 @@
 - **来源**：可进化契约中「十二长生环序（绝为起点）」「`PILLAR_WEIGHTS`」均为 CFG 真源。
 - **状态**：现行值沿用，若后续命例显示与直觉偏差明显再行校准。
 
-### C3 · 大运总判混合权重标定
-- **项目**：`SCORING_CFG.daYunMix`（大运本身分权重 `selfWeight` / 下辖十年流年平均分权重 `liuNianAvgWeight`）。
-- **来源**：2026-10 打分链路审计——原 1:1 = 求和，使大运调整分满量程约 ±8.8，而九档阈值按 ±4.4 设计 → S / A+ / A 对大运偏松、十年均可凑分。
-- **已做（score-v1.1.0）**：改为 **0.5 / 0.5 = 取平均**，大运调整分满量程回到 ±4.4，与流年同尺、合于 `letterFromCombined` 阈值设计；S+ 硬认证（`selfCompress≥3.6`）同步更严。
-- **条件**：若后续命例显示「本柱应更主导」，可上调 `selfWeight`，但须经命例回放验证。
-- **状态**：已修正为取平均（可继续随命例标定）。
-- **锚点**：`src/data/baziData.ts`（`SCORING_CFG.daYunMix`）；`src/utils/baziAnalyzer.ts`（`analyzeDaYunLiuNian` 的 `finalCompress`）。
+### C3 · 岁运同参权重与 S+ 认证标定
+- **项目**：`SCORING_CFG.suiYunMix`（`yearWeight` 0.7 / `yunHalfWeight` 0.3 / `bingLinBonus` 0.6 / `maxAbs` 4.4）与 `sPlusCert`（4.2 / 0.2 / 1 / 4.0）。
+- **来源**：2026-10-27 D4 岁运同参落地——大运改为本柱独立定档后量程回到 ±4.4，旧的 0.5/0.5 混合与 `selfCompress≥3.6` 认证已不适用。
+- **现状**：20 例基准快照下，S+ 大运收敛为 4 个（3/20 盘），流年调整分全部在 ±4.4 内；权重与认证阈值均为初值。
+- **条件**：随命例积累校准 `yearWeight / yunHalfWeight / bingLinBonus` 与 S+ 认证四项；改动须重跑 `npm run audit:core` 并对比基准快照。
+- **状态**：初值已落地，待命例标定。
+- **锚点**：`src/data/baziData.ts`（`SCORING_CFG.suiYunMix` / `sPlusCert`）；`src/utils/baziAnalyzer.ts`（`calcLiuNian`、`analyzeDaYunLiuNian`、`certifyDaYunSPLUS`）。
 
 ### C4 · 木克土按「两条路径」分化折算 → **已完成（2026-10-20）**
 - **来源**：老高 2026-10-20（`docs/学习笔记.md`）——木克土只有两条路径：①成气木温直克土（乙卯）；②木先被水寒控制再克土（癸卯）；甲木为生气布温**不直接克土**（唯坐支落地有根如甲寅时柱中带克土之象）。已入库为 `WOOD_KE_EARTH_CFG.paths` / `jiaDirect`。
@@ -99,6 +99,38 @@
 - **影响面**：仅象法「干支作用」与「情缘应期/打分」的展示与打分口径；**岁运评分链路、用忌 marks、九档评级均未改动**。
 - **锚点**：`src/utils/baziAnalyzer.ts`（`applyToBoth` 六合/六冲/六害/子卯刑、寅巳申/丑未戌/自刑、三合/三会；`analyzeDiZhiInteractions` 概述）；`src/utils/xiangfaAnalyzer.ts`（情缘 `isSanHe/isSanHui` 与 `sanHeBranches` 已移除）。
 - **状态**：✅ 已完成。
+
+---
+
+## D. 技术债（2026-10-27 核心自检新增）
+
+### D4 · 岁运同参缺失（大运与流年互不影响）→ **已完成（2026-10-27）**
+- **处置**：大运评级改为本柱干支独立定档（移除 0.5/0.5 十年平均混合）；流年改为「流年本柱 × 0.7 + 大运当值半柱 × 0.3」，前五年取干、后五年取支；岁运并临 +0.6，最终钳制 ±4.4；`scoreGanZhiImpact` 增 `only` 模式只评半柱；S+ 认证上调为 4.2/0.2/1/4.0。
+- **验证（20 例固定基准快照）**：大运 160 步评级变化 119 步、平均 |Δ| 1.02；流年 1600 年变化 943 年、平均 |Δ| 0.71，全部在 ±4.4；S+ 由 11 收敛至 4 且同盘 ≤1；`adjustScore === selfCompress`。
+- **状态**：✅ 已完成（2026-10-27），权重与认证初值待 C3 标定。
+- **锚点**：`src/data/baziData.ts`（`SCORING_CFG.suiYunMix` / `sPlusCert`）；`src/utils/baziAnalyzer.ts`（`calcLiuNian`、`analyzeDaYunLiuNian`、`scoreGanZhiImpact` 的 `only` 参数）。
+
+### D5 · 逐字喜忌真源未入数据层
+- **现状（已处置）**：原硬编码在 `baziAnalyzer.ts` 的 `ZHUZI_XIJI_REF` / `ZHUZI_ROUND_MARKS` 已迁入 `baziData.ts`，成为版本化 `ZHUZI_XIJI_CFG`（`zhuzi-v1.0.0`），分析引擎只读消费；`scripts/audit-core.mjs` 增「12 月 × 10 干 + 12 支、标记合法、申月两局表存在」完整性校验。
+- **遗留**：`MOCK_MONTH_QI`（方向/文案）与 `MONTH_QI_EXPANDED`（页面原文）仍是另两层来源，尚未与逐字表做「方向一致性」自动比对（逐字表允许例外，需人工判定）。
+- **状态**：✅ 主体已完成（2026-10-27）。
+- **锚点**：`src/data/baziData.ts`（`ZHUZI_XIJI_CFG`）；`src/utils/baziAnalyzer.ts`（`monthCharMark` 消费）；`scripts/audit-core.mjs`。
+
+### D6 · 起运精度与流年归属
+- **现状**：起运取 `floor(起运岁)` 后再 `startYear = 出生年 + 整数岁`，真实交运日期可晚近 1 年；`getCurrentDaYunIndex` 按公历年比较，交运年前后「当前大运」可能错一位；流年卡按公历年贴干支（1/1–立春仍属上一干支年）。
+- **条件**：存「交运日期」并按日期归属；流年改按立春区间或明确标注「公历年标签」。
+- **状态**：未开始。
+- **锚点**：`src/utils/baziCalculator.ts`（`getDaYun` L325-L334、`getCurrentDaYunIndex`、`getLiuNianList`）。
+
+### D7 · `LAO_GAO_KOU_JING_CFG` 多数口径仍为纯文本
+- **分组定性（2026-10-27）**：
+  - ✅ 已实现（判词/证据层）：年柱无吉凶与年月两步、冲的克向、时年同气、大运吉凶分记、关系不带吉凶（D3 行为层）。
+  - ✅ 已程序化（本次）：生气/成气交互 → 天干克门控（跨气类须先布出对应成气，局中未见则判平 0 分，仅象法层）；十神取象·克向（十神内容追加，不评分）；柱意优先（丙戌/辛未/甲寅案例命中补注）。
+  - ◐ 部分：中心星（六亲父母/子女已用，学习/精神尚无独立模块）。
+  - ⏸ 判词/流程层，暂不程序化：平衡阳气不伤阴气（需先判阳太极成立，属分析流程约束）、主干流程（已由分析顺序体现）。
+- **条件**：判词层不新增打分；若未来要进评分，先补命例回放。
+- **状态**：◐ 部分完成（2026-10-27）。
+- **锚点**：`src/data/baziData.ts`（`LAO_GAO_KOU_JING_CFG`）；`src/utils/baziAnalyzer.ts`（`stemKeQiGate`、`analyzeLaoGaoRules`）；`src/pages/BaZiAnalyzerPage/BaZiAnalyzerPage.tsx`（07「老高判据复核」卡）。
 
 ---
 
@@ -175,3 +207,4 @@
 | 版本发布与上线 v2.9.1 → v2.9.3 | v2.9.3 | 三次提交推送 main + gh-pages 上线：打分链路参数 CFG 化 → 大运九档梯度收紧（`daYunMix` 0.5/0.5）→ 六亲换太极标签去歧义 |
 | 系统审查 · 类型缺口修复（2026-10-19） | 未提交 | 全量审查发现 `analyzeShengKeQuan` 的 `cands` 声明为 `{ el: string }`、擦除了五行联合类型，构成 `tsc` 唯一的业务代码错误（TS2322）；改为 `{ el: typeof startEl }` 后 `tsc -p tsconfig.app.json` 归零（零行为变更）。同批订正：BACKLOG A1 锚点清单（原举示例 `analyzeMingJuPattern` 有误）、B1 归并至本表、PROJECT_STATUS / SYNC 过期行 |
 | 学习笔记口径入库（`LAO_GAO_KOU_JING_CFG`） | 未提交 | 将 `docs/学习笔记.md`（老高/老爹 2026-10-20 现场口径）归纳入库：① `baziData.ts` 新增版本化 CFG `LAO_GAO_KOU_JING_CFG`（`laogao-v1.0.0`）——生气/成气对话规则 + 地支藏干生气成气中心表 + 年柱无吉凶与年月两步 + 冲的克向判据（六冲逐对）+ 关系不带吉凶与半合拱气不采用 + 时年同气反气 + 柱意优先（丙戌/辛未/甲寅三例）+ 中心论锚点（父母/学习/精神/子女）+ 十神克向 + 大运吉凶并存 + 平衡阳气不伤阴气 + 主干流程；② `GANZHI_YITI_RULES.subRules` 增补「生气须布成气再对话、合不走这条道、五合不论化」两条；③ `WOOD_KE_EARTH_CFG` 升 `woodkeearth-v1.1.0`，新增 `paths`（成气木温 / 寒制之木）与 `jiaDirect=false`；④ 引擎侧只作**判词/证据层**接线：`analyzeNianYueTaiJi` 补「年月两步、年柱无吉凶、时柱同气反气」三条 evidence，象法六冲判词改按克向（两处），`analyzeLiuQin` 子女星改「男命官杀 / 女命食伤」并补中心论对位——**均未改动用忌 marks、评分链路与九档评级**；⑤ 评分/口径待定项登记 B4 / C4 / D3。`vite build` 通过（1668 modules） |
+| 排盘时间基准三处修复（2026-10-27 核心自检） | v2.13.0 | ① 节气/立春不再混用真太阳时：年柱/月柱/节气/起运一律用标准时同帧；② 真太阳时跨日进位（东五区凌晨退前一日、东九区深夜进次日、23 点换日保留）；③ 新增 `TIME_BASE_CFG`（`timebase-v1.0.0`）：中国 1986–1991 夏令时回拨 60 分、均时差 ±16 分钟计入；④ 新增 `scripts/audit-core.mjs`（`npm run audit:core`）：600 随机命例不变量 + 6 组时间边界回归，全部通过 |

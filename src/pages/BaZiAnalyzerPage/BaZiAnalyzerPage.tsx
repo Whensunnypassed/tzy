@@ -57,6 +57,7 @@ import {
   analyzeLiuQinHuanTaiJi,
   analyzeChangShengRing,
   analyzeWuXingQuXiang,
+  analyzeLaoGaoRules,
   computeTaiJiQi,
   type MonthQiResult,
   type ChunQiuFactorResult,
@@ -842,7 +843,7 @@ type ScoreBreakdownRow = {
 };
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.12.0';
+const APP_VERSION = '2.13.0';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -1011,6 +1012,13 @@ export default function BaZiAnalyzerPage() {
         birthPlace: '北京',
         trueSolarTime: '—',
         trueSolarOffset: 0,
+        standardTime: '—',
+        dstApplied: false,
+        dstOffsetMinutes: 0,
+        longitudeOffsetMinutes: 0,
+        equationOfTimeMinutes: 0,
+        trueSolarDate: `${by}年（手动四柱）`,
+        trueSolarDayOffset: 0,
       },
       daYun,
     };
@@ -1045,6 +1053,12 @@ export default function BaZiAnalyzerPage() {
     if (!chart || !monthQi) return null;
     return analyzeYongJi(chart, monthQi);
   }, [chart, monthQi]);
+
+  // 老高判据复核（判词层）：柱意优先 / 十神克向 / 生气成气克门控
+  const laoGaoRules = useMemo(() => {
+    if (!chart || !yongJi) return null;
+    return analyzeLaoGaoRules(chart, yongJi);
+  }, [chart, yongJi]);
 
   const elementPower = useMemo(() => {
     if (!chart) return null;
@@ -1939,6 +1953,9 @@ export default function BaZiAnalyzerPage() {
                         <span className="mx-1">·</span>
                         {selectedRegion.note}
                       </div>
+                      <div className="mt-1 text-[11px] leading-snug text-muted-foreground/80">
+                        1986–1991 夏令时出生按钟表时间自动回拨 1 小时；真太阳时含经度差与均时差。
+                      </div>
                     </div>
 
                     {/* 排盘大按钮 */}
@@ -2050,7 +2067,9 @@ export default function BaZiAnalyzerPage() {
                     </span>
                   </div>
                   <span className="num-tabular text-xs font-medium text-muted-foreground" style={{ fontFamily: 'var(--font-mono)' }}>
-                    {chart.birthInfo.solarDate} · {chart.gender === 'male' ? '乾造' : '坤造'} · 真太阳时 {chart.birthInfo.trueSolarTime}
+                    {chart.birthInfo.solarDate} · {chart.gender === 'male' ? '乾造' : '坤造'} · 真太阳时
+                    {chart.birthInfo.trueSolarDayOffset !== 0 ? ` ${chart.birthInfo.trueSolarDate}` : ''} {chart.birthInfo.trueSolarTime}
+                    {chart.birthInfo.dstApplied ? ' · 夏令时已回拨 60 分' : ''}
                     {chart.birthInfo.birthPlace && chart.birthInfo.birthPlace !== BIRTH_REGION_CFG.defaultKey
                       ? ` · 出生地 ${chart.birthInfo.birthPlace}`
                       : ''}
@@ -3526,6 +3545,40 @@ export default function BaZiAnalyzerPage() {
                     <p className="text-center text-sm font-bold text-muted-foreground">数据计算中，请稍候…</p>
                   )}
 
+                  {/* 老高判据复核（判词层）：柱意优先 / 十神克向 / 生气成气克门控 */}
+                  {laoGaoRules && (laoGaoRules.zhuYi.length > 0 || laoGaoRules.shiShen.length > 0 || laoGaoRules.blockedKe.length > 0) && (
+                    <div className="mt-4 border border-border">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-border px-4 py-2">
+                        <span className="label-mono text-[10px] font-black text-primary">L / LAO GAO</span>
+                        <span className="h-3 w-px bg-border" />
+                        <span className="text-[11px] font-bold tracking-[0.12em] text-foreground">老高判据复核</span>
+                        <span className="label-mono ml-auto text-[9.5px] text-muted-foreground">判词层 · 不计分</span>
+                      </div>
+                      <div className="space-y-2 p-4 text-[11px] leading-relaxed text-muted-foreground">
+                        {laoGaoRules.zhuYi.length > 0 && (
+                          <div>
+                            <span className="font-black text-foreground">柱意优先 · </span>
+                            {laoGaoRules.zhuYi.map((z) => `${z.ganzhi}：${z.note.replace(/。$/, '')}`).join('；')}。
+                          </div>
+                        )}
+                        {laoGaoRules.shiShen.length > 0 && (
+                          <div>
+                            <span className="font-black text-foreground">十神取象（克向） · </span>
+                            {laoGaoRules.shiShen.join('；')}。
+                          </div>
+                        )}
+                        {laoGaoRules.blockedKe.length > 0 && (
+                          <div>
+                            <span className="font-black text-foreground">生气/成气门控 · </span>
+                            {laoGaoRules.blockedKe.length} 处跨气类之克未布出对应成气，判平不计：
+                            {laoGaoRules.blockedKe.slice(0, 2).map((k) => `${k.from}克${k.to}`).join('、')}
+                            。
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* 六亲换太极（判定内核增量 · 以六亲星为太极点观其「食伤」灾坎） */}
                   {huanTaiJi && (
                     <div className="mt-4 border border-border">
@@ -3537,7 +3590,7 @@ export default function BaZiAnalyzerPage() {
                       </div>
                       <div className="space-y-3 p-4">
                         <p className="text-[11px] leading-relaxed text-muted-foreground">
-                          食伤为命主所生、是命局的寿元星；看六亲的灾坎，须对六亲星「换太极」——以六亲星为新太极点，观察其「食伤」的状态好坏。
+                          食伤为命主所生、是命局的灾坎星；看六亲的灾坎，须对六亲星「换太极」——以六亲星为新太极点，观察其「食伤」的状态好坏。
                           <span className="ml-1 font-bold text-foreground">{huanTaiJi.chainNote}</span>
                         </p>
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">

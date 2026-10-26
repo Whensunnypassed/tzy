@@ -131,7 +131,7 @@ export const WEALTH_RANKS: IWealthRank[] = [
   { rank: '赤贫',    min: 0,  max: 11,  desc: '富源不足且难得助，需赖岁运或亲友扶持' },
 ];
 
-// —— 贵寿/地位档位外显映射（对应 nobilityScore，参考社会地位/事业层级金字塔）
+// —— 地位档位外显映射（对应 nobilityScore，参考社会地位/事业层级金字塔）
 export const NOBILITY_RANKS: IWealthRank[] = [
   { rank: '顶尖地位', min: 97, max: 100, desc: '贵源极盛，事业地位显赫，影响力与层级均属顶尖' },
   { rank: '显贵',    min: 90, max: 96,  desc: '地位显赫，事业层级高，或在专业领域具有权威性' },

@@ -5,7 +5,10 @@
 import {
   MOCK_HEAVENLY_STEMS,
   MOCK_EARTHLY_BRANCHES,
+  BIRTH_REGION_CFG,
   birthRegionLongitude,
+  chinaDstOffsetMinutes,
+  equationOfTimeMinutes,
   type IHeavenlyStem,
   type IEarthlyBranch,
 } from '@/data/baziData';
@@ -347,7 +350,29 @@ const getLiuNian = (year: number): { stem: string; branch: string } => {
   };
 };
 
-// 真太阳时校正（简化：按经度偏移计算，北京时间为东经120度）
+// 日期 + 分钟 → 规范化日期时刻（支持负值与超过 1440 的分钟数，带跨日偏移）
+const normalizeDateTime = (
+  year: number,
+  month: number,
+  day: number,
+  totalMinutes: number,
+): { year: number; month: number; day: number; hour: number; minute: number; dayOffset: number } => {
+  const dayOffset = Math.floor(totalMinutes / 1440);
+  const rest = totalMinutes - dayOffset * 1440;
+  // 纯 civil 运算：用 UTC 组装日期，避免运行环境本地时区/夏令时影响换算结果
+  const base = new Date(Date.UTC(year, month - 1, day) + dayOffset * 86400000);
+  return {
+    year: base.getUTCFullYear(),
+    month: base.getUTCMonth() + 1,
+    day: base.getUTCDate(),
+    hour: Math.floor(rest / 60),
+    minute: rest % 60,
+    dayOffset,
+  };
+};
+
+// 真太阳时 = 标准时 + 经度差（每度 4 分钟）+ 均时差；
+// 返回的日期随真太阳时跨日进位（东五区凌晨会退到前一日，东九区深夜会进到次日）
 const adjustTrueSolarTime = (
   year: number,
   month: number,
@@ -355,15 +380,18 @@ const adjustTrueSolarTime = (
   hour: number,
   minute: number,
   longitude: number,
-): { hour: number; minute: number; offsetMinutes: number } => {
-  // 经度每差1度，时差约4分钟（东经大于120则加，小于则减）
-  const diffMinutes = Math.round((longitude - 120) * 4);
-  let totalMinutes = hour * 60 + minute + diffMinutes;
-  if (totalMinutes < 0) totalMinutes += 1440;
-  if (totalMinutes >= 1440) totalMinutes -= 1440;
+  eotMinutes: number,
+): { hour: number; minute: number; offsetMinutes: number; year: number; month: number; day: number } => {
+  const diffMinutes = Math.round(
+    (longitude - BIRTH_REGION_CFG.standardMeridian) * BIRTH_REGION_CFG.minutesPerDegree + eotMinutes,
+  );
+  const t = normalizeDateTime(year, month, day, hour * 60 + minute + diffMinutes);
   return {
-    hour: Math.floor(totalMinutes / 60),
-    minute: totalMinutes % 60,
+    year: t.year,
+    month: t.month,
+    day: t.day,
+    hour: t.hour,
+    minute: t.minute,
     offsetMinutes: diffMinutes,
   };
 };
@@ -421,6 +449,19 @@ export interface BaZiChart {
     birthPlace: string;
     trueSolarTime: string;
     trueSolarOffset: number;
+    /** 标准时（北京时间；夏令时已回拨） */
+    standardTime: string;
+    /** 是否命中中国 1986–1991 夏令时 */
+    dstApplied: boolean;
+    dstOffsetMinutes: number;
+    /** 经度差换算分钟（每度 4 分钟） */
+    longitudeOffsetMinutes: number;
+    /** 均时差分钟（真太阳时 − 平太阳时） */
+    equationOfTimeMinutes: number;
+    /** 真太阳时所在日期（跨日时与出生日期不同） */
+    trueSolarDate: string;
+    /** 真太阳时相对出生日期的跨日偏移（-1 / 0 / 1） */
+    trueSolarDayOffset: number;
   };
   daYun: Array<{
     index: number;
@@ -445,21 +486,27 @@ export function calculateBaZi(
   // 经度优先级：城市表 → 出生地时区板块（BIRTH_REGION_CFG）→ 默认北京
   const longitude = CITY_LONGITUDE[birthPlace] ?? birthRegionLongitude(birthPlace);
 
-  // 真太阳时校正
-  const trueSolar = adjustTrueSolarTime(year, month, day, hour, minute, longitude);
+  // ① 夏令时回拨：输入为出生地钟表时间，1986–1991 夏令时需先减 60 分钟得到标准时
+  const dstOffsetMinutes = chinaDstOffsetMinutes(year, month, day, hour, minute);
+  const std = normalizeDateTime(year, month, day, hour * 60 + minute - dstOffsetMinutes);
 
-  // 年柱（使用真太阳时，精确到分钟）
-  const yearPillar = getYearPillar(year, month, day, trueSolar.hour, trueSolar.minute);
+  // ② 均时差按标准时日期取（年内日序），真太阳时 = 标准时 + 经度差 + 均时差
+  const eotMinutes = equationOfTimeMinutes(std.year, std.month, std.day);
+  const trueSolar = adjustTrueSolarTime(std.year, std.month, std.day, std.hour, std.minute, longitude, eotMinutes);
+  const longitudeOffsetMinutes = Math.round(
+    (longitude - BIRTH_REGION_CFG.standardMeridian) * BIRTH_REGION_CFG.minutesPerDegree,
+  );
 
-  // 月柱（使用真太阳时，精确到分钟）
-  const monthPillar = getMonthPillar(yearPillar.stem, year, month, day, trueSolar.hour, trueSolar.minute);
+  // 年柱 / 月柱 / 起运：一律用标准时，与节气时刻（北京时间）同帧；真太阳时只用于日柱与时柱
+  const yearPillar = getYearPillar(std.year, std.month, std.day, std.hour, std.minute);
+  const monthPillar = getMonthPillar(yearPillar.stem, std.year, std.month, std.day, std.hour, std.minute);
 
-  // 日柱（注意：23点后日柱要加一天，为次日子时）
-  let dayYear = year;
-  let dayMonth = month;
-  let dayDay = day;
+  // 日柱：日期随真太阳时跨日进位；23 点后为次日子时，再进一天
+  let dayYear = trueSolar.year;
+  let dayMonth = trueSolar.month;
+  let dayDay = trueSolar.day;
   if (trueSolar.hour === 23) {
-    const next = new Date(year, month - 1, day + 1);
+    const next = new Date(dayYear, dayMonth - 1, dayDay + 1);
     dayYear = next.getFullYear();
     dayMonth = next.getMonth() + 1;
     dayDay = next.getDate();
@@ -468,6 +515,11 @@ export function calculateBaZi(
 
   // 时柱
   const hourPillar = getHourPillar(dayPillarRaw.stem, trueSolar.hour, trueSolar.minute);
+
+  // 真太阳时相对「用户输入日期」的跨日偏移（夏令时 + 经度差 + 均时差综合结果）
+  const trueSolarDayOffset = Math.round(
+    (Date.UTC(trueSolar.year, trueSolar.month - 1, trueSolar.day) - Date.UTC(year, month - 1, day)) / 86400000,
+  );
 
   // 日主天干
   const dayMaster = dayPillarRaw.stem;
@@ -483,8 +535,8 @@ export function calculateBaZi(
     shiShen: isDay ? '日主' : getShiShen(dayMaster, stem),
   });
 
-  // 大运（使用真太阳时精确节气计算）
-  const daYun = getDaYun(year, month, day, trueSolar.hour, trueSolar.minute, gender, yearPillar.stem, monthPillar.stem, monthPillar.branch, monthPillar.branchIndex);
+  // 大运起运：同样用标准时与节气时刻同帧（夏令时已回拨）
+  const daYun = getDaYun(std.year, std.month, std.day, std.hour, std.minute, gender, yearPillar.stem, monthPillar.stem, monthPillar.branch, monthPillar.branchIndex);
 
   return {
     year: makePillar(yearPillar.stem, yearPillar.branch),
@@ -499,6 +551,13 @@ export function calculateBaZi(
       birthPlace,
       trueSolarTime: `${trueSolar.hour.toString().padStart(2, '0')}:${trueSolar.minute.toString().padStart(2, '0')}`,
       trueSolarOffset: trueSolar.offsetMinutes,
+      standardTime: `${std.hour.toString().padStart(2, '0')}:${std.minute.toString().padStart(2, '0')}`,
+      dstApplied: dstOffsetMinutes > 0,
+      dstOffsetMinutes,
+      longitudeOffsetMinutes,
+      equationOfTimeMinutes: Math.round(eotMinutes * 10) / 10,
+      trueSolarDate: `${trueSolar.year}年${trueSolar.month}月${trueSolar.day}日`,
+      trueSolarDayOffset,
     },
     daYun,
   };

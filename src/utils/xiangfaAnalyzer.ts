@@ -121,8 +121,8 @@ export interface WealthVerdict {
   wealthRank: string;             // 外显档位：顶尖富豪 / 富豪级 / 富裕 / 中上 / 中产 / 小康 / 温饱 / 贫困 / 赤贫
   wealthRankDesc: string;         // 档位描述
   nobilityScoreFinal: number;     // 直接沿用底层 nobilityScore
-  nobilityRank: string;           // 外显贵寿/地位档位
-  nobilityRankDesc: string;       // 贵寿档位描述
+  nobilityRank: string;           // 外显地位档位
+  nobilityRankDesc: string;       // 地位档位描述
 }
 
 export function analyzeWealthVerdict(
@@ -166,7 +166,7 @@ export function analyzeWealthVerdict(
     { label: '资源宫位', value: `${caiOuter ? '财星在他宫(年月)' : ''}${caiOuter && guanOuter ? '、' : ''}${guanOuter ? '官星在他宫(年月)' : (caiShenPresent || guanShenPresent ? '财官多在我宫(日时)' : '—')}` },
   ];
 
-  // 取底层既有财富/贵寿分数；未提供时默认 38（温饱线以下，保证不崩）
+  // 取底层既有财富/贵气分数；未提供时默认 38（温饱线以下，保证不崩）
   const rawWealthScore = wealthNobility?.wealthScore ?? 38;
   const rawNobilityScore = wealthNobility?.nobilityScore ?? 38;
   const wRank = mapScoreToRank(rawWealthScore, WEALTH_RANKS);
@@ -598,7 +598,7 @@ export function scoreWealthForYear(
   return base + bonus;
 }
 
-/** 利事业地位（贵寿）年度：displayScore为底 + 贵载体/官杀加分 */
+/** 利事业地位年度：displayScore为底 + 贵载体/官杀加分 */
 export function scoreNobilityForYear(
   stem: string,
   branch: string,
