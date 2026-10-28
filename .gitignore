@@ -40,3 +40,19 @@ node_modules/.cache/gh-pages
 .trae/
 dshqqbot/
 docs/待归纳.md
+
+# 案例验证内部资料（2026-10-29 用户要求保密，不入库）
+docs/外部案例对照验证.md
+docs/验证总结报告.md
+docs/名人案例对照.md
+docs/工作日志.md
+.tmp_messages_b1.md
+
+scripts/compare-cases.mjs
+
+# 内部验证脚本（引用外部数据源，不入库）
+scripts/batch-verify-minghai.mjs
+scripts/batch-verify-celebs.mjs
+scripts/compare-celebs.mjs
+scripts/nightly-verify.mjs
+scripts/spot-check.mjs

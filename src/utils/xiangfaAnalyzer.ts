@@ -331,11 +331,15 @@ export interface EducationVerdict {
   result: string;
   reference: string[];
   disclaimer?: string;
-  // 新增：学历量化打分（10 档：辍学~顶级学校）
-  score: number;         // 学历分 0-100
-  level: string;         // 学历档位
-  levelDesc: string;     // 档位描述
-  scoreReasons: string[]; // 打分依据明细
+  // 学历倾向三档（1061 例真实案例回测校准：中段无区分度，仅两端有信号）
+  tendency: 'elite' | 'neutral' | 'weak';
+  tendencyLabel: string;   // 学业精英倾向 / 学业中平 / 学业偏弱倾向
+  tendencyDesc: string;    // 倾向判定依据（自然语言）
+  // 内部保留：原 10 档量化打分（不再作为对外结论展示，供研究迭代用）
+  score: number;
+  level: string;
+  levelDesc: string;
+  scoreReasons: string[];
 }
 
 // 学历量化打分：0-100 分，映射 10 档（辍学/小学/初中/高中/三本/二本/一本/211/985/顶级学校）
@@ -475,16 +479,45 @@ export function analyzeEducationVerdict(
 
   const matched = yinStar > 0 || caiStar > 0;
 
-  // —— 学历量化打分（10 档），结论只展示最终档位，不展示任何打分过程明细 ——
-  const scored = scoreEducationLevel(chart, yongJi, elementPower);
-  result += ` 学历评价：${scored.level}（${scored.score} 分）——${scored.levelDesc}。`;
+  // —— 学历倾向三档（回测校准版）——
+  // 校准依据（1061 例真实命主，外部学历标签对照）：
+  //   精英门（印得用 + 印透干 + 食伤不得用）：博士群出现率 41%，常人 16%（2.5 倍富集）
+  //   偏弱门（印为忌且不得用）：初中及以下群 51%，博士群 28%
+  //   中段（初中~本科）命盘因子无区分度，多数落中平，不做强行档位猜测
+  const dayEl = STEM_ELEMENTS[chart.day.stem];
+  const shengWo: Record<string, string> = { fire: 'wood', earth: 'fire', metal: 'earth', water: 'metal', wood: 'water' };
+  const woSheng: Record<string, string> = { wood: 'fire', fire: 'earth', earth: 'metal', metal: 'water', water: 'wood' };
+  const yinEl = shengWo[dayEl];   // 印星五行（生我）
+  const ssEl = woSheng[dayEl];    // 食伤五行（我生）
+  const usefulEls = yongJi?.usefulElements ?? [];
+  const tabooEls = yongJi?.tabooElements ?? [];
+  const yinUsefulEl = usefulEls.includes(yinEl);
+  const yinTabooEl = tabooEls.includes(yinEl);
+  const ssUsefulEl = usefulEls.includes(ssEl);
+  const yinOnStem = pillars.some((p) => (p.shiShen || '').includes('印'));
+  let tendency: 'elite' | 'neutral' | 'weak' = 'neutral';
+  if (yinUsefulEl && yinOnStem && !ssUsefulEl) tendency = 'elite';
+  else if (yinTabooEl && !yinUsefulEl) tendency = 'weak';
+  const tendencyLabel = tendency === 'elite' ? '学业精英倾向' : tendency === 'weak' ? '学业偏弱倾向' : '学业中平';
+  const tendencyDesc = tendency === 'elite'
+    ? '印星得用且透干为学识根基，食伤伏而不用——埋首钻研、沉潜积累之象，学业易向高深处走（研究型、学术型路径倾向明显）。'
+    : tendency === 'weak'
+      ? '印星为忌、根基受制，求学过程多阻力与反复，学识积累需借岁运补救，宜以技能实用路径扬长避短。'
+      : '印星既未显著得力亦未显著受制，学业根基中平——能否走远，更多取决于家庭环境、地域资源与所处年代，命盘只指示倾向而非定论。';
 
+  result += ` 学历倾向：${tendencyLabel}——${tendencyDesc}`;
+
+  // 内部保留 10 档量化分（研究迭代用，不对客展示）
+  const scored = scoreEducationLevel(chart, yongJi, elementPower);
   return {
     inputs,
     matched,
     result,
     reference: [],
     disclaimer: matched ? undefined : NOT_MATCHED_DISCLAIMER,
+    tendency,
+    tendencyLabel,
+    tendencyDesc,
     score: scored.score,
     level: scored.level,
     levelDesc: scored.levelDesc,

@@ -2020,6 +2020,32 @@ export function equationOfTimeMinutes(year: number, month: number, day: number):
 }
 
 // ============================================================
+// 趋避指南映射（06 趋避与时机模块）· qubi-v1.0.0
+// ------------------------------------------------------------
+// 把用神/忌神五行翻译成可执行的生活建议：方位 / 颜色 / 行业 / 时令 / 人际。
+// 只覆盖木火金水四行；土按干支级判定（见 04 用神忌神），不整类归用忌。
+// 定位：判词层参考，不参与任何评分。
+// ============================================================
+export interface QuBiElementInfo {
+  name: string;
+  direction: string;
+  color: string;
+  industry: string;
+  season: string;
+  people: string;
+}
+export const QUBI_CFG = {
+  version: 'qubi-v1.0.0',
+  elements: {
+    wood: { name: '木', direction: '东方', color: '青、绿', industry: '文教、出版、医药、农林、纺织', season: '春季（寅卯辰月）', people: '木气旺者（甲乙寅卯多的人）更助我' },
+    fire: { name: '火', direction: '南方', color: '红、紫', industry: '能源、电子、餐饮、照明、影视', season: '夏季（巳午未月）', people: '火气旺者（丙丁巳午多的人）更助我' },
+    earth: { name: '土', direction: '本地、中央', color: '黄、褐', industry: '地产、建筑、农业、仓储、矿产', season: '四季之交（辰戌丑未月）', people: '土气旺者（戊己辰戌丑未多的人）更助我' },
+    metal: { name: '金', direction: '西方', color: '白、金、银', industry: '金融、机械、五金、司法、军警', season: '秋季（申酉戌月）', people: '金气旺者（庚辛申酉多的人）更助我' },
+    water: { name: '水', direction: '北方', color: '黑、蓝', industry: '贸易、物流、水产、旅游、传媒', season: '冬季（亥子丑月）', people: '水气旺者（壬癸亥子多的人）更助我' },
+  } as Record<string, QuBiElementInfo>,
+} as const
+
+// ============================================================
 // 月令逐字喜忌资料库（原硬编码于 baziAnalyzer，2026-10-27 迁入数据层）
 // ------------------------------------------------------------
 // 这是四柱徽章 / 藏干 / 大运流年打分真正的「逐字真源」：喜(xi)=用神、忌(ji)=忌神、待定(dai)=中性。

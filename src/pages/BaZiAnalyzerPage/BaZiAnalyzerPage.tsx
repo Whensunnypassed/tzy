@@ -53,8 +53,8 @@ import {
   detectGanZhiZiHe,
   analyzeGuFaPangZheng,
   analyzeSiZhuXianDuan,
-  analyzeGenBenJiXiong,
-  analyzeLiuQinHuanTaiJi,
+  analyzeQuBi,
+  pickKeyYears,
   analyzeChangShengRing,
   analyzeWuXingQuXiang,
   analyzeLaoGaoRules,
@@ -67,8 +67,8 @@ import {
   type ZhuZiXiJiResult,
   type ZhuZiEntry,
   type XianDuanResult,
-  type GenBenResult,
-  type HuanTaiJiResult,
+  type QuBiResult,
+  type KeyYearsResult,
   type ChangShengRingResult,
   type WuXingQuXiangResult,
   type TaiJiQiResult,
@@ -76,11 +76,13 @@ import {
 import {
   analyzeXiangYi,
   analyzeWealthVerdict,
+  analyzeEducationVerdict,
   analyzeEarthXiJi,
   scoreWealthForYear,
   scoreNobilityForYear,
   type XiangYiVerdict,
   type WealthVerdict,
+  type EducationVerdict,
   type EarthXiJiResult,
 } from '@/utils/xiangfaAnalyzer';
 import {
@@ -142,8 +144,7 @@ const REPORT_SECTIONS = [
   { id: 'monthqi', no: '03', label: '月气分析', en: 'MONTH QI', title: '月气分析' },
   { id: 'yongji', no: '04', label: '用神忌神', en: 'FAVORABLE & TABOO', title: '用神忌神判断' },
   { id: 'dayun', no: '05', label: '大运流年', en: 'FORTUNE', title: '大运流年分析' },
-  { id: 'mingju-pattern', no: '06', label: '命局模式', en: 'PATTERN', title: '命局模式分析' },
-  { id: 'xiangfa', no: '07', label: '象意解读', en: 'XIANG FA', title: '象意 · 财富 · 感情 · 学历' },
+  { id: 'xiangfa', no: '06', label: '象意解读', en: 'XIANG FA', title: '象意解读' },
 ] as const;
 
 const SECTION_META: Record<string, { no: string; label: string; en: string; title: string }> =
@@ -156,20 +157,26 @@ function SplitBody({
   notes,
   children,
   className = '',
+  notesOpen = true,
 }: {
   notes?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  /** 侧注（依据 / NOTES）初始是否展开；false 时默认折叠，点击展开 */
+  notesOpen?: boolean;
 }) {
   if (!notes) return <div className={className}>{children}</div>;
   return (
     <div className={`lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start lg:gap-7 ${className}`}>
       <div className="min-w-0 space-y-4">{children}</div>
       <aside className="mt-5 border-t border-border pt-4 lg:mt-0 lg:border-l lg:border-t-0 lg:pl-7 lg:pt-0">
-        <div className="label-mono mb-3 border-b border-border pb-2 text-muted-foreground">
-          依据 / NOTES
-        </div>
-        <div className="space-y-4">{notes}</div>
+        <details className="group" open={notesOpen || undefined}>
+          <summary className="label-mono mb-3 cursor-pointer select-none border-b border-border pb-2 text-muted-foreground transition-colors hover:text-foreground">
+            依据 / NOTES
+            <span className="ml-2 inline-block text-[9px] transition-transform group-open:rotate-90">▶</span>
+          </summary>
+          <div className="space-y-4">{notes}</div>
+        </details>
       </aside>
     </div>
   );
@@ -843,7 +850,7 @@ type ScoreBreakdownRow = {
 };
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.13.0';
+const APP_VERSION = '2.15.0';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -1126,17 +1133,13 @@ export default function BaZiAnalyzerPage() {
     return analyzeSiZhuXianDuan(chart, yongJi, currentYear);
   }, [chart, yongJi, currentYear]);
 
-  // 根本吉 / 根本凶（年月根本模式硬化层）：在年月太极结论之上给出根本定论
-  const genBen = useMemo<GenBenResult | null>(() => {
-    if (!chart || !monthQi || !yongJi || !pattern?.nianYueTaiJi) return null;
-    return analyzeGenBenJiXiong(chart, monthQi, yongJi, pattern.nianYueTaiJi);
-  }, [chart, monthQi, yongJi, pattern]);
-
-  // 六亲换太极（亲情灾坎）：以六亲星为太极点，观其「食伤」状态好坏
-  const huanTaiJi = useMemo<HuanTaiJiResult | null>(() => {
-    if (!chart || !yongJi) return null;
-    return analyzeLiuQinHuanTaiJi(chart, yongJi);
-  }, [chart, yongJi]);
+  // 趋避与时机（06）：用神生活化趋避 + 未来十年关键年份速查（判词层·不计分）
+  // 原「根本吉凶 / 六亲换太极」UI 已撤；底层 analyzeGenBenJiXiong / analyzeLiuQinHuanTaiJi 保留在引擎，可随时恢复
+  const quBi = useMemo<QuBiResult | null>(() => (yongJi ? analyzeQuBi(yongJi) : null), [yongJi]);
+  const keyYears = useMemo<KeyYearsResult | null>(
+    () => (daYunAnalysis ? pickKeyYears(daYunAnalysis.daYunWithFortune, currentYear) : null),
+    [daYunAnalysis, currentYear],
+  );
 
   // 十二长生环序（绝为起点、由弱到强）：逐干列落月令状态、环序位与气机强弱分
   const changShengRing = useMemo<ChangShengRingResult | null>(() => {
@@ -1178,6 +1181,11 @@ export default function BaZiAnalyzerPage() {
     if (!chart || !wealthNobility) return null;
     return analyzeWealthVerdict(chart, monthQi, wealthNobility, elementPower);
   }, [chart, monthQi, wealthNobility, elementPower]);
+
+  const educationVerdict = useMemo<EducationVerdict | null>(() => {
+    if (!chart || !yongJi || !elementPower) return null;
+    return analyzeEducationVerdict(chart, yongJi, elementPower);
+  }, [chart, yongJi, elementPower]);
 
   // 古法旁证（阴阳干支命理讲义底层增量：气干/形干、四冲、六破、驿马、司令真神、生克权流转）
   const guFaPangZheng = useMemo<GuFaPangZheng | null>(() => {
@@ -2263,46 +2271,11 @@ export default function BaZiAnalyzerPage() {
                     <span className="h-3 w-px bg-border" />
                     <span className="text-sm font-bold tracking-[0.15em] text-foreground">{SECTION_META.overview.title}</span>
                   </div>
-                  <span className="label-mono hidden text-muted-foreground md:inline">日主 · 格局 · 用神 · 整体定调</span>
+                  <span className="label-mono hidden text-muted-foreground md:inline">用神 · 格局综合 · 学历 · 财富 · 事业</span>
                 </div>
                 <CardContent className="p-4 md:p-8">
-                  <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                    {/* 1. 日主 */}
-                    <div
-                      className="rounded-sm p-4"
-                      style={{
-                        backgroundColor: `${TERMINAL_PALETTE.primary}0C`,
-                        border: `1px solid ${TERMINAL_PALETTE.primary}30`,
-                      }}
-                    >
-                      <div className="label-mono text-[9.5px] text-muted-foreground">日主 DAY MASTER</div>
-                      <div className="mt-2 text-3xl font-black text-foreground">
-                        {chart.day.stem}{ELEMENT_NAMES[chart.day.stemElement]}
-                      </div>
-                      <div className="mt-1 label-mono text-[10px] text-muted-foreground">
-                        {chart.day.stemYinYang === 'yang' ? '阳' : '阴'}{ELEMENT_NAMES[chart.day.stemElement]}
-                      </div>
-                    </div>
-                    {/* 2. 格局 */}
-                    <div
-                      className="rounded-sm p-4"
-                      style={{
-                        backgroundColor: `${TERMINAL_PALETTE.secondary}12`,
-                        border: `1px solid ${TERMINAL_PALETTE.secondary}33`,
-                      }}
-                    >
-                      <div className="label-mono text-[9.5px] text-muted-foreground">格局 PATTERN</div>
-                      <div
-                        className="mt-2 text-lg font-bold leading-snug text-foreground"
-                        style={{ minHeight: '3.2rem' }}
-                      >
-                        {pattern.patternType || '常规格局'}
-                      </div>
-                      <div className="mt-1 label-mono text-[10px] text-muted-foreground">
-                        {monthQi.fourSymbol} · {monthQi.monthName}
-                      </div>
-                    </div>
-                    {/* 3. 用神 */}
+                  <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+                    {/* 1. 用神 */}
                     <div
                       className="rounded-none p-4"
                       style={{
@@ -2420,9 +2393,96 @@ export default function BaZiAnalyzerPage() {
                         </div>
                       );
                     })()}
-                  </div>
 
-                  {/* 02·A 命局函数曲线（阴阳轴 + 理想虚影 · 旁证层 · 不参与评分） */}
+                    {/* 3. 学历倾向（三档 + 区间谱条，回测校准：仅两端有信号） */}
+                    {educationVerdict && (() => {
+                      const t = educationVerdict.tendency;
+                      const col = t === 'elite' ? '#2E7654' : t === 'weak' ? '#E31C29' : '#788491';
+                      const bg = t === 'elite' ? 'rgba(46,118,84,.07)' : t === 'weak' ? 'rgba(227,28,41,.06)' : 'rgba(120,132,145,.08)';
+                      // 大概率区间（0=初中及以下 … 5=博士）：精英→本科~博士，中平→高中~本科，偏弱→初中~大专
+                      const band: [number, number] = t === 'elite' ? [3, 5] : t === 'weak' ? [0, 2] : [1, 3];
+                      const SEGS = ['初中', '高中', '大专', '本科', '硕士', '博士'];
+                      return (
+                        <div className="col-span-2 p-4 md:col-span-1" style={{ background: bg, border: `1px solid ${col}55`, borderRadius: 0 }}>
+                          <div className="label-mono" style={{ color: col }}>学历倾向 EDUCATION</div>
+                          <div className="mt-2 text-xl font-black" style={{ color: col }}>{educationVerdict.tendencyLabel}</div>
+                          <div className="mt-2">
+                            <div className="flex gap-[2px]">
+                              {SEGS.map((s, i) => (
+                                <div
+                                  key={s}
+                                  className="h-1.5 flex-1"
+                                  style={{ background: i >= band[0] && i <= band[1] ? col : 'rgba(120,132,145,.2)' }}
+                                />
+                              ))}
+                            </div>
+                            <div className="mt-0.5 flex gap-[2px]">
+                              {SEGS.map((s, i) => (
+                                <div key={s} className="flex-1 text-center text-[8.5px] font-bold" style={{ color: i >= band[0] && i <= band[1] ? col : 'var(--muted-foreground)' }}>{s}</div>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="mt-1 text-[10px] font-bold" style={{ color: col }}>大概率落在 {SEGS[band[0]]} ~ {SEGS[band[1]]} 区间</div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* 4. 财富区间（区间谱条，不打分） */}
+                    {wealthNobility && (() => {
+                      const col = '#B98C31';
+                      const SEGS = ['贫', '温饱', '小康', '小富', '大富'];
+                      const wl = wealthNobility.wealthLevel;
+                      const band: [number, number] = wl === '富' ? [3, 4] : wl === '小康' ? [2, 2] : wl === '小康偏下' ? [1, 2] : wl === '偏贫' ? [0, 1] : [0, 0];
+                      const label = wl === '富' ? '富裕倾向' : wl === '小康' ? '小康倾向' : wl === '小康偏下' ? '温饱至小康' : '温饱偏紧';
+                      return (
+                        <div className="p-4" style={{ background: 'rgba(185,140,49,.06)', border: '1px solid rgba(185,140,49,.4)', borderRadius: 0 }}>
+                          <div className="label-mono" style={{ color: col }}>财富 WEALTH</div>
+                          <div className="mt-2 text-xl font-black" style={{ color: col }}>{label}</div>
+                          <div className="mt-2">
+                            <div className="flex gap-[2px]">
+                              {SEGS.map((s, i) => (
+                                <div key={s} className="h-1.5 flex-1" style={{ background: i >= band[0] && i <= band[1] ? col : 'rgba(120,132,145,.2)' }} />
+                              ))}
+                            </div>
+                            <div className="mt-0.5 flex gap-[2px]">
+                              {SEGS.map((s, i) => (
+                                <div key={s} className="flex-1 text-center text-[8.5px] font-bold" style={{ color: i >= band[0] && i <= band[1] ? col : 'var(--muted-foreground)' }}>{s}</div>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="mt-1 text-[10px] font-bold" style={{ color: col }}>大概率落在 {SEGS[band[0]]}{band[0] !== band[1] ? ` ~ ${SEGS[band[1]]}` : ''} 区间</div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* 5. 事业地位区间（区间谱条，不打分；不判寿夭） */}
+                    {wealthNobility && (() => {
+                      const col = '#31669B';
+                      const SEGS = ['偏弱', '平常', '显贵'];
+                      const nl = wealthNobility.nobilityLevel;
+                      const band: [number, number] = nl === '贵' ? [2, 2] : nl === '平常' ? [1, 1] : [0, 0];
+                      const label = nl === '贵' ? '贵气倾向' : nl === '平常' ? '平常' : '偏弱';
+                      return (
+                        <div className="p-4" style={{ background: 'rgba(49,102,155,.06)', border: '1px solid rgba(49,102,155,.4)', borderRadius: 0 }}>
+                          <div className="label-mono" style={{ color: col }}>事业 CAREER</div>
+                          <div className="mt-2 text-xl font-black" style={{ color: col }}>{label}</div>
+                          <div className="mt-2">
+                            <div className="flex gap-[2px]">
+                              {SEGS.map((s, i) => (
+                                <div key={s} className="h-1.5 flex-1" style={{ background: i >= band[0] && i <= band[1] ? col : 'rgba(120,132,145,.2)' }} />
+                              ))}
+                            </div>
+                            <div className="mt-0.5 flex gap-[2px]">
+                              {SEGS.map((s, i) => (
+                                <div key={s} className="flex-1 text-center text-[8.5px] font-bold" style={{ color: i >= band[0] && i <= band[1] ? col : 'var(--muted-foreground)' }}>{s}</div>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="mt-1 text-[10px] font-bold" style={{ color: col }}>大概率落在 {SEGS[band[0]]}{band[0] !== band[1] ? ` ~ ${SEGS[band[1]]}` : ''} 区间</div>
+                        </div>
+                      );
+                    })()}
+                  </div>
                   <Detail
                     label="02·A 命局函数曲线 f(五行)·阴阳二气与理想虚影 · 旁证可视化（不参与评分）"
                     open={fullView}
@@ -2503,7 +2563,9 @@ export default function BaZiAnalyzerPage() {
                   <span className="label-mono hidden text-muted-foreground md:inline">月令为权 · 吉凶准绳</span>
                 </div>
                 <CardContent className="p-4 md:p-8">
+                  <Detail label="月气详析 · 阴阳二气 · 月令口诀（点击展开）" open={fullView}>
                   <SplitBody
+                    notesOpen={false}
                     notes={(
                       <>
                   {/* 春秋月关键因子（寅卯申酉分段 + 辰戌杂气月）——古法辑要 04 */}
@@ -2701,11 +2763,12 @@ export default function BaZiAnalyzerPage() {
                     </div>
                   )}
                   </SplitBody>
+                  </Detail>
                 </CardContent>
               </Card>
 
 
-              {/* 命局模式分析 → 已移至大运流年之后（见下方 06 PATTERN） */}
+              {/* 原「命局模式分析」已替换为「趋避与时机」（见下方 06 GUIDANCE） */}
 
 
               {/* 九、用神忌神判断 */}
@@ -3342,6 +3405,43 @@ export default function BaZiAnalyzerPage() {
                             })}
                           </div>
                         </div>
+
+                        {/* 未来十年关键年份：十年全量按序，绿=窗口内最吉三年，红=最凶三年，金=换运交接年 */}
+                        {keyYears?.allYears?.length ? (
+                          <div>
+                            <div className="mb-2 text-sm font-bold">
+                              <span className="mark-highlight">未来十年关键年份</span>（{keyYears.windowStart}–{keyYears.windowEnd}）
+                            </div>
+                            <div className="grid grid-cols-5 gap-1.5 md:grid-cols-10">
+                              {keyYears.allYears.map((y) => {
+                                const isJi = y.tag === 'ji';
+                                const isXiong = y.tag === 'xiong';
+                                const bg = isJi ? 'rgba(46,118,84,.12)' : isXiong ? 'rgba(227,28,41,.10)' : 'rgba(120,132,145,.06)';
+                                const borderCol = isJi ? '#2E7654' : isXiong ? '#E31C29' : 'rgba(120,132,145,.35)';
+                                const textCol = isJi ? '#2E7654' : isXiong ? '#E31C29' : 'var(--foreground)';
+                                return (
+                                  <div
+                                    key={y.year}
+                                    className="rounded-none border px-1 py-1.5 text-center"
+                                    style={{
+                                      background: bg,
+                                      borderColor: borderCol,
+                                      borderTop: y.isTransition ? '2px solid #B98C31' : `1px solid ${borderCol}`,
+                                    }}
+                                  >
+                                    <div className="text-[10px] font-bold text-muted-foreground">{y.year}</div>
+                                    <div className="text-xs font-black" style={{ color: textCol }}>{y.level}</div>
+                                    <div className="text-[9px] font-bold" style={{ color: textCol }}>{y.ganzhi}</div>
+                                    <div className="text-[9px] font-bold text-muted-foreground">({y.displayScore >= 0 ? '+' : ''}{y.displayScore})</div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <p className="mt-2 text-[10px] leading-relaxed font-bold text-muted-foreground">
+                              绿底为窗口内最吉三年（宜进），红底为最凶三年（宜守），金色顶线为大运交接年（前后宜稳）。年份吉凶为气机倾向而非定数。
+                            </p>
+                          </div>
+                        ) : null}
                       </>
                     );
                   })()}
@@ -3351,162 +3451,6 @@ export default function BaZiAnalyzerPage() {
               </Card>
 
 
-              {/* 六、命局模式分析 */}
-              <Card
-                id="section-mingju-pattern"
-                className="relative crosshair scroll-mt-6 rounded-sm border-border bg-card"
-              >
-                <div className="flex items-center justify-between border-b border-border px-5 py-3 md:px-8">
-                  <div className="flex items-center gap-3">
-                    <span className="label-mono text-primary">{SECTION_META['mingju-pattern'].no} / {SECTION_META['mingju-pattern'].en}</span>
-                    <span className="h-3 w-px bg-border" />
-                    <span className="text-sm font-bold tracking-[0.15em] text-foreground">{SECTION_META['mingju-pattern'].title}</span>
-                  </div>
-                  <span className="label-mono hidden text-muted-foreground md:inline">年月太极 · 格局根本</span>
-                </div>
-                <CardContent className="space-y-4 p-4 md:p-8">
-                  {/* 年月太极（《太极阴阳法》：年为格局根本，年月组合构成命局核心太极） */}
-                  {pattern.nianYueTaiJi && (
-                    <div
-                      className="rounded-none p-4"
-                      style={{ backgroundColor: `${TERMINAL_PALETTE.primary}0A`, border: `1px solid ${TERMINAL_PALETTE.primary}22` }}
-                    >
-                      <div className="text-sm font-bold" style={{ color: `${TERMINAL_PALETTE.primary}` }}><span className="mark-highlight">年月太极分析</span></div>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <span className="rounded-none px-2.5 py-1 text-[13px] font-black text-foreground" style={{ fontFamily: 'var(--font-mono)', backgroundColor: `${TERMINAL_PALETTE.primary}14`, border: `1px solid ${TERMINAL_PALETTE.primary}30` }}>
-                          {pattern.nianYueTaiJi.yearGZ}年 · {pattern.nianYueTaiJi.monthGZ}月
-                        </span>
-                        <span className="rounded-none px-2.5 py-1 text-[13px] font-black" style={{ fontFamily: 'var(--font-mono)', color: '#FFFFFF', backgroundColor: `${TERMINAL_PALETTE.primary}` }}>
-                          {pattern.nianYueTaiJi.taijiName}
-                        </span>
-                        <span className="rounded-none px-2.5 py-1 text-[13px] font-black" style={{
-                          color: pattern.nianYueTaiJi.state === '两仪完整' ? '#2E7654' : pattern.nianYueTaiJi.state === '两仪受损' ? '#B98C31' : '#9A3412',
-                          backgroundColor: pattern.nianYueTaiJi.state === '两仪完整' ? 'rgba(46,118,84,.08)' : pattern.nianYueTaiJi.state === '两仪受损' ? 'rgba(185,140,49,.10)' : 'rgba(154,52,18,.08)',
-                          border: `1px solid ${pattern.nianYueTaiJi.state === '两仪完整' ? 'rgba(46,118,84,.45)' : pattern.nianYueTaiJi.state === '两仪受损' ? 'rgba(185,140,49,.45)' : 'rgba(154,52,18,.4)'}`,
-                        }}>
-                          {pattern.nianYueTaiJi.state}
-                        </span>
-                      </div>
-                      <p className="mt-2 text-sm leading-relaxed font-bold text-foreground">{pattern.nianYueTaiJi.verdict}</p>
-                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                        {/* 01 年干定位 */}
-                        <div className="border border-border bg-card/60 px-3 py-2.5">
-                          <div className="label-mono text-[10px] text-muted-foreground">01 / YEAR STEM</div>
-                          <div className="mt-1 text-[13px] font-black text-foreground">
-                            年干定位：{pattern.nianYueTaiJi.yearStemJiXiong}（月令十二长生「{pattern.nianYueTaiJi.yearStemChangSheng}」）
-                          </div>
-                          <ul className="mt-1.5 space-y-1">
-                            {(pattern.nianYueTaiJi.yearStemFactors?.length ? pattern.nianYueTaiJi.yearStemFactors : [pattern.nianYueTaiJi.yearStemReason]).map((f, i) => (
-                              <li key={i} className="flex gap-1.5 text-[12px] leading-relaxed text-muted-foreground">
-                                <span className="mt-[7px] inline-block size-1.5 shrink-0 bg-muted-foreground/50" />
-                                <span>{f}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        {/* 02 年支作用 */}
-                        <div className="border border-border bg-card/60 px-3 py-2.5">
-                          <div className="label-mono text-[10px] text-muted-foreground">02 / YEAR BRANCH</div>
-                          <div className="mt-1 text-[13px] font-black text-foreground">
-                            年支作用：{pattern.nianYueTaiJi.yearBranchAction}
-                          </div>
-                          <ul className="mt-1.5 space-y-1">
-                            {(pattern.nianYueTaiJi.yearBranchFactors?.length ? pattern.nianYueTaiJi.yearBranchFactors : [pattern.nianYueTaiJi.yearBranchReason]).map((f, i) => (
-                              <li key={i} className="flex gap-1.5 text-[12px] leading-relaxed text-muted-foreground">
-                                <span className="mt-[7px] inline-block size-1.5 shrink-0 bg-muted-foreground/50" />
-                                <span>{f}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        {/* 03 两仪气机 */}
-                        <div className="border border-border bg-card/60 px-3 py-2.5">
-                          <div className="label-mono text-[10px] text-muted-foreground">03 / TWIN QI</div>
-                          {[pattern.nianYueTaiJi.yangYi, pattern.nianYueTaiJi.yinYi].map((yi, k) => (
-                            <div key={k} className={k === 1 ? 'mt-2 border-t border-border/60 pt-2' : ''}>
-                              <div className="text-[13px] font-black text-foreground">
-                                {yi.role}：{yi.stem}（{yi.state} · <span className="num-tabular" style={{ fontFamily: 'var(--font-mono)' }}>{yi.power}</span> 分）
-                              </div>
-                              <div className="mt-0.5 text-[12px] font-bold" style={{ color: yi.power >= 50 ? '#2E7654' : yi.power >= 20 ? '#B98C31' : '#E31C29' }}>
-                                {yi.verdict}
-                              </div>
-                              <ul className="mt-1 space-y-0.5">
-                                {(yi.factors ?? []).map((f, i) => (
-                                  <li key={i} className="flex gap-1.5 text-[12px] leading-relaxed text-muted-foreground">
-                                    <span className="mt-[7px] inline-block size-1.5 shrink-0 bg-muted-foreground/50" />
-                                    <span>{f}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          ))}
-                        </div>
-                        {/* 04 日时应验 */}
-                        <div className="border border-border bg-card/60 px-3 py-2.5">
-                          <div className="label-mono text-[10px] text-muted-foreground">04 / DAY-HOUR</div>
-                          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[13px] font-black text-foreground">
-                            日时应验：{pattern.nianYueTaiJi.riShiEffect}
-                            {pattern.nianYueTaiJi.riShiYiNian && (
-                              <span className="px-1.5 py-0.5 text-[10px] font-bold" style={{ background: 'rgba(46,118,84,.1)', color: '#2E7654', border: '1px solid rgba(46,118,84,.4)' }}>宜年</span>
-                            )}
-                          </div>
-                          <ul className="mt-1.5 space-y-1">
-                            {(pattern.nianYueTaiJi.riShiItems?.length ? pattern.nianYueTaiJi.riShiItems : []).map((it, i) => (
-                              <li key={i} className="flex gap-1.5 text-[12px] leading-relaxed text-muted-foreground">
-                                <span className="mt-[7px] inline-block size-1.5 shrink-0" style={{ background: it.effect === '维护' ? '#2E7654' : it.effect === '破坏' ? '#E31C29' : '#9CA3AF' }} />
-                                <span><span className="font-bold text-foreground">{it.pillar}{it.char}</span>（{it.effect}）：{it.why}</span>
-                              </li>
-                            ))}
-                            <li className="text-[12px] leading-relaxed text-muted-foreground">{pattern.nianYueTaiJi.riShiReason}</li>
-                          </ul>
-                        </div>
-                      </div>
-                      <p className="mt-2 text-[13px] leading-relaxed font-bold text-muted-foreground">{pattern.nianYueTaiJi.taijiNote}</p>
-                      {pattern.nianYueTaiJi.matchedCase && (
-                        <div className="mt-2 rounded-md border border-border/60 bg-card/60 px-3 py-2 text-[13px] leading-relaxed font-bold text-muted-foreground">
-                          <span className="font-black text-foreground">参考格局「{pattern.nianYueTaiJi.matchedCase.title}」：</span>{pattern.nianYueTaiJi.matchedCase.analysis}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* 根本吉 / 根本凶（年月根本模式硬化 · 判定内核增量）· 依据类，默认折叠（「全量」视图展开） */}
-                  {genBen && (() => {
-                    const col = genBen.kind === '根本吉' ? '#2E7654' : genBen.kind === '根本凶' ? '#E31C29' : '#788491';
-                    const bg = genBen.kind === '根本吉' ? 'rgba(46,118,84,.07)' : genBen.kind === '根本凶' ? 'rgba(227,28,41,.06)' : 'rgba(120,132,145,.08)';
-                    return (
-                      <Detail
-                        label={`A / 根本吉凶 · 年月根本模式「${genBen.kind}」（内核增量 v${genBen.version}）`}
-                        open={fullView}
-                      >
-                        <div className="-m-4 space-y-2 p-4" style={{ backgroundColor: bg }}>
-                          <p className="text-[13px] leading-relaxed font-bold" style={{ color: col }}>{genBen.reason}</p>
-                          <ul className="space-y-1">
-                            {genBen.factors.map((f, i) => (
-                              <li key={i} className="flex gap-1.5 text-[12px] leading-relaxed text-muted-foreground">
-                                <span className="mt-[7px] inline-block size-1.5 shrink-0" style={{ background: col }} />
-                                <span>{f}</span>
-                              </li>
-                            ))}
-                          </ul>
-                          <div
-                            className="rounded-none px-3 py-2 text-[11px] leading-relaxed text-muted-foreground"
-                            style={{ border: `1px solid ${genBen.tianDiYiZhu.hit ? col : '#D1D5DB'}`, backgroundColor: 'rgba(255,255,255,.55)' }}
-                          >
-                            <span className="font-black text-foreground">天地一柱：</span>
-                            {genBen.tianDiYiZhu.hit ? '成立' : '不成立'}——{genBen.tianDiYiZhu.note}
-                          </div>
-                          {genBen.matchedExample && (
-                            <div className="rounded-none border border-border/60 px-3 py-2 text-[12px] leading-relaxed text-muted-foreground">
-                              <span className="font-black text-foreground">命中参考命例「{genBen.matchedExample.title}」（{genBen.matchedExample.kind}）：</span>{genBen.matchedExample.reason}
-                            </div>
-                          )}
-                        </div>
-                      </Detail>
-                    );
-                  })()}
-                </CardContent>
-              </Card>
 
 
               {/* 六、盘内存在太极（暂时停用，模块已隐藏；底层 analyzeTaiJiInChart 逻辑保留在 baziAnalyzer.ts，可随时恢复） */}
@@ -3528,19 +3472,10 @@ export default function BaZiAnalyzerPage() {
                   </div>
                 </div>
                 <CardContent className="p-4 md:p-8">
-                  {xiangYi && wealthVerdict ? (
-                    <Tabs defaultValue="xiangyi" className="w-full">
-                      <TabsList className="w-full justify-center">
-                        <TabsTrigger value="xiangyi">象意</TabsTrigger>
-                        <TabsTrigger value="wealth">财富</TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="xiangyi" className="mt-4">
-                        <XiangYiPanel verdict={xiangYi} />
-                      </TabsContent>
-                      <TabsContent value="wealth" className="mt-4">
-                        <WealthPanel verdict={wealthVerdict} bestWealthYears={bestWealthYears} bestNobilityYears={bestNobilityYears} />
-                      </TabsContent>
-                    </Tabs>
+                  {xiangYi ? (
+                    <Detail label="象意 / XIANG YI · 干支象意与日主论断（点击展开）" open={fullView}>
+                      <XiangYiPanel verdict={xiangYi} />
+                    </Detail>
                   ) : (
                     <p className="text-center text-sm font-bold text-muted-foreground">数据计算中，请稍候…</p>
                   )}
@@ -3579,59 +3514,15 @@ export default function BaZiAnalyzerPage() {
                     </div>
                   )}
 
-                  {/* 六亲换太极（判定内核增量 · 以六亲星为太极点观其「食伤」灾坎） */}
-                  {huanTaiJi && (
-                    <div className="mt-4 border border-border">
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-border px-4 py-2">
-                        <span className="label-mono text-[10px] font-black text-primary">X / HUAN TAI JI</span>
-                        <span className="h-3 w-px bg-border" />
-                        <span className="text-[11px] font-bold tracking-[0.12em] text-foreground">六亲换太极 · 亲情灾坎</span>
-                        <span className="label-mono ml-auto text-[9.5px] text-muted-foreground">判定内核增量 v{huanTaiJi.version}</span>
-                      </div>
-                      <div className="space-y-3 p-4">
-                        <p className="text-[11px] leading-relaxed text-muted-foreground">
-                          食伤为命主所生、是命局的灾坎星；看六亲的灾坎，须对六亲星「换太极」——以六亲星为新太极点，观察其「食伤」的状态好坏。
-                          <span className="ml-1 font-bold text-foreground">{huanTaiJi.chainNote}</span>
-                        </p>
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                          {huanTaiJi.entries.map((e) => {
-                            const col = e.outputMark === 'useful' ? '#2E7654' : e.outputMark === 'taboo' ? '#E31C29' : '#788491';
-                            const bg = e.outputMark === 'useful' ? 'rgba(46,118,84,.07)' : e.outputMark === 'taboo' ? 'rgba(227,28,41,.06)' : 'rgba(120,132,145,.08)';
-                            return (
-                              <div key={e.name} className="rounded-none p-3" style={{ backgroundColor: bg, border: `1px solid ${col}40` }}>
-                                <div className="flex items-center justify-between">
-                                  <span className="text-[12px] font-black text-foreground">{e.name}</span>
-                                  <span className="label-mono text-[9.5px]" style={{ color: col }}>
-                                    {e.star} → 其食伤 {e.outputStar}
-                                  </span>
-                                </div>
-                                <div className="mt-1.5 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 label-mono text-[9.5px] text-muted-foreground">
-                                  <span>十神 {e.star}（{e.anchorElementName}）</span>
-                                  <span>→ 换太极食伤 {e.outputElementName}</span>
-                                  <span className="px-1 py-0.5 font-black" style={{ color: col, border: `1px solid ${col}`, borderRadius: 0 }}>
-                                    {e.outputMark === 'useful' ? '喜用' : e.outputMark === 'taboo' ? '所忌' : '中平'}
-                                  </span>
-                                </div>
-                                <p className="mt-1.5 border-t border-border pt-1.5 text-[10px] leading-relaxed text-muted-foreground">{e.reading}</p>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        <p className="text-[10px] leading-relaxed" style={{ color: '#9A3412' }}>{huanTaiJi.guardrail}</p>
-                      </div>
-                    </div>
-                  )}
 
-                  {/* 五行取象（判定内核增量 · 从理到象） */}
+                  {/* 五行取象（判定内核增量 · 从理到象）· 默认折叠（「全量」视图展开） */}
                   {wuXingQuXiang && (
-                    <div className="mt-4 border border-border">
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-border px-4 py-2">
-                        <span className="label-mono text-[10px] font-black text-primary">Q / WU XING QU XIANG</span>
-                        <span className="h-3 w-px bg-border" />
-                        <span className="text-[11px] font-bold tracking-[0.12em] text-foreground">五行取象 · 从理到象</span>
-                        <span className="label-mono ml-auto text-[9.5px] text-muted-foreground">判定内核增量 v{wuXingQuXiang.version}</span>
-                      </div>
-                      <div className="space-y-3 p-4">
+                    <Detail
+                      className="mt-4"
+                      label={`Q / 五行取象 · 从理到象（内核增量 v${wuXingQuXiang.version}）`}
+                      open={fullView}
+                    >
+                      <div className="space-y-3">
                         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                           {wuXingQuXiang.entries.map((q) => {
                             const col = q.mark === 'useful' ? '#2E7654' : q.mark === 'taboo' ? '#E31C29' : '#788491';
@@ -3663,7 +3554,7 @@ export default function BaZiAnalyzerPage() {
                         </div>
                         <p className="text-[10px] leading-relaxed font-bold text-muted-foreground">{wuXingQuXiang.verdict}</p>
                       </div>
-                    </div>
+                    </Detail>
                   )}
 
                   {/* 地支作用规则（判定内核增量 · 三合三会不开藏干）· 依据类，默认折叠（「全量」视图展开） */}

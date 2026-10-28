@@ -46,12 +46,14 @@ import {
   WOOD_KE_EARTH_CFG,
   LAO_GAO_KOU_JING_CFG,
   ZHUZI_XIJI_CFG,
+  QUBI_CFG,
   type IChunQiuSegment,
   type IWuXingQuXiang,
   type ITaiJiQiPair,
   type ZhuZiMark,
   type ZhuZiMonthRef,
   type ZhuZiRefRow,
+  type QuBiElementInfo,
 } from '../data/baziData';
 import { getBirthJulianDay, getTermJulianDay } from './solarTermsCalc';
 
@@ -2482,6 +2484,17 @@ export function analyzeWealthNobility(
     qiConflict = '无冲突';
   }
 
+  // ================ 结构因子（v2.15 特殊格局通道）================
+  // 纯阴阳总量分不出贵贱（所有命盘都挤在 40~60% 的中段），补「透干」结构因子：
+  // 用神边天干透出（日主不算，日主是"我"不是"气"）+ 当令边力量足够 → 上格通道；
+  // 用神边既无力又无透 → 破格下压。只动两端，不动中段。
+  const YANG_STEMS = new Set(['甲', '乙', '丙', '丁']);
+  const YIN_STEMS = new Set(['庚', '辛', '壬', '癸']);
+  const stems3 = [chart.year.stem, chart.month.stem, chart.hour.stem];
+  const yongIsYang = monthQi.usageDirection === 'yang';
+  const yongTouCount = stems3.filter((s) => (yongIsYang ? YANG_STEMS : YIN_STEMS).has(s)).length; // 用神边透干数 0-3
+  const yinTouCount = stems3.filter((s) => YIN_STEMS.has(s)).length; // 阴干透出数 0-3（贵气专用：贵看阴，阳透干不给贵气加分）
+
   // ================ 财富分（0-100）：基础分 50，按阳气力量与用神情况浮动 ================
   let wealthScore: number;
   let wealthLevel: string;
@@ -2517,7 +2530,32 @@ export function analyzeWealthNobility(
       wealthLevel = '贫';
     }
   }
-  wealthScore = Math.max(0, Math.min(100, wealthScore));
+  // ---- 特殊格局通道：上格（阳有力 + 用神边有透干）----
+  if (monthQi.usageDirection === 'yin') {
+    // 阳当令：富看阳；阳足且用神（阴）有透干能存 → 富
+    if (yangPower >= 45 && yongTouCount >= 1) {
+      wealthScore = Math.max(wealthScore, 85 + Math.min(12, Math.round((yangPower - 45) * 0.3)));
+      wealthLevel = '富';
+    }
+    // 破格：用神（阴）极弱且无透干 → 富基虚设
+    if (yongShenPower < 14 && yongTouCount === 0) {
+      wealthScore = Math.min(wealthScore, 45);
+      wealthLevel = yangPower >= 25 ? '偏贫' : '贫';
+    }
+  } else {
+    // 阳为用神：阳有力且透干两位 → 富通道
+    if (yangPower >= 30 && yongTouCount >= 2) {
+      wealthScore = Math.max(wealthScore, 82 + Math.min(13, Math.round((yangPower - 30) * 0.4)));
+      wealthLevel = '富';
+    }
+    // 破格：阳用神极弱且无透 → 压到贫
+    if (yangPower < 14 && yongTouCount === 0) {
+      wealthScore = Math.min(wealthScore, 40);
+      wealthLevel = '贫';
+    }
+  }
+  // 全站封顶 96（2026-10-29 用户校订：人类世界没有 100 分，分布应为函数型长尾）
+  wealthScore = Math.max(0, Math.min(96, wealthScore));
   const wealthScoreText = `【${wealthScore}分】`;
   wealthDesc = `${wealthScoreText} 阳气(木火)${yangPower}% — ${
     wealthScore >= 85 ? '财气旺盛、物质基础扎实，命局自带富贵之基，求财相对易得，资源丰厚。'
@@ -2532,12 +2570,12 @@ export function analyzeWealthNobility(
   let nobilityLevel: string;
   let nobilityDesc: string;
   if (monthQi.usageDirection === 'yang') {
-    // 阴气旺（当令），贵气基础好：阴 50→95，阴 30→72，阴 0→28
+    // 阴气旺（当令），贵气基础好：阴 50→76，封顶 82（「贵」必须走透干结构通道，纯力量堆不出贵，2026-10-29 收紧）
     if (yinPower >= 50) {
-      nobilityScore = 88 + Math.min(12, Math.round((yinPower - 50) * 0.5));
-      nobilityLevel = '贵';
+      nobilityScore = Math.min(82, 76 + Math.round((yinPower - 50) * 0.3));
+      nobilityLevel = '平常';
     } else if (yinPower >= 30) {
-      nobilityScore = 68 + Math.round((yinPower - 30) / (50 - 30) * 20); // 68~88
+      nobilityScore = 68 + Math.round((yinPower - 30) / (50 - 30) * 14); // 68~82
       nobilityLevel = '平常';
     } else if (yinPower >= 15) {
       nobilityScore = 50 + Math.round((yinPower - 15) / (30 - 15) * 18); // 50~68
@@ -2549,8 +2587,8 @@ export function analyzeWealthNobility(
   } else {
     // 阳气旺（当令），阴气为用神
     if (yinPower >= 30) {
-      nobilityScore = 74 + Math.min(16, Math.round((yinPower - 30) * 0.5)); // 74~90
-      nobilityLevel = '贵';
+      nobilityScore = Math.min(82, 74 + Math.round((yinPower - 30) * 0.25)); // 74~82，「贵」走下方结构通道
+      nobilityLevel = '平常';
     } else if (yinPower >= 15) {
       nobilityScore = 56 + Math.round((yinPower - 15) / (30 - 15) * 18); // 56~74
       nobilityLevel = '平常';
@@ -2562,7 +2600,31 @@ export function analyzeWealthNobility(
       nobilityLevel = '偏弱';
     }
   }
-  nobilityScore = Math.max(0, Math.min(100, nobilityScore));
+  // ---- 特殊格局通道：上格（阴有力 + 用神边有透干）----
+  if (monthQi.usageDirection === 'yang') {
+    // 阴当令：贵看阴；阴足且阴干透出两位以上 → 贵通道（2026-10-29 收紧：阳透干不算，单透阴干也不够，防 #8 类过火）
+    if (yinPower >= 42 && yinTouCount >= 2) {
+      nobilityScore = Math.max(nobilityScore, 85 + Math.min(12, Math.round((yinPower - 42) * 0.3)));
+      nobilityLevel = '贵';
+    }
+    // 破格：用神（阳）极弱且无透干
+    if (yongShenPower < 14 && yongTouCount === 0) {
+      nobilityScore = Math.min(nobilityScore, 45);
+      nobilityLevel = '偏弱';
+    }
+  } else {
+    // 阴为用神：阴有力且透干两位 → 贵通道
+    if (yinPower >= 26 && yongTouCount >= 2) {
+      nobilityScore = Math.max(nobilityScore, 82 + Math.min(13, Math.round((yinPower - 26) * 0.4)));
+      nobilityLevel = '贵';
+    }
+    // 破格：阴用神极弱且无透 → 压到偏弱
+    if (yinPower < 14 && yongTouCount === 0) {
+      nobilityScore = Math.min(nobilityScore, 40);
+      nobilityLevel = '偏弱';
+    }
+  }
+  nobilityScore = Math.max(0, Math.min(96, nobilityScore));
   const nobilityScoreText = `【${nobilityScore}分】`;
   nobilityDesc = `${nobilityScoreText} 阴气(金水)${yinPower}% — ${
     nobilityScore >= 85 ? '贵气深厚，社会地位较高，名声好，受人尊敬，事业成就突出。'
@@ -2605,7 +2667,7 @@ export function analyzeWealthNobility(
       taijiNote = `年月太极：${t.taijiName}（${t.state}）。${t.verdict}`;
     }
   }
-  overallScore = Math.max(0, Math.min(100, overallScore));
+  overallScore = Math.max(0, Math.min(96, overallScore));
 
   // 综合档位（兼容旧命名，UI 可直接用 overallScore 渲染进度条；随新分布收紧）
   let overallLevel: string;
@@ -3588,6 +3650,110 @@ export function analyzeLaoGaoRules(
     .map((s) => ({ from: s.from, to: s.to, note: s.detail }));
 
   return { zhuYi, shiShen, blockedKe };
+}
+
+// ============================================================
+// 趋避与时机（06 模块）· 判词层，不参与评分（数据源 QUBI_CFG / qubi-v1.0.0）
+// ============================================================
+export interface QuBiItem extends QuBiElementInfo {
+  element: string;
+}
+export interface QuBiResult {
+  version: string;
+  direction: 'yang' | 'yin';
+  useful: QuBiItem[];
+  taboo: QuBiItem[];
+  note: string;
+}
+export function analyzeQuBi(yongJi: YongJiResult): QuBiResult {
+  const toItem = (el: string): QuBiItem | null => {
+    const info = QUBI_CFG.elements[el];
+    return info ? { element: el, ...info } : null;
+  };
+  const useful = yongJi.usefulElements.map(toItem).filter((x): x is QuBiItem => !!x);
+  const taboo = yongJi.tabooElements.map(toItem).filter((x): x is QuBiItem => !!x);
+  const direction: 'yang' | 'yin' = useful.some((x) => x.element === 'wood' || x.element === 'fire') ? 'yang' : 'yin';
+  return {
+    version: QUBI_CFG.version,
+    direction,
+    useful,
+    taboo,
+    note: '趋避为气机倾向参考而非定数；土按干支级判定（见 04 用神忌神），不在此整类归用忌。',
+  };
+}
+
+export interface KeyYearItem {
+  year: number;
+  ganzhi: string;
+  level: string;
+  displayScore: number;
+  adjustScore: number;
+  band: string;
+}
+export interface KeyYearsResult {
+  windowStart: number;
+  windowEnd: number;
+  jiYears: KeyYearItem[];
+  xiongYears: KeyYearItem[];
+  transition: { year: number; ganzhi: string } | null;
+  /** 窗口内全部年份，按年份升序；tag 标记 吉顶三/凶底三/平常，isTransition 标记换运年 */
+  allYears: Array<KeyYearItem & { tag: 'ji' | 'xiong' | 'normal'; isTransition: boolean }>;
+}
+interface DaYunLike {
+  stem: string;
+  branch: string;
+  startYear: number;
+  endYear: number;
+  liuNian10?: Array<{
+    year: number;
+    ganzhi: string;
+    letterLevel?: string;
+    displayScore: number;
+    adjustScore?: number;
+    band?: string;
+  }>;
+}
+/** 未来十年关键年份速查：自 currentYear 起 10 年内，取调整分最高 3 吉年、最低 3 凶年，及窗口内下一次换大运的转折年 */
+export function pickKeyYears(daYunList: DaYunLike[], currentYear: number): KeyYearsResult {
+  const windowStart = currentYear;
+  const windowEnd = currentYear + 9;
+  const all: KeyYearItem[] = [];
+  for (const dy of daYunList) {
+    for (const ln of dy.liuNian10 ?? []) {
+      if (ln.year < windowStart || ln.year > windowEnd) continue;
+      all.push({
+        year: ln.year,
+        ganzhi: ln.ganzhi,
+        level: ln.letterLevel ?? '',
+        displayScore: ln.displayScore,
+        adjustScore: ln.adjustScore ?? 0,
+        band: ln.band ?? '',
+      });
+    }
+  }
+  const jiYears = all
+    .filter((x) => x.adjustScore > 0)
+    .sort((a, b) => b.adjustScore - a.adjustScore)
+    .slice(0, 3);
+  const xiongYears = all
+    .filter((x) => x.adjustScore < 0)
+    .sort((a, b) => a.adjustScore - b.adjustScore)
+    .slice(0, 3);
+  const nextDy = daYunList
+    .filter((d) => d.startYear > currentYear && d.startYear <= windowEnd)
+    .sort((a, b) => a.startYear - b.startYear)[0];
+  const transition = nextDy ? { year: nextDy.startYear, ganzhi: nextDy.stem + nextDy.branch } : null;
+  const jiSet = new Set(jiYears.map((x) => x.year));
+  const xiongSet = new Set(xiongYears.map((x) => x.year));
+  const allYears = all
+    .slice()
+    .sort((a, b) => a.year - b.year)
+    .map((x) => ({
+      ...x,
+      tag: (jiSet.has(x.year) ? 'ji' : xiongSet.has(x.year) ? 'xiong' : 'normal') as 'ji' | 'xiong' | 'normal',
+      isTransition: transition?.year === x.year,
+    }));
+  return { windowStart, windowEnd, jiYears, xiongYears, transition, allYears };
 }
 
 export function analyzeJiXiong(
