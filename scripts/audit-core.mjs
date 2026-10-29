@@ -27,8 +27,10 @@ const STEMS = new Set('甲乙丙丁戊己庚辛壬癸'.split(''));
 const BRANCHES = new Set('子丑寅卯辰巳午未申酉戌亥'.split(''));
 
 function loadCore() {
-  const entry = path.join(os.tmpdir(), 'tzy-audit-entry.ts');
-  const outfile = path.join(os.tmpdir(), 'tzy-audit-core.cjs');
+  const distDir = path.join(ROOT, 'dist');
+  if (!fs.existsSync(distDir)) fs.mkdirSync(distDir, { recursive: true });
+  const entry = path.join(distDir, '_audit_entry.ts');
+  const outfile = path.join(distDir, '_audit_core.cjs');
   fs.writeFileSync(entry, `
 import { calculateBaZi } from '@/utils/baziCalculator';
 import { ZHUZI_XIJI_CFG } from '@/data/baziData';

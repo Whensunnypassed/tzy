@@ -424,6 +424,7 @@ export function analyzeEducationVerdict(
   chart: BaZiChart,
   yongJi: { usefulElements: string[]; tabooElements: string[] } | null,
   elementPower: { wood: number; fire: number; earth: number; metal: number; water: number } | null,
+  currentDayun?: { stem: string; branch: string; letterLevel?: string; displayScore?: number } | null,
 ): EducationVerdict {
   const pillars = [chart.year, chart.month, chart.hour];
   const ten = pillars.map((p) => p.shiShen || '').filter(Boolean);
@@ -446,6 +447,27 @@ export function analyzeEducationVerdict(
   const wenScore = (elementPower ? elementPower.wood + elementPower.fire : 0);
   const liScore = (elementPower ? elementPower.metal + elementPower.water : 0);
   const subject = liScore > wenScore ? '理科（金水主智、主逻辑）' : '文科（木火主语言、主文采）';
+
+  // —— 大运补入分析（2026-10-29 新增）——
+  // 学历不只看原局，大运覆盖关键学业期（18-28 岁）时必须考虑。
+  // 丁巳大运补火（用神）时，原局金属 0 的盘也能有好学历。
+  const usefulEls = yongJi?.usefulElements ?? [];
+  const tabooEls = yongJi?.tabooElements ?? [];
+  let dayunBoost = 0;    // +1=助力型大运, -1=阻力型, 0=中性
+  let dayunBringsUseful = false;
+  let dayunBringsTaboo = false;
+  if (currentDayun) {
+    const dyStemEl = STEM_ELEMENTS[currentDayun.stem] as string | undefined;
+    const dyBranchEl = BRANCH_ELEMENTS[currentDayun.branch] as string | undefined;
+    if (dyStemEl && usefulEls.includes(dyStemEl)) { dayunBoost++; dayunBringsUseful = true; }
+    if (dyBranchEl && usefulEls.includes(dyBranchEl)) { dayunBoost++; dayunBringsUseful = true; }
+    if (dyStemEl && tabooEls.includes(dyStemEl)) { dayunBoost--; dayunBringsTaboo = true; }
+    if (dyBranchEl && tabooEls.includes(dyBranchEl)) { dayunBoost--; dayunBringsTaboo = true; }
+    // letterLevel 辅助：S/A+ 确认为用神大运，B/C 以下可能有忌神混杂
+    if (currentDayun.letterLevel && ['S+', 'S', 'A+'].includes(currentDayun.letterLevel) && dayunBoost > 0) {
+      dayunBoost++; // 用神纯度高，再加分
+    }
+  }
 
   const inputs = [
     { label: '印星(学识根基)', value: yinStar > 0 ? `${yinStar} 位` : '未现' },
@@ -479,31 +501,50 @@ export function analyzeEducationVerdict(
 
   const matched = yinStar > 0 || caiStar > 0;
 
-  // —— 学历倾向三档（回测校准版）——
-  // 校准依据（1061 例真实命主，外部学历标签对照）：
+  // —— 学历倾向三档（原局 + 大运双轨，2026-10-29 加入大运）——
+  // 原局判定：
   //   精英门（印得用 + 印透干 + 食伤不得用）：博士群出现率 41%，常人 16%（2.5 倍富集）
   //   偏弱门（印为忌且不得用）：初中及以下群 51%，博士群 28%
-  //   中段（初中~本科）命盘因子无区分度，多数落中平，不做强行档位猜测
+  //   中段（初中~本科）命盘因子无区分度，多数落中平
+  // 大运修正：
+  //   用神大运（dayunBoost ≥ 2）可将原局"偏弱"拉回"中平"甚至"精英"
+  //   忌神大运可将原局"精英"降为"中平"
   const dayEl = STEM_ELEMENTS[chart.day.stem];
   const shengWo: Record<string, string> = { fire: 'wood', earth: 'fire', metal: 'earth', water: 'metal', wood: 'water' };
   const woSheng: Record<string, string> = { wood: 'fire', fire: 'earth', earth: 'metal', metal: 'water', water: 'wood' };
   const yinEl = shengWo[dayEl];   // 印星五行（生我）
   const ssEl = woSheng[dayEl];    // 食伤五行（我生）
-  const usefulEls = yongJi?.usefulElements ?? [];
-  const tabooEls = yongJi?.tabooElements ?? [];
   const yinUsefulEl = usefulEls.includes(yinEl);
   const yinTabooEl = tabooEls.includes(yinEl);
   const ssUsefulEl = usefulEls.includes(ssEl);
   const yinOnStem = pillars.some((p) => (p.shiShen || '').includes('印'));
   let tendency: 'elite' | 'neutral' | 'weak' = 'neutral';
-  if (yinUsefulEl && yinOnStem && !ssUsefulEl) tendency = 'elite';
-  else if (yinTabooEl && !yinUsefulEl) tendency = 'weak';
+  let tendencyFrom = '原局';
+  if (yinUsefulEl && yinOnStem && !ssUsefulEl) {
+    tendency = 'elite'; tendencyFrom = '原局（精英门：印得用且透干、食伤不得用）';
+  } else if (yinTabooEl && !yinUsefulEl) {
+    tendency = 'weak'; tendencyFrom = '原局（偏弱门：印为忌且不得用）';
+  } else if (yinStar === 0 && caiStar === 0) {
+    tendency = 'weak'; tendencyFrom = '原局（印财均未现，学业太极不显）';
+  }
+  // 大运修正
+  if (currentDayun && dayunBoost >= 2) {
+    if (tendency === 'weak') {
+      if (dayunBoost >= 3) { tendency = 'elite'; tendencyFrom += ` → 大运强力助力（${currentDayun.stem}${currentDayun.branch} S/A+ 级用神运，原局所缺尽补）`; }
+      else { tendency = 'neutral'; tendencyFrom += ` → 大运助力（${currentDayun.stem}${currentDayun.branch} 用神运，补入原局所缺）`; }
+    } else if (tendency === 'neutral' && yinStar === 0 && dayunBringsUseful) {
+      tendency = 'elite'; tendencyFrom += ` → 大运助力（${currentDayun.stem}${currentDayun.branch} 用神运直接引入根基）`;
+    }
+  } else if (currentDayun && dayunBoost <= -2) {
+    if (tendency === 'elite') { tendency = 'neutral'; tendencyFrom += ` → 大运忌神（${currentDayun.stem}${currentDayun.branch} 非用神）`; }
+    else if (tendency === 'neutral' && yinStar > 0 && yinIsUseful) { tendency = 'weak'; tendencyFrom += ` → 大运忌神（${currentDayun.stem}${currentDayun.branch} 冲克原局用神）`; }
+  }
   const tendencyLabel = tendency === 'elite' ? '学业精英倾向' : tendency === 'weak' ? '学业偏弱倾向' : '学业中平';
   const tendencyDesc = tendency === 'elite'
-    ? '印星得用且透干为学识根基，食伤伏而不用——埋首钻研、沉潜积累之象，学业易向高深处走（研究型、学术型路径倾向明显）。'
+    ? '学识根基扎实且方向得用，学业易向高深处走（研究型、学术型路径倾向明显）。'
     : tendency === 'weak'
-      ? '印星为忌、根基受制，求学过程多阻力与反复，学识积累需借岁运补救，宜以技能实用路径扬长避短。'
-      : '印星既未显著得力亦未显著受制，学业根基中平——能否走远，更多取决于家庭环境、地域资源与所处年代，命盘只指示倾向而非定论。';
+      ? '原局根基偏弱——若当前大运为用神运则靠大运补入仍可取到不错学历；若大运亦无助力，宜以技能实用路径扬长避短。'
+      : '原局学业倾向中平，能否走远取决于大运配合、家庭环境与所处年代。';
 
   result += ` 学历倾向：${tendencyLabel}——${tendencyDesc}`;
 

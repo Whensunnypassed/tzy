@@ -850,7 +850,7 @@ type ScoreBreakdownRow = {
 };
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.15.0';
+const APP_VERSION = '2.15.1';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -1184,8 +1184,13 @@ export default function BaZiAnalyzerPage() {
 
   const educationVerdict = useMemo<EducationVerdict | null>(() => {
     if (!chart || !yongJi || !elementPower) return null;
-    return analyzeEducationVerdict(chart, yongJi, elementPower);
-  }, [chart, yongJi, elementPower]);
+    // 2026-10-29：加入当前大运（覆盖 18-28 岁关键学业期），原局偏弱但大运为用神运时不直接判弱
+    const curDY = daYunAnalysis?.daYunWithFortune?.[daYunAnalysis.currentDaYunIndex];
+    return analyzeEducationVerdict(chart, yongJi, elementPower, curDY ? {
+      stem: curDY.stem, branch: curDY.branch,
+      letterLevel: curDY.letterLevel, displayScore: curDY.displayScore,
+    } : null);
+  }, [chart, yongJi, elementPower, daYunAnalysis]);
 
   // 古法旁证（阴阳干支命理讲义底层增量：气干/形干、四冲、六破、驿马、司令真神、生克权流转）
   const guFaPangZheng = useMemo<GuFaPangZheng | null>(() => {
