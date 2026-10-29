@@ -853,7 +853,7 @@ type ScoreBreakdownRow = {
 };
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.16.0';
+const APP_VERSION = '2.16.1';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -1226,6 +1226,33 @@ export default function BaZiAnalyzerPage() {
       .sort((a, b) => a - b);
     return { tier, years };
   }, [chart, romanceVerdict, keyYears]);
+
+  // 情缘年度强度条：过去十年 → 未来十年，逐年一个百分比，横向可滑动
+  // 干支优先取大运下辖流年（引擎权威口径），缺失年份按标准干支年公式回退
+  const romanceYearStrip = useMemo<Array<{
+    year: number;
+    ganzhi: string;
+    pct: number;
+    isCurrent: boolean;
+  }> | null>(() => {
+    if (!chart) return null;
+    const STEMS = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
+    const BRANCHES = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+    const gzMap = new Map<number, string>();
+    for (const dy of daYunAnalysis?.daYunWithFortune ?? []) {
+      for (const ln of dy.liuNian10 ?? []) {
+        if (ln?.year && ln.ganzhi) gzMap.set(ln.year, ln.ganzhi);
+      }
+    }
+    const out: Array<{ year: number; ganzhi: string; pct: number; isCurrent: boolean }> = [];
+    for (let y = currentYear - 10; y <= currentYear + 10; y++) {
+      const gz = gzMap.get(y) ?? `${STEMS[((y - 4) % 10 + 10) % 10]}${BRANCHES[((y - 4) % 12 + 12) % 12]}`;
+      const sc = scoreRomanceForYear(gz[0] ?? '', gz[1] ?? '', chart);
+      // 常见强引动为「六合夫妻宫5 + 桃花4 = 9」，据此折算相对百分比（干支叠加更高时封顶 100）
+      out.push({ year: y, ganzhi: gz, pct: Math.min(100, Math.round((sc.loveScore / 9) * 100)), isCurrent: y === currentYear });
+    }
+    return out;
+  }, [chart, daYunAnalysis, currentYear]);
 
   // 古法旁证（阴阳干支命理讲义底层增量：气干/形干、四冲、六破、驿马、司令真神、生克权流转）
   const guFaPangZheng = useMemo<GuFaPangZheng | null>(() => {
@@ -2558,6 +2585,52 @@ export default function BaZiAnalyzerPage() {
                       );
                     })()}
                   </div>
+
+                  {/* 情缘年度引动条：过去十年 → 未来十年，逐年一个百分比，窄屏可横向滑动 */}
+                  {romanceYearStrip && (() => {
+                    const ink = '#1F2937';
+                    const items = romanceYearStrip;
+                    const barH = 56;
+                    const colOf = (pct: number) =>
+                      pct >= 50 ? ink : pct >= 25 ? 'rgba(31,41,55,.45)' : 'rgba(120,132,145,.38)';
+                    return (
+                      <div className="mt-4 border-t border-border pt-3">
+                        <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                          <span className="label-mono text-muted-foreground">
+                            情缘年度引动 {items[0].year}–{items[items.length - 1].year}
+                          </span>
+                          <span className="label-mono text-muted-foreground">← 可横向滑动 →</span>
+                        </div>
+                        <div className="mt-2 overflow-x-auto">
+                          <div className="flex min-w-full items-end gap-[3px]">
+                            {items.map((it) => {
+                              const c = colOf(it.pct);
+                              const h = Math.max(2, Math.round((it.pct / 100) * barH));
+                              return (
+                                <div key={it.year} className="flex shrink-0 flex-col items-center" style={{ width: 32 }}>
+                                  <div className="label-mono text-[9px] leading-none" style={{ color: it.pct >= 50 ? ink : 'var(--muted-foreground)' }}>
+                                    {it.pct}
+                                  </div>
+                                  <div className="mt-1 flex w-full items-end justify-center" style={{ height: barH }}>
+                                    <div style={{ width: 20, height: h, background: c }} />
+                                  </div>
+                                  <div
+                                    className="mt-1 label-mono text-[9px] leading-none"
+                                    style={{ color: it.isCurrent ? '#E31C29' : 'var(--muted-foreground)', fontWeight: it.isCurrent ? 800 : 400 }}
+                                  >
+                                    {String(it.year).slice(2)}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        <div className="mt-2 text-[10px] leading-snug text-muted-foreground">
+                          百分比为当年情缘引动强度（相对值，满分≈100），数值越高越易有感情进展；标红年份为今年。此为倾向提示，非断言。
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <Detail
                     label="02·A 命局函数曲线 f(五行)·阴阳二气与理想虚影 · 旁证可视化（不参与评分）"
                     open={fullView}
