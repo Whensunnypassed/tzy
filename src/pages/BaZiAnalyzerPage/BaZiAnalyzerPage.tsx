@@ -78,12 +78,15 @@ import {
   analyzeWealthVerdict,
   analyzeEducationVerdict,
   analyzeEarthXiJi,
+  analyzeRomanceVerdict,
   scoreWealthForYear,
   scoreNobilityForYear,
+  scoreRomanceForYear,
   type XiangYiVerdict,
   type WealthVerdict,
   type EducationVerdict,
   type EarthXiJiResult,
+  type RomanceVerdict,
 } from '@/utils/xiangfaAnalyzer';
 import {
   ELEMENT_PALETTE_FORMAL,
@@ -850,7 +853,7 @@ type ScoreBreakdownRow = {
 };
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.15.2';
+const APP_VERSION = '2.16.0';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -1191,6 +1194,38 @@ export default function BaZiAnalyzerPage() {
       letterLevel: curDY.letterLevel, displayScore: curDY.displayScore,
     } : null);
   }, [chart, yongJi, elementPower, daYunAnalysis]);
+
+  // 情缘（轻量卡片）：原局情缘结构三档 + 未来十年引动窗口（窗口式表述，不给断言、不打分）
+  const romanceVerdict = useMemo<RomanceVerdict | null>(
+    () => (chart ? analyzeRomanceVerdict(chart) : null),
+    [chart],
+  );
+
+  const romanceWindow = useMemo<{
+    tier: 'active' | 'steady' | 'quiet';
+    years: number[];
+  } | null>(() => {
+    if (!chart || !romanceVerdict) return null;
+    const peachCount = romanceVerdict.peachBranches.length;
+    const spouseInPalace =
+      romanceVerdict.inputs.find((i) => i.label === '异性星入夫妻宫')?.value?.startsWith('是') ?? false;
+    const spouseInStem =
+      romanceVerdict.inputs.find((i) => i.label === '异性星透干')?.value === '有';
+    const tier: 'active' | 'steady' | 'quiet' =
+      spouseInPalace || peachCount >= 2 ? 'active' : spouseInStem || peachCount === 1 ? 'steady' : 'quiet';
+    // 十年窗口：逐年恋爱引动强度排序，只挑引动明显（≥3 分）的年份，最多取三年
+    const years = (keyYears?.allYears ?? [])
+      .map((y) => {
+        const gz = y.ganzhi ?? '';
+        return { year: y.year, score: scoreRomanceForYear(gz[0] ?? '', gz[1] ?? '', chart).loveScore };
+      })
+      .filter((x) => x.score >= 3)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3)
+      .map((x) => x.year)
+      .sort((a, b) => a - b);
+    return { tier, years };
+  }, [chart, romanceVerdict, keyYears]);
 
   // 古法旁证（阴阳干支命理讲义底层增量：气干/形干、四冲、六破、驿马、司令真神、生克权流转）
   const guFaPangZheng = useMemo<GuFaPangZheng | null>(() => {
@@ -2276,10 +2311,10 @@ export default function BaZiAnalyzerPage() {
                     <span className="h-3 w-px bg-border" />
                     <span className="text-sm font-bold tracking-[0.15em] text-foreground">{SECTION_META.overview.title}</span>
                   </div>
-                  <span className="label-mono hidden text-muted-foreground md:inline">用神 · 格局综合 · 学历 · 财富 · 事业</span>
+                  <span className="label-mono hidden text-muted-foreground md:inline">用神 · 格局综合 · 学历 · 财富 · 事业 · 情缘</span>
                 </div>
                 <CardContent className="p-4 md:p-8">
-                  <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+                  <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
                     {/* 1. 用神 */}
                     <div
                       className="rounded-none p-4"
@@ -2484,6 +2519,41 @@ export default function BaZiAnalyzerPage() {
                             </div>
                           </div>
                           <div className="mt-1 text-[10px] font-bold" style={{ color: col }}>大概率落在 {SEGS[band[0]]}{band[0] !== band[1] ? ` ~ ${SEGS[band[1]]}` : ''} 区间</div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* 6. 情缘（三档 + 谱条 + 十年窗口；窗口式表述，不打分不断言） */}
+                    {romanceWindow && (() => {
+                      const col = '#1F2937';
+                      const SEGS = ['待引', '平稳', '活跃'];
+                      const t = romanceWindow.tier;
+                      const band: [number, number] = t === 'active' ? [2, 2] : t === 'steady' ? [1, 1] : [0, 0];
+                      const label = t === 'active' ? '情缘活跃' : t === 'steady' ? '情缘平稳' : '情缘待引';
+                      const ys = romanceWindow.years;
+                      const windowText = ys.length === 0
+                        ? '十年内引动不明显 · 多靠主动经营'
+                        : ys.length === 1
+                          ? `${ys[0]} 年前后引动较明显`
+                          : `${ys[0]}–${ys[ys.length - 1]} 年间引动较明显`;
+                      return (
+                        <div className="col-span-2 p-4 md:col-span-1" style={{ background: 'rgba(31,41,55,.04)', border: `1px solid rgba(31,41,55,.28)`, borderRadius: 0 }}>
+                          <div className="label-mono" style={{ color: col }}>情缘 ROMANCE</div>
+                          <div className="mt-2 text-xl font-black" style={{ color: col }}>{label}</div>
+                          <div className="mt-2">
+                            <div className="flex gap-[2px]">
+                              {SEGS.map((s, i) => (
+                                <div key={s} className="h-1.5 flex-1" style={{ background: i >= band[0] && i <= band[1] ? col : 'rgba(120,132,145,.2)' }} />
+                              ))}
+                            </div>
+                            <div className="mt-0.5 flex gap-[2px]">
+                              {SEGS.map((s, i) => (
+                                <div key={s} className="flex-1 text-center text-[8.5px] font-bold" style={{ color: i >= band[0] && i <= band[1] ? col : 'var(--muted-foreground)' }}>{s}</div>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="mt-1 text-[10px] font-bold" style={{ color: col }}>{windowText}</div>
+                          <div className="mt-0.5 text-[9.5px] leading-snug text-muted-foreground">较易有进展的时段 · 非断言</div>
                         </div>
                       );
                     })()}
