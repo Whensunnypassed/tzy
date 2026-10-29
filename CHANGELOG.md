@@ -4,7 +4,27 @@
 
 > 署名约定：每条版本记录末尾注明执行者（人类用户名或 AI 模型名）。v2.15.0 起由 AI 助手 **Kimi-K3**（TraeCode）执行并记录。
 
-当前正式版：**v2.16.1**
+当前正式版：**v2.16.2**
+
+---
+
+## [2.16.2] - 2026-10-29
+
+### 回退（撤除情缘模块，命主速览恢复为 5 格）
+
+**反馈**：v2.16.0 / v2.16.1 的情缘模块经实际使用后判定价值不足，按要求整体撤除。
+
+**改动**：
+- 移除 `02 命主速览` 的「情缘 ROMANCE」卡片（三档倾向 + 谱条 + 窗口文字）
+- 移除其下方「情缘年度引动」逐年百分比横条（2016–2036 / 21 根柱）
+- 栅格 `lg:grid-cols-6` 回退为 `lg:grid-cols-5`，版块右上角说明文字回退为「用神 · 格局综合 · 学历 · 财富 · 事业」
+- 清理页面内 `romanceVerdict` / `romanceWindow` / `romanceYearStrip` 三处计算及 `analyzeRomanceVerdict`、`scoreRomanceForYear`、`RomanceVerdict` 导入
+
+**保留**：`xiangfaAnalyzer.ts` 中的感情分析引擎（`analyzeRomanceVerdict` / `scoreRomanceForYear` / `evaluateRomanceForGZ`）**不做删除**，仍可供后续按需调用；本次仅撤除展示层。
+
+**验证**：`tsc -p tsconfig.app.json --noEmit` 通过 ✓
+
+*by Kimi-K3 · 2026-10-29*
 
 ---
 
