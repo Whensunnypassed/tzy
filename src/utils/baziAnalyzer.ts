@@ -2556,6 +2556,53 @@ export function analyzeWealthNobility(
   }
   // 全站封顶 96（2026-10-29 用户校订：人类世界没有 100 分，分布应为函数型长尾）
   wealthScore = Math.max(0, Math.min(96, wealthScore));
+
+  // ================ 暗财通道（v2.15.2）：拱财 + 财库重叠 ================
+  // 反例：1970-03-23 20:00 坤造 庚戌/己卯/壬寅/庚戌 —— 实际 A8.5 大富，
+  //       但原局火仅 7 分、天干 0 透阳，基础通道只给小康 80 分。
+  //       真正的财富信号在：寅戌拱午（暗拱正财禄地）+ 双戌财库（火库重叠）+ 卯戌合火。
+  //       此类「财不透干、拱库重叠」属隐性大富，现有纯力量/纯透干算法无法识别。
+  //
+  // 触发条件（同时满足）：
+  //   ① 日主财星之库（火库戌、金库丑、木库未、水库辰）在原局出现 ≥2 次
+  //   ② 存在拱财结构（寅戌拱午、申子拱辰、巳丑拱酉、亥未拱卯 —— 三合缺中神、中神即财星本气禄地）
+  //   ③ 财星五行为原局用神（避免忌神财库被误判为富）
+  // 命中即推至富裕下段（88 分），不越过富豪级（≥90 需透干/格局另证）
+  const STEM_TO_CAI_ELEMENT: Record<string, 'wood' | 'fire' | 'earth' | 'metal' | 'water'> = {
+    '甲': 'earth', '乙': 'earth',
+    '丙': 'metal', '丁': 'metal',
+    '戊': 'water', '己': 'water',
+    '庚': 'wood',  '辛': 'wood',
+    '壬': 'fire',  '癸': 'fire',
+  };
+  const CAI_KU_BRANCH: Record<string, string> = {
+    fire: '戌', metal: '丑', wood: '未', water: '辰', earth: '戌',
+  };
+  // 拱财对：两支同现夹拱出财星本气禄地（午/酉/卯/辰）
+  const GONG_CAI_PAIRS: Array<{ a: string; b: string; element: 'wood' | 'fire' | 'earth' | 'metal' | 'water' }> = [
+    { a: '寅', b: '戌', element: 'fire' },  // 寅戌拱午（火财）
+    { a: '申', b: '子', element: 'water' }, // 申子拱辰（水库，暗财需另断，暂作财星结构）
+    { a: '巳', b: '丑', element: 'metal' }, // 巳丑拱酉（金财）
+    { a: '亥', b: '未', element: 'wood' },  // 亥未拱卯（木财）
+  ];
+  const dayStemChar = chart.day.stem;
+  const caiElement = STEM_TO_CAI_ELEMENT[dayStemChar];
+  const caiKuBranch = CAI_KU_BRANCH[caiElement];
+  const allBranches = [chart.year.branch, chart.month.branch, chart.day.branch, chart.hour.branch];
+  const caiKuCount = allBranches.filter((b) => b === caiKuBranch).length;
+  const hasGongCai = GONG_CAI_PAIRS.some(
+    (g) => g.element === caiElement && allBranches.includes(g.a) && allBranches.includes(g.b),
+  );
+  const caiIsYongShen = monthQi.usageDirection === 'yang'
+    ? (caiElement === 'wood' || caiElement === 'fire')
+    : (caiElement === 'metal' || caiElement === 'water');
+  if (caiKuCount >= 2 && hasGongCai && caiIsYongShen) {
+    wealthScore = Math.max(wealthScore, 88);
+    wealthLevel = '富';
+  }
+  // 暗财通道命中后重新封顶（防御，88 不会越界）
+  wealthScore = Math.max(0, Math.min(96, wealthScore));
+
   const wealthScoreText = `【${wealthScore}分】`;
   wealthDesc = `${wealthScoreText} 阳气(木火)${yangPower}% — ${
     wealthScore >= 85 ? '财气旺盛、物质基础扎实，命局自带富贵之基，求财相对易得，资源丰厚。'
