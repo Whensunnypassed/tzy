@@ -14,18 +14,14 @@ import {
 import {
   judgeEarthXiJi,
   calculateYinYangBalance,
-  DI_ZHI_LIU_HE,
-  LIU_CHONG_PAIRS,
   type MonthQiResult,
 } from './baziAnalyzer';
 import {
   XIANG_YI_ELEMENTS,
   WEALTH_RULES,
-  ROMANCE_RULES,
   EDUCATION_RULES,
   EDUCATION_LEVELS,
   EDUCATION_SCORING,
-  PEACH_BRANCHES,
   WEALTH_RANKS,
   NOBILITY_RANKS,
   mapScoreToRank,
@@ -201,129 +197,7 @@ export function analyzeWealthVerdict(
 }
 
 // ============================================================
-// 三、感情（异性缘与婚姻情缘）
-// ============================================================
-export interface RomanceVerdict {
-  inputs: Array<{ label: string; value: string }>;
-  matched: boolean;
-  love: boolean;
-  marriage: boolean;
-  result: string;
-  reference: string[];
-  disclaimer?: string;
-  loveTiming: string;            // 最利恋爱的年份/流年应期
-  marriageTiming: string;        // 最利结婚的年份/流年应期
-  peachBranches: string[];       // 命局桃花地支（子午卯酉）
-  oppositeElementName: string;   // 异性星（财/官）元素
-  marriagePalace: string;        // 夫妻宫（日支）
-  heBranch: string;              // 与日支六合的地支（无则为空）
-  chongBranch: string;           // 与日支相冲的地支（无则为空）
-}
-
-export function analyzeRomanceVerdict(
-  chart: BaZiChart,
-): RomanceVerdict {
-  const isMale = chart.gender === 'male';
-  const dayEl = STEM_ELEMENTS[chart.day.stem];
-  const oppositeEl = isMale ? KE_MAP[dayEl] : Object.keys(KE_MAP).find((k) => KE_MAP[k] === dayEl) || 'water';
-  const oppositeName = isMale ? '财星(妻星)' : '官星(夫星)';
-  const stems = [chart.year.stem, chart.month.stem, chart.day.stem, chart.hour.stem];
-  const branches = [chart.year.branch, chart.month.branch, chart.day.branch, chart.hour.branch];
-  const dayBranch = chart.day.branch;
-  const spouseStarInStem = stems.some((s) => STEM_ELEMENTS[s] === oppositeEl);
-  // 异性星入夫妻宫（日支主气或藏干）
-  const spouseInPalace = BRANCH_ELEMENTS[dayBranch] === oppositeEl
-    || chart.day.hiddenStems.some((s) => STEM_ELEMENTS[s] === oppositeEl);
-  const peach = branches.filter((b) => PEACH_BRANCHES.includes(b));
-  // 辰戌相见 / 相冲
-  const hasChenXu = branches.includes('辰') && branches.includes('戌');
-  // 日支（夫妻宫）与他支的六合/冲（婚姻宫引动）
-  const palaceTriggered = branches.some((b) => b !== dayBranch && (
-    DI_ZHI_LIU_HE[b + dayBranch] || DI_ZHI_LIU_HE[dayBranch + b] || LIU_CHONG_PAIRS[b + dayBranch] || LIU_CHONG_PAIRS[dayBranch + b]
-  ));
-  // —— 情缘应期：与夫妻宫（日支）六合 / 相冲的地支（半合/半会的「拱气」不采用，故不列三合三会应期） ——
-  const heEntry = Object.entries(DI_ZHI_LIU_HE).find(([k]) => k.includes(dayBranch));
-  const heBranch = heEntry ? heEntry[0].replace(dayBranch, '') : '';
-  const chongEntry = Object.entries(LIU_CHONG_PAIRS).find(([k]) => k.includes(dayBranch));
-  const chongBranch = chongEntry ? chongEntry[0].replace(dayBranch, '') : '';
-  const oppositeElementName = ELEMENT_CN[oppositeEl];
-
-  const inputs = [
-    { label: '性别', value: isMale ? '男命' : '女命' },
-    { label: '异性星', value: `${oppositeName}（${oppositeElementName}）` },
-    { label: '异性星透干', value: spouseStarInStem ? '有' : '无' },
-    { label: '异性星入夫妻宫', value: spouseInPalace ? '是（正缘）' : '否' },
-    { label: '桃花(子午卯酉)', value: peach.length > 0 ? peach.join('·') : '无' },
-    { label: '夫妻宫(日支)', value: dayBranch },
-    { label: '六合/相冲夫妻宫', value: `${heBranch ? `六合${heBranch}` : '—'}${heBranch && chongBranch ? '、' : ''}${chongBranch ? `冲${chongBranch}` : '—'}` },
-    { label: '辰戌相见', value: hasChenXu ? '有（人事波折）' : '无' },
-  ];
-
-  // —— 结论（综合分析，不含任何内部原文引用）——
-  let result = '';
-  const love = spouseStarInStem || peach.length > 0 || palaceTriggered;
-  let marriage = spouseInPalace;
-
-  if (spouseStarInStem) {
-    result += ` ${oppositeName}透出天干，异性缘基础显现；不过天干多为缘分表象，感情实质需结合地支合冲与夫妻宫引动综合判断。`;
-  }
-  if (spouseInPalace) {
-    result += ` ${oppositeName}正落夫妻宫（日支${dayBranch}），属正缘之象，名分内的正统情缘较为稳固。`;
-    marriage = true;
-  } else if (palaceTriggered) {
-    result += ` 夫妻宫（日支${dayBranch}）被其他地支合冲引动，婚姻宫有应期，逢岁运再合冲时感情之事易显。`;
-  }
-  if (peach.length > 0) {
-    result += ` 命带桃花（${peach.join('·')}），异性缘旺、魅力外显；若桃花逢合冲或异性星未入正宫，感情关系可能较为分散、易生外情桃花。`;
-  }
-  if (hasChenXu) {
-    result += ' 辰戌相见，婚恋与家庭人事易生波折，遇辰戌之年尤为明显；并非品行问题，多为情感与家庭的选择与磨合。';
-  }
-
-  const matched = spouseStarInStem || spouseInPalace || peach.length > 0 || hasChenXu;
-
-  // —— 恋爱 / 结婚应期（最容易恋爱与结婚的年份） ——
-  let loveTiming = '';
-  if (peach.length > 0) loveTiming += `逢${peach.join('、')}桃花之年异性缘最旺、最易动情；`;
-  if (oppositeElementName) loveTiming += `逢${oppositeElementName}干/支流年（${oppositeName}现）恋爱运开；`;
-  if (heBranch) loveTiming += `逢${heBranch}年（六合夫妻宫${dayBranch}）情感涌动；`;
-  if (!loveTiming) loveTiming = '恋爱应期需逢岁运桃花或异性星引动之年方显，无明显固定旺年。';
-
-  let marriageTiming = '';
-  if (heBranch) marriageTiming += `逢${heBranch}年（与日支${dayBranch}六合）最利婚定；`;
-  if (chongBranch) marriageTiming += `逢${chongBranch}年（冲动夫妻宫${dayBranch}）婚姻易成或变动；`;
-  if (spouseInPalace) marriageTiming += ` ${oppositeName}已入夫妻宫，逢${oppositeElementName}流年引动即为婚姻应期；`;
-  if (hasChenXu) marriageTiming += ' 辰戌相见者，逢辰戌之年人事与婚恋波动最显；';
-  if (!marriageTiming) marriageTiming = '结婚应期需逢岁运合冲夫妻宫之年方显，无明显固定婚年。';
-
-  result += ` 应期提示——恋爱：${loveTiming}结婚：${marriageTiming}`;
-
-  // ============================================================
-  // 情缘徽标严格互斥（按数据库《象法》感情篇优先级）：结婚(喜) ＞ 恋爱(♥)
-  // → 感情页两张应期卡片（loveTiming/marriageTiming）各自独立保留，仅徽标二选一显示
-  // ============================================================
-  const loveFinal = marriage ? false : love;
-
-  return {
-    inputs,
-    matched,
-    love: loveFinal,
-    marriage,
-    result,
-    reference: [],
-    disclaimer: matched ? undefined : NOT_MATCHED_DISCLAIMER,
-    loveTiming,
-    marriageTiming,
-    peachBranches: peach,
-    oppositeElementName,
-    marriagePalace: dayBranch,
-    heBranch,
-    chongBranch,
-  };
-}
-
-// ============================================================
-// 四、学历（十神学业考试）
+// 三、学历（十神学业考试）
 // ============================================================
 export interface EducationVerdict {
   inputs: Array<{ label: string; value: string }>;
@@ -567,70 +441,6 @@ export function analyzeEducationVerdict(
 }
 
 // ============================================================
-// ============================================================
-// 五（扩展）、具体年份的恋爱/结婚强度评分（用于按可能性从高到低排序具体 YYYY 年）
-// 条件权重严格依据《象法》数据书·感情篇与 evaluateRomanceForGZ 的判断逻辑；
-// 所有评分仅服务外显年份列表，不改变核心 baziAnalyzer / baziData 任何逻辑。
-// ============================================================
-export interface YearRomanceScore {
-  loveScore: number;
-  marriageScore: number;
-  loveHits: string[];
-  marriageHits: string[];
-}
-
-export function scoreRomanceForYear(stem: string, branch: string, chart: BaZiChart): YearRomanceScore {
-  const isMale = chart.gender === 'male';
-  const dayEl = STEM_ELEMENTS[chart.day.stem];
-  const oppositeEl = isMale ? KE_MAP[dayEl] : Object.keys(KE_MAP).find((k) => KE_MAP[k] === dayEl) || 'water';
-  const oppositeName = isMale ? '财星(妻星)' : '官星(夫星)';
-  const dayBranch = chart.day.branch;
-  const stemEl = STEM_ELEMENTS[stem];
-  const branchEl = BRANCH_ELEMENTS[branch];
-  const oppositeMet = stemEl === oppositeEl || branchEl === oppositeEl;
-
-  const loveHits: string[] = [];
-  const marriageHits: string[] = [];
-  let loveScore = 0;
-  let marriageScore = 0;
-
-  // —— 恋爱分（越旺越靠前）——
-  if (PEACH_BRANCHES.includes(branch)) { loveScore += 4; loveHits.push(`桃花${branch}`); }
-  if (oppositeMet) { loveScore += 3; loveHits.push(`${oppositeName}现`); }
-
-  const isHe = DI_ZHI_LIU_HE[branch + dayBranch] || DI_ZHI_LIU_HE[dayBranch + branch];
-  const isChong = LIU_CHONG_PAIRS[branch + dayBranch] || LIU_CHONG_PAIRS[dayBranch + branch];
-  const isFuYin = branch === dayBranch;
-  const chenXu = (dayBranch === '辰' && branch === '戌') || (dayBranch === '戌' && branch === '辰');
-
-  if (isHe) { loveScore += 5; loveHits.push(`六合夫妻宫${dayBranch}`); }
-  if (isChong) { loveScore += 2; loveHits.push(`冲夫妻宫${dayBranch}`); }
-  if (isFuYin) { loveScore += 2; loveHits.push(`夫妻宫伏吟${dayBranch}`); }
-  if (chenXu) { loveScore += 2; loveHits.push(`辰戌相见`); }
-
-  // —— 结婚分（比恋爱更严，必须婚姻宫强引动+异性缘实质）——
-  if (isHe && oppositeMet) { marriageScore += 12; marriageHits.push(`六合夫妻宫+${oppositeName}现`); }
-  else if (isHe && PEACH_BRANCHES.includes(branch)) { marriageScore += 9; marriageHits.push(`六合夫妻宫+桃花${branch}`); }
-  else if (isHe) { marriageScore += 5; marriageHits.push(`六合夫妻宫（弱：无异性星/桃花）`); }
-
-  if (isChong && oppositeMet) { marriageScore += 8; marriageHits.push(`冲夫妻宫+${oppositeName}现`); }
-  else if (isChong && PEACH_BRANCHES.includes(branch)) { marriageScore += 6; marriageHits.push(`冲夫妻宫+桃花${branch}`); }
-  else if (isChong) { marriageScore += 3; marriageHits.push(`冲夫妻宫`); }
-
-  if (isFuYin && oppositeMet) { marriageScore += 5; marriageHits.push(`夫妻宫伏吟+${oppositeName}现`); }
-
-  if (chenXu && (oppositeMet || PEACH_BRANCHES.includes(branch))) {
-    marriageScore += 7;
-    marriageHits.push(`辰戌相见+${oppositeMet ? `${oppositeName}现` : `桃花${branch}`}`);
-  } else if (chenXu) {
-    marriageScore += 2;
-    marriageHits.push(`辰戌相见（波动）`);
-  }
-
-  return { loveScore, marriageScore, loveHits, marriageHits };
-}
-
-// ============================================================
 // 五（扩展 2）、具体流年：财富/事业/学业 年度得分（用于"最利 X 年份"从高到低排序）
 // —— 复用底层既有 displayScore（阴阳喜用分，已经充分反映该岁运对命局的价值），
 //    再叠加《象法》数据书的"载体/十神"加权作为排序区分度，绝对不改动任何底层得分。
@@ -740,75 +550,6 @@ export function scoreEducationForYear(
   return base + bonus;
 }
 
-// 五、大运流年情缘接口（爱心=恋爱可能 / 喜字=结婚可能）
-// ============================================================
-export interface RomanceFlag {
-  love: boolean;
-  marriage: boolean;
-  reason: string;
-}
-
-export function evaluateRomanceForGZ(
-  stem: string,
-  branch: string,
-  chart: BaZiChart,
-): RomanceFlag {
-  const isMale = chart.gender === 'male';
-  const dayEl = STEM_ELEMENTS[chart.day.stem];
-  const oppositeEl = isMale ? KE_MAP[dayEl] : Object.keys(KE_MAP).find((k) => KE_MAP[k] === dayEl) || 'water';
-  const oppositeName = isMale ? '财星(妻星)' : '官星(夫星)';
-  const dayBranch = chart.day.branch;
-  const stemEl = STEM_ELEMENTS[stem];
-  const branchEl = BRANCH_ELEMENTS[branch];
-  const oppositeMet = stemEl === oppositeEl || branchEl === oppositeEl;
-
-  const reasons: string[] = [];
-  let love = false;
-  let marriage = false;
-
-  // 桃花：子午卯酉
-  if (PEACH_BRANCHES.includes(branch)) {
-    love = true;
-    reasons.push(`地支${branch}为桃花，异性缘旺、恋爱契机显`);
-  }
-  // 异性星（财/官）透出
-  if (oppositeMet) {
-    love = true;
-    reasons.push(`${oppositeName}(${ELEMENT_CN[oppositeEl]})现于干支，异性缘引动`);
-  }
-  // 夫妻宫（日支）被合/冲/伏吟引动 → 婚姻应期（半合半会的拱气不采用）
-  const isHe = DI_ZHI_LIU_HE[branch + dayBranch] || DI_ZHI_LIU_HE[dayBranch + branch];
-  const isChong = LIU_CHONG_PAIRS[branch + dayBranch] || LIU_CHONG_PAIRS[dayBranch + branch];
-  const isFuYin = branch === dayBranch;
-  const palaceMoved = isHe || isChong || isFuYin;
-  if (palaceMoved) {
-    love = true;
-    const how = isHe ? `六合${DI_ZHI_LIU_HE[branch + dayBranch] || DI_ZHI_LIU_HE[dayBranch + branch]}` : isChong ? '相冲' : '伏吟';
-    reasons.push(`${branch}与夫妻宫${dayBranch}${how}，婚姻宫被引动`);
-    // 结婚：婚姻宫被引动 且 异性星现（或桃花强）
-    if (oppositeMet || PEACH_BRANCHES.includes(branch)) {
-      marriage = true;
-    }
-  }
-  // 辰戌相见：引动婚姻人事
-  const chenXu = (dayBranch === '辰' && branch === '戌') || (dayBranch === '戌' && branch === '辰');
-  if (chenXu) {
-    love = true;
-    reasons.push(`${branch}与日支${dayBranch}辰戌相见，人事与婚恋波动显`);
-    if (oppositeMet || PEACH_BRANCHES.includes(branch)) marriage = true;
-  }
-
-  // ============================================================
-  // 情缘等级严格互斥（按数据库《象法》感情篇优先级）：结婚(喜) ＞ 恋爱(♥)
-  // → 同一干支/流年只显示最高一档徽标，绝不并显爱心与喜
-  // ============================================================
-  if (marriage) love = false;
-  const tierDesc = marriage ? '婚姻应期' : love ? '恋爱缘显' : '情缘平静';
-  const reasonFinal = reasons.length > 0 ? `${tierDesc}：${reasons.join('；')}` : '情缘平静，无明显引动';
-  return { love, marriage, reason: reasonFinal };
-}
-
-// ============================================================
 // 六、用神忌神判断·土专区（是否取用土及原因）
 // ============================================================
 export interface EarthXiJiResult {

@@ -4,7 +4,33 @@
 
 > 署名约定：每条版本记录末尾注明执行者（人类用户名或 AI 模型名）。v2.15.0 起由 AI 助手 **Kimi-K3**（TraeCode）执行并记录。
 
-当前正式版：**v2.16.2**
+当前正式版：**v2.16.3**
+
+---
+
+## [2.16.3] - 2026-10-29
+
+### 清理（彻底删除感情引擎，不仅撤展示层）
+
+**背景**：v2.16.2 仅撤除了情缘 UI，`xiangfaAnalyzer.ts` 中感情分析引擎仍保留。本次按要求一并删除。
+
+**删除清单**：
+- `xiangfaData.ts`：`ROMANCE_RULES` 常量、`PEACH_BRANCHES` 常量
+- `xiangfaAnalyzer.ts`：
+  - `RomanceVerdict` 接口 + `analyzeRomanceVerdict` 函数
+  - `YearRomanceScore` 接口 + `scoreRomanceForYear` 函数
+  - `RomanceFlag` 接口 + `evaluateRomanceForGZ` 函数
+  - 相关导入 `ROMANCE_RULES`、`PEACH_BRANCHES`、`DI_ZHI_LIU_HE`、`LIU_CHONG_PAIRS`（后两者删除后仅服务于感情引擎，已不再使用）
+- `BaZiAnalyzerPage.tsx`：死代码组件 `RomanceVerdictPanel`（定义后从未渲染）
+
+**验证**：
+- `tsc -p tsconfig.app.json --noEmit` 通过 ✓
+- 核心审计 600 例随机命例 + 6 组边界回归全部通过 ✓
+- 全局检索 `RomanceVerdict|scoreRomanceForYear|evaluateRomanceForGZ|YearRomanceScore|RomanceFlag|ROMANCE_RULES|PEACH_BRANCHES|analyzeRomanceVerdict` 无任何残留 ✓
+
+**说明**：`DI_ZHI_LIU_HE` / `LIU_CHONG_PAIRS` 仍由 `baziAnalyzer.ts` 导出，此处仅停止在象法层导入；不影响其他模块。
+
+*by Kimi-K3 · 2026-10-29*
 
 ---
 

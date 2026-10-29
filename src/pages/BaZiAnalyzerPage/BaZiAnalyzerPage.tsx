@@ -531,75 +531,6 @@ function WealthPanel({
   );
 }
 
-
-// ============ 感情论断面板（只列具体 YYYY 年：恋爱可能 / 结婚，按可能性从高到低排列） ============
-function RomanceVerdictPanel({
-  bestLoveYears,
-  bestMarriageYears,
-}: {
-  bestLoveYears: Array<{ year: number; ganzhi: string; score: number; age: number; hits: string[] }>;
-  bestMarriageYears: Array<{ year: number; ganzhi: string; score: number; age: number; hits: string[] }>;
-}) {
-  const renderTimingList = (
-    items: Array<{ year: number; ganzhi: string; score: number; age: number; hits: string[] }>,
-    accent: string,
-    accentBg: string,
-  ) => (
-    <ol className="mt-2 space-y-1.5">
-      {items.map((it, i) => (
-        <li key={it.year} className="flex flex-col rounded-sm border border-border bg-card/60 p-2">
-          <div className="flex items-center justify-between text-[12px] font-bold">
-            <span className="inline-flex items-center">
-              <span className="mr-2 inline-flex size-4 items-center justify-center rounded-full text-[9px] font-black" style={{ background: accentBg, color: '#FFFFFF' }}>{i + 1}</span>
-              <span>{it.year}年</span>
-              <span className="ml-1 text-muted-foreground">·{it.ganzhi}</span>
-              <span className="ml-1 text-muted-foreground">·{it.age}岁</span>
-            </span>
-            <span style={{ color: accent }}>{it.score}分</span>
-          </div>
-          {it.hits.length > 0 && (
-            <div className="mt-0.5 flex flex-wrap gap-1">
-              {it.hits.slice(0, 3).map((h) => (
-                <span key={h} className="rounded-md border px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground" style={{ borderColor: `${accentBg}33`, background: `${accentBg}0D` }}>{h}</span>
-              ))}
-            </div>
-          )}
-        </li>
-      ))}
-    </ol>
-  );
-
-  return (
-    <div className="space-y-3">
-      <div className="text-sm font-bold text-muted-foreground">感情 · 异性缘与婚姻情缘</div>
-
-      <div className="rounded-sm border p-4" style={{ borderColor: 'rgba(227,28,41,0.35)', background: 'rgba(227,28,41,0.05)' }}>
-        <div className="mb-2 flex items-center gap-1.5">
-          <span className="inline-flex size-4 items-center justify-center rounded-full text-[9px] font-black leading-none" style={{ background: '#E31C29', color: '#FFFFFF' }}>♥</span>
-          <span className="label-mono text-[11px] font-black" style={{ color: '#E31C29' }}>恋爱可能时间如下（按可能性从高到低排列）</span>
-        </div>
-        {bestLoveYears.length === 0 ? (
-          <p className="text-xs leading-relaxed text-muted-foreground">暂无足够流年数据；恋爱应期需逢岁运桃花或异性星引动之年方显。</p>
-        ) : (
-          renderTimingList(bestLoveYears, '#E31C29', '#E31C29')
-        )}
-      </div>
-
-      <div className="rounded-sm border p-4" style={{ borderColor: 'rgba(154,52,18,0.35)', background: 'rgba(154,52,18,0.05)' }}>
-        <div className="mb-2 flex items-center gap-1.5">
-          <span className="inline-flex size-4 items-center justify-center rounded-full text-[9px] font-black leading-none" style={{ background: '#9A3412', color: '#FFFFFF' }}>喜</span>
-          <span className="label-mono text-[11px] font-black" style={{ color: '#9A3412' }}>结婚时间如下（按可能性从高到低排列）</span>
-        </div>
-        {bestMarriageYears.length === 0 ? (
-          <p className="text-xs leading-relaxed text-muted-foreground">暂无足够流年数据；结婚应期需逢岁运合冲夫妻宫之年方显。</p>
-        ) : (
-          renderTimingList(bestMarriageYears, '#9A3412', '#9A3412')
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ============ 象意论断面板（日主五行象法） ============
 function XiangYiPanel({ verdict }: { verdict: XiangYiVerdict }) {
   return (
@@ -850,7 +781,7 @@ type ScoreBreakdownRow = {
 };
 
 /** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.16.2';
+const APP_VERSION = '2.16.3';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
