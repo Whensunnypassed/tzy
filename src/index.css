@@ -8,6 +8,14 @@
 html {
   color-scheme: light;
   background-color: var(--background);
+  /* 版块锚点跳转平滑滚动（命主速览指标卡等内部链接）；尊重系统减弱动效设置 */
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 body {

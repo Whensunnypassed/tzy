@@ -10,12 +10,13 @@ import {
   STEM_ELEMENTS,
   BRANCH_ELEMENTS,
   STEM_YINYANG,
-} from './baziCalculator';
+  getShiShen,
+} from '../common/baziCalculator';
 import {
   judgeEarthXiJi,
   calculateYinYangBalance,
   type MonthQiResult,
-} from './baziAnalyzer';
+} from './engine';
 import {
   XIANG_YI_ELEMENTS,
   WEALTH_RULES,
@@ -25,7 +26,7 @@ import {
   WEALTH_RANKS,
   NOBILITY_RANKS,
   mapScoreToRank,
-} from '../data/xiangfaData';
+} from '../../data/xiangfaData';
 
 export const XIANGFA_PRIORITY = 2; // 数据书优先级：2（仅供新模块，不参与底层运算）
 
@@ -300,23 +301,32 @@ export function analyzeEducationVerdict(
   elementPower: { wood: number; fire: number; earth: number; metal: number; water: number } | null,
   currentDayun?: { stem: string; branch: string; letterLevel?: string; displayScore?: number } | null,
 ): EducationVerdict {
-  const pillars = [chart.year, chart.month, chart.hour];
-  const ten = pillars.map((p) => p.shiShen || '').filter(Boolean);
+  // 四柱全参与统计；日柱天干为「日主」本身不带十神，故补入日支藏干的十神
+  const pillars = [chart.year, chart.month, chart.day, chart.hour];
+  const dayHidden = chart.day.hiddenStems ?? [];
+  const ten = [
+    ...pillars.map((p) => p.shiShen || ''),
+    ...dayHidden.map((hs) => getShiShen(chart.day.stem, hs)),
+  ].filter(Boolean);
   const count = (kw: string) => ten.filter((s) => s.includes(kw)).length;
   const yinStar = count('印');         // 正印+偏印
-  const caiStar = count('财');         // 正财+偏财
+  // 只认正财/偏财：此处若用 includes('财') 会把「劫财」误计为财星
+  const caiStar = ten.filter((s) => s === '正财' || s === '偏财').length;
   const shiShang = count('食') + count('伤');
   const guanSha = count('官') + count('杀');
   const biJie = count('比') + count('劫');
-  // 印星是否为用神
-  const yinIsUseful = (() => {
-    const yinEls = new Set<string>();
-    pillars.forEach((p) => {
-      if ((p.shiShen || '').includes('印')) yinEls.add(STEM_ELEMENTS[p.stem]);
-    });
-    const useful = (yongJi?.usefulElements ?? []);
-    return Array.from(yinEls).some((el) => useful.includes(el));
-  })();
+  // 印星/食伤的五行方向：展示与判定共用同一口径（此前展示只统计天干，导致与判定相反）
+  const dayEl = STEM_ELEMENTS[chart.day.stem];
+  const shengWo: Record<string, string> = { fire: 'wood', earth: 'fire', metal: 'earth', water: 'metal', wood: 'water' };
+  const woSheng: Record<string, string> = { wood: 'fire', fire: 'earth', earth: 'metal', metal: 'water', water: 'wood' };
+  const yinEl = shengWo[dayEl];   // 印星五行（生我）
+  const ssEl = woSheng[dayEl];    // 食伤五行（我生）
+  const usefulEls = yongJi?.usefulElements ?? [];
+  const tabooEls = yongJi?.tabooElements ?? [];
+  const yinUsefulEl = usefulEls.includes(yinEl);
+  const yinTabooEl = tabooEls.includes(yinEl);
+  const ssUsefulEl = usefulEls.includes(ssEl);
+  const yinIsUseful = yinUsefulEl;
   // 文理：木火(文科) / 金水(理科)
   const wenScore = (elementPower ? elementPower.wood + elementPower.fire : 0);
   const liScore = (elementPower ? elementPower.metal + elementPower.water : 0);
@@ -325,8 +335,6 @@ export function analyzeEducationVerdict(
   // —— 大运补入分析（2026-10-29 新增）——
   // 学历不只看原局，大运覆盖关键学业期（18-28 岁）时必须考虑。
   // 丁巳大运补火（用神）时，原局金属 0 的盘也能有好学历。
-  const usefulEls = yongJi?.usefulElements ?? [];
-  const tabooEls = yongJi?.tabooElements ?? [];
   let dayunBoost = 0;    // +1=助力型大运, -1=阻力型, 0=中性
   let dayunBringsUseful = false;
   let dayunBringsTaboo = false;
@@ -383,21 +391,40 @@ export function analyzeEducationVerdict(
   // 大运修正：
   //   用神大运（dayunBoost ≥ 2）可将原局"偏弱"拉回"中平"甚至"精英"
   //   忌神大运可将原局"精英"降为"中平"
-  const dayEl = STEM_ELEMENTS[chart.day.stem];
-  const shengWo: Record<string, string> = { fire: 'wood', earth: 'fire', metal: 'earth', water: 'metal', wood: 'water' };
-  const woSheng: Record<string, string> = { wood: 'fire', fire: 'earth', earth: 'metal', metal: 'water', water: 'wood' };
-  const yinEl = shengWo[dayEl];   // 印星五行（生我）
-  const ssEl = woSheng[dayEl];    // 食伤五行（我生）
-  const yinUsefulEl = usefulEls.includes(yinEl);
-  const yinTabooEl = tabooEls.includes(yinEl);
-  const ssUsefulEl = usefulEls.includes(ssEl);
+  // 印星实际力量：判「印为忌」时不能只看五行方向，还要看印是否有气
+  const yinPower = (elementPower as Record<string, number> | null)?.[yinEl] ?? 0;
+  // 官印相生：官杀有力生印、印有气，学业可走深（印虽为忌亦可成学）
+  const KE_WO: Record<string, string> = { wood: 'metal', fire: 'water', earth: 'wood', metal: 'fire', water: 'earth' };
+  const guanEl = KE_WO[dayEl];
+  const guanPower = (elementPower as Record<string, number> | null)?.[guanEl] ?? 0;
+  const guanYinSheng = yinTabooEl && yinPower >= 20 && guanPower >= 20;
+  // 印旺无官（≥35 且官杀 <10）：气聚于印、走纯学术路径
+  const yinStrongAcademic = yinPower >= 35 && guanPower < 10;
+  // 印有气且食伤为用：印为根、食伤为输出（研究/表达型学业）；食伤过旺（>30）泄身太过，反向排除
+  const ssPower = (elementPower as Record<string, number> | null)?.[ssEl] ?? 0;
+  const yinShiShangOutput = yinPower >= 20 && ssUsefulEl && ssPower >= 15 && ssPower <= 30;
+  // 食伤极旺（35–59）且有官杀约束（≥10）：才华外露而不放逸，专业/研究型路径
+  const ssStrongWithGuan = ssPower >= 35 && ssPower < 60 && guanPower >= 10;
+  // 印稳而不燥（20–32）、官杀适中（≥10）、食伤不透（<15）：学识根基稳
+  const yinStableAcademic = yinPower >= 20 && yinPower <= 32 && guanPower >= 10 && ssPower < 15;
   const yinOnStem = pillars.some((p) => (p.shiShen || '').includes('印'));
   let tendency: 'elite' | 'neutral' | 'weak' = 'neutral';
   let tendencyFrom = '原局';
-  if (yinUsefulEl && yinOnStem && !ssUsefulEl) {
-    tendency = 'elite'; tendencyFrom = '原局（精英门：印得用且透干、食伤不得用）';
-  } else if (yinTabooEl && !yinUsefulEl) {
-    tendency = 'weak'; tendencyFrom = '原局（偏弱门：印为忌且不得用）';
+  if ((yinUsefulEl && yinOnStem && !ssUsefulEl && yinPower <= 32) || guanYinSheng || yinStrongAcademic || yinShiShangOutput || ssStrongWithGuan || yinStableAcademic) {
+    tendency = 'elite';
+    tendencyFrom = guanYinSheng
+      ? '原局（官印相生：印有气、官杀有力，学业门成立）'
+      : yinStrongAcademic
+        ? '原局（印旺无官：气聚学识，走学术路径）'
+        : yinShiShangOutput
+          ? '原局（印有气且食伤为用：根深而能输出）'
+          : ssStrongWithGuan
+            ? '原局（食伤极旺而有官杀约束：才华外露，专业/研究型）'
+            : yinStableAcademic
+              ? '原局（印稳官清：印有气、官杀适中、食伤不透）'
+              : '原局（精英门：印得用且透干、食伤不得用、印不过旺）';
+  } else if (yinTabooEl && !yinUsefulEl && yinPower < 12) {
+    tendency = 'weak'; tendencyFrom = '原局（偏弱门：印为忌且无气）';
   } else if (yinStar === 0 && caiStar === 0) {
     tendency = 'weak'; tendencyFrom = '原局（印财均未现，学业太极不显）';
   }
@@ -411,7 +438,7 @@ export function analyzeEducationVerdict(
     }
   } else if (currentDayun && dayunBoost <= -2) {
     if (tendency === 'elite') { tendency = 'neutral'; tendencyFrom += ` → 大运忌神（${currentDayun.stem}${currentDayun.branch} 非用神）`; }
-    else if (tendency === 'neutral' && yinStar > 0 && yinIsUseful) { tendency = 'weak'; tendencyFrom += ` → 大运忌神（${currentDayun.stem}${currentDayun.branch} 冲克原局用神）`; }
+    // 中平不再因「当前大运」降为偏弱：学历是历史结果，当前所处大运只影响当下状态
   }
   const tendencyLabel = tendency === 'elite' ? '学业精英倾向' : tendency === 'weak' ? '学业偏弱倾向' : '学业中平';
   const tendencyDesc = tendency === 'elite'

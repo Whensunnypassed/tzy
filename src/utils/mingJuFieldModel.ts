@@ -40,8 +40,8 @@ import {
   STEM_ELEMENTS,
   BRANCH_ELEMENTS,
   type BaZiChart,
-} from './baziCalculator';
-import { PILLAR_WEIGHTS, type XiJiMark, type YongJiResult } from './baziAnalyzer';
+} from '@/analysis/common/baziCalculator';
+import { PILLAR_WEIGHTS, type XiJiMark, type YongJiResult } from '@/analysis/yinyang/engine';
 
 /** 五行顺序（与页面 ELEMENT_COLORS 同序） */
 export const FIELD_ELEMENT_ORDER = ['wood', 'fire', 'earth', 'metal', 'water'] as const;

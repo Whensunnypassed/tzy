@@ -32,14 +32,14 @@ function loadCore() {
   const entry = path.join(distDir, '_audit_entry.ts');
   const outfile = path.join(distDir, '_audit_core.cjs');
   fs.writeFileSync(entry, `
-import { calculateBaZi } from '@/utils/baziCalculator';
+import { calculateBaZi } from '@/analysis/common/baziCalculator';
 import { ZHUZI_XIJI_CFG } from '@/data/baziData';
 import {
   analyzeMonthQi,
   analyzeYongJi,
   calculateElementPower,
   analyzeDaYunLiuNian,
-} from '@/utils/baziAnalyzer';
+} from '@/analysis/yinyang/engine';
 export { calculateBaZi, ZHUZI_XIJI_CFG, analyzeMonthQi, analyzeYongJi, calculateElementPower, analyzeDaYunLiuNian };
 `);
   esbuild.buildSync({

@@ -13,7 +13,7 @@ import {
   getShiShen,
   getLiuNianList,
   getCurrentDaYunIndex,
-} from './baziCalculator';
+} from '../common/baziCalculator';
 
 import {
   SHI_ER_CHANG_SHENG,
@@ -54,8 +54,8 @@ import {
   type ZhuZiMonthRef,
   type ZhuZiRefRow,
   type QuBiElementInfo,
-} from '../data/baziData';
-import { getBirthJulianDay, getTermJulianDay } from './solarTermsCalc';
+} from '../../data/baziData';
+import { getBirthJulianDay, getTermJulianDay } from '../common/solarTermsCalc';
 
 // 四象与四季月令气机真机（《自然易鉴》第七章第二节）
 export const FOUR_SYMBOL_META: Record<string, {
@@ -2495,6 +2495,40 @@ export function analyzeWealthNobility(
   const yongTouCount = stems3.filter((s) => (yongIsYang ? YANG_STEMS : YIN_STEMS).has(s)).length; // 用神边透干数 0-3
   const yinTouCount = stems3.filter((s) => YIN_STEMS.has(s)).length; // 阴干透出数 0-3（贵气专用：贵看阴，阳透干不给贵气加分）
 
+  // ================ 财星载体（财富分的前置校验，v2.16.4）================
+  // 财星五行 = 日主所克；财库按五行取库地
+  const STEM_TO_CAI_ELEMENT: Record<string, 'wood' | 'fire' | 'earth' | 'metal' | 'water'> = {
+    '甲': 'earth', '乙': 'earth',
+    '丙': 'metal', '丁': 'metal',
+    '戊': 'water', '己': 'water',
+    '庚': 'wood',  '辛': 'wood',
+    '壬': 'fire',  '癸': 'fire',
+  };
+  const CAI_KU_BRANCH: Record<string, string> = {
+    fire: '戌', metal: '丑', wood: '未', water: '辰', earth: '戌',
+  };
+  // 拱财对：两支同现夹拱出财星本气禄地（午/酉/卯/辰）
+  const GONG_CAI_PAIRS: Array<{ a: string; b: string; element: 'wood' | 'fire' | 'earth' | 'metal' | 'water' }> = [
+    { a: '寅', b: '戌', element: 'fire' },  // 寅戌拱午（火财）
+    { a: '申', b: '子', element: 'water' }, // 申子拱辰（水库，暗财需另断，暂作财星结构）
+    { a: '巳', b: '丑', element: 'metal' }, // 巳丑拱酉（金财）
+    { a: '亥', b: '未', element: 'wood' },  // 亥未拱卯（木财）
+  ];
+  const caiElement = STEM_TO_CAI_ELEMENT[chart.day.stem];
+  const caiKuBranch = CAI_KU_BRANCH[caiElement];
+  const allBranches = [chart.year.branch, chart.month.branch, chart.day.branch, chart.hour.branch];
+  const caiKuCount = allBranches.filter((b) => b === caiKuBranch).length;
+  const hasGongCai = GONG_CAI_PAIRS.some(
+    (g) => g.element === caiElement && allBranches.includes(g.a) && allBranches.includes(g.b),
+  );
+  // 财星力量与透干数：透干只算年/月/时（日主不是财）
+  const caiPower = (elementPower as Record<string, number>)[caiElement] ?? 0;
+  const caiTouCount = stems3.filter((s) => STEM_ELEMENTS[s] === caiElement).length;
+  // 食伤力量（日主所生）：食伤生财是独立于木火占比的财富来源
+  const WO_SHENG: Record<string, string> = { wood: 'fire', fire: 'earth', earth: 'metal', metal: 'water', water: 'wood' };
+  const shiShangElement = WO_SHENG[STEM_ELEMENTS[chart.day.stem]];
+  const shiShangPower = (elementPower as Record<string, number>)[shiShangElement] ?? 0;
+
   // ================ 财富分（0-100）：基础分 50，按阳气力量与用神情况浮动 ================
   let wealthScore: number;
   let wealthLevel: string;
@@ -2554,6 +2588,46 @@ export function analyzeWealthNobility(
       wealthLevel = '贫';
     }
   }
+  // ================ 财星载体校验（v2.16.4）================
+  // 财富分此前只按木火占比给分，导致「无财星」的命局也被抬到小康。
+  // 规则：财星无气、或财不透且无库 → 整体降一档；财库三重 → 财聚于库，至少富裕下段
+  const dropWealthOneTier = (s: number): number => {
+    if (s >= 90) return 89;
+    if (s >= 80) return 79;
+    if (s >= 55) return 54;
+    if (s >= 42) return 41;
+    if (s >= 28) return 27;
+    if (s >= 12) return 11;
+    return 0;
+  };
+  if (caiKuCount >= 3) {
+    wealthScore = Math.max(wealthScore, 85);
+    wealthLevel = '富';
+  } else if (caiPower < 5 || (caiTouCount === 0 && caiKuCount === 0)) {
+    wealthScore = Math.min(wealthScore, dropWealthOneTier(wealthScore));
+    wealthLevel = wealthScore >= 80 ? '富'
+      : wealthScore >= 55 ? '小康'
+      : wealthScore >= 42 ? '小康偏下'
+      : wealthScore >= 28 ? '偏贫' : '贫';
+    // 财星本身偏弱（<20）且无透无库：不能判到富裕，压回中上上沿
+    if (caiPower < 20) wealthScore = Math.min(wealthScore, 79);
+  }
+  // 身弱财旺：财星 ≥25 且日主在四支无根 → 富屋贫人，压到贫困上沿
+  const dayElement = STEM_ELEMENTS[chart.day.stem];
+  const hasDayRoot = allBranches.some((b) => BRANCH_ELEMENTS[b] === dayElement);
+  if (caiPower >= 25 && !hasDayRoot) {
+    wealthScore = Math.min(wealthScore, 27);
+    wealthLevel = '贫';
+  }
+  // 食伤生财：食伤极旺（≥40%）且财星有气（≥10%）且财为用神 → 至少富裕下段
+  // 覆盖「不看木火、靠输出转化为财」的命局（如金水食伤生水财、婚姻/经营得财）
+  const caiIsUseful = monthQi.usageDirection === 'yang'
+    ? (caiElement === 'wood' || caiElement === 'fire')
+    : (caiElement === 'metal' || caiElement === 'water');
+  if (shiShangPower >= 40 && caiPower >= 10 && caiIsUseful) {
+    wealthScore = Math.max(wealthScore, 82);
+    wealthLevel = '富';
+  }
   // 全站封顶 96（2026-10-29 用户校订：人类世界没有 100 分，分布应为函数型长尾）
   wealthScore = Math.max(0, Math.min(96, wealthScore));
 
@@ -2568,36 +2642,12 @@ export function analyzeWealthNobility(
   //   ② 存在拱财结构（寅戌拱午、申子拱辰、巳丑拱酉、亥未拱卯 —— 三合缺中神、中神即财星本气禄地）
   //   ③ 财星五行为原局用神（避免忌神财库被误判为富）
   // 命中即推至富裕下段（88 分），不越过富豪级（≥90 需透干/格局另证）
-  const STEM_TO_CAI_ELEMENT: Record<string, 'wood' | 'fire' | 'earth' | 'metal' | 'water'> = {
-    '甲': 'earth', '乙': 'earth',
-    '丙': 'metal', '丁': 'metal',
-    '戊': 'water', '己': 'water',
-    '庚': 'wood',  '辛': 'wood',
-    '壬': 'fire',  '癸': 'fire',
-  };
-  const CAI_KU_BRANCH: Record<string, string> = {
-    fire: '戌', metal: '丑', wood: '未', water: '辰', earth: '戌',
-  };
-  // 拱财对：两支同现夹拱出财星本气禄地（午/酉/卯/辰）
-  const GONG_CAI_PAIRS: Array<{ a: string; b: string; element: 'wood' | 'fire' | 'earth' | 'metal' | 'water' }> = [
-    { a: '寅', b: '戌', element: 'fire' },  // 寅戌拱午（火财）
-    { a: '申', b: '子', element: 'water' }, // 申子拱辰（水库，暗财需另断，暂作财星结构）
-    { a: '巳', b: '丑', element: 'metal' }, // 巳丑拱酉（金财）
-    { a: '亥', b: '未', element: 'wood' },  // 亥未拱卯（木财）
-  ];
-  const dayStemChar = chart.day.stem;
-  const caiElement = STEM_TO_CAI_ELEMENT[dayStemChar];
-  const caiKuBranch = CAI_KU_BRANCH[caiElement];
-  const allBranches = [chart.year.branch, chart.month.branch, chart.day.branch, chart.hour.branch];
-  const caiKuCount = allBranches.filter((b) => b === caiKuBranch).length;
-  const hasGongCai = GONG_CAI_PAIRS.some(
-    (g) => g.element === caiElement && allBranches.includes(g.a) && allBranches.includes(g.b),
-  );
+  // v2.16.4：财为忌神时不再直接否掉，降权至 80；财透干亦可作为「暗财可见」的替代结构
   const caiIsYongShen = monthQi.usageDirection === 'yang'
     ? (caiElement === 'wood' || caiElement === 'fire')
     : (caiElement === 'metal' || caiElement === 'water');
-  if (caiKuCount >= 2 && hasGongCai && caiIsYongShen) {
-    wealthScore = Math.max(wealthScore, 88);
+  if (caiKuCount >= 2 && (hasGongCai || caiTouCount >= 1)) {
+    wealthScore = Math.max(wealthScore, caiIsYongShen ? 88 : 80);
     wealthLevel = '富';
   }
   // 暗财通道命中后重新封顶（防御，88 不会越界）

@@ -17,7 +17,7 @@ import {
   isBeforeLiChun,
   getDaysToNextTerm,
   getDaysToPrevTerm,
-} from '@/utils/solarTermsCalc';
+} from './solarTermsCalc';
 
 // 十天干索引
 const STEMS = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];

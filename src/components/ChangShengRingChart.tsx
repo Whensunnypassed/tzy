@@ -1,5 +1,5 @@
 import React from 'react';
-import type { ChangShengRingResult } from '@/utils/baziAnalyzer';
+import type { ChangShengRingResult } from '@/analysis/yinyang/engine';
 import { SHI_ER_CHANG_SHENG_CYCLE } from '@/data/baziData';
 
 // ============================================================

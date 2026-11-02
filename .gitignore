@@ -56,3 +56,11 @@ scripts/batch-verify-celebs.mjs
 scripts/compare-celebs.mjs
 scripts/nightly-verify.mjs
 scripts/spot-check.mjs
+
+# 飞书案例回测（含飞书 Base token，不入库）
+scripts/backtest-lark.mjs
+docs/真实案例回测问卷.md
+docs/视频案例库.md
+
+# 本地 ASR 工具（ffmpeg / whisper 依赖，不入库）
+.bili-tools/

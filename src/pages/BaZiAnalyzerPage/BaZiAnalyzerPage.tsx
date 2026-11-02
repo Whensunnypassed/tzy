@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 
 import MingJuFieldChart from '@/components/MingJuFieldChart';
 import ChangShengRingChart from '@/components/ChangShengRingChart';
+import PeiranReport, { PEIRAN_SECTIONS } from '@/pages/PeiranLine/PeiranReport';
 
 import {
   calculateBaZi,
@@ -38,15 +39,8 @@ import {
   BRANCH_YINYANG,
   HIDDEN_STEMS,
   getShiShen,
-} from '@/utils/baziCalculator';
+} from '@/analysis/common/baziCalculator';
 import {
-  analyzeMonthQi,
-  analyzeYongJi,
-  calculateElementPower,
-  analyzeMingJuPattern,
-  analyzeWealthNobility,
-  scoreMingPan,
-  analyzeDaYunLiuNian,
   analyzeTaiJiInChart, // 暂时停用：盘内存在太极模块已隐藏，恢复时启用
   analyzeZhuZiXiJi,
   getChunQiuMonthFactor,
@@ -59,11 +53,9 @@ import {
   analyzeWuXingQuXiang,
   analyzeLaoGaoRules,
   computeTaiJiQi,
-  type MonthQiResult,
   type ChunQiuFactorResult,
   type GanZhiZiHeHit,
   type GuFaPangZheng,
-  type YongJiResult,
   type ZhuZiXiJiResult,
   type ZhuZiEntry,
   type XianDuanResult,
@@ -72,7 +64,8 @@ import {
   type ChangShengRingResult,
   type WuXingQuXiangResult,
   type TaiJiQiResult,
-} from '@/utils/baziAnalyzer';
+} from '@/analysis/yinyang/engine';
+import { buildYinyangAnalysis, buildPeiranAnalysis, type AnalysisLineKey } from '@/analysis';
 import {
   analyzeXiangYi,
   analyzeWealthVerdict,
@@ -84,7 +77,7 @@ import {
   type WealthVerdict,
   type EducationVerdict,
   type EarthXiJiResult,
-} from '@/utils/xiangfaAnalyzer';
+} from '@/analysis/yinyang/xiangfa';
 import {
   ELEMENT_PALETTE_FORMAL,
   getSolarTermThemeByBirthDate,
@@ -133,6 +126,79 @@ function compactLiuNianHint(hint: unknown): string {
   const text = typeof hint === 'string' ? hint : '';
   const cut = text.match(/^[^（]*（[^）]*）：/);
   return (cut ? text.slice(cut[0].length) : text).trim();
+}
+
+// ============ 命主速览 · 指标卡骨架（统一规格） ============
+// 五张卡共用同一套结构：1px 语义细边 + 6% 语义淡底 + 等宽元信息标签
+// + 统一 text-xl 主值 + 统一谱条位 + 贴底说明行；整卡为锚点链接，
+// hover 用内描边加深（inset shadow，不改变布局尺寸），键盘可 focus。
+function MetricCard({
+  tone,
+  href,
+  label,
+  value,
+  badges,
+  bar,
+  note,
+  className = '',
+}: {
+  tone: string;
+  href: string;
+  label: string;
+  value: React.ReactNode;
+  badges?: React.ReactNode;
+  bar?: React.ReactNode;
+  note: string;
+  className?: string;
+}) {
+  return (
+    <a
+      href={href}
+      className={`group relative flex h-full flex-col rounded-none border p-4 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${className}`}
+      style={{ borderColor: `${tone}55`, backgroundColor: `${tone}0F` }}
+    >
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+        style={{ boxShadow: `inset 0 0 0 2px ${tone}` }}
+      />
+      <div className="relative flex items-center justify-between gap-2">
+        <span className="label-mono" style={{ color: tone }}>{label}</span>
+        <span
+          aria-hidden
+          className="label-mono shrink-0 text-[9px] opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+          style={{ color: tone }}
+        >
+          →
+        </span>
+      </div>
+      <div className="relative mt-2 flex flex-wrap items-center gap-1.5">
+        <span className="text-xl font-black leading-tight" style={{ color: tone }}>{value}</span>
+        {badges}
+      </div>
+      {bar ? <div className="relative mt-2">{bar}</div> : null}
+      <div className="relative mt-auto pt-2 text-[10px] font-bold leading-snug" style={{ color: tone }}>{note}</div>
+    </a>
+  );
+}
+
+// 分段区间谱条（学历 / 财富 / 事业 / 用神五行共用；h-1.5 + 8.5px 刻度行）
+function SegmentBar({ tone, segs, active }: { tone: string; segs: string[]; active: number[] }) {
+  const on = (i: number) => active.includes(i);
+  return (
+    <div>
+      <div className="flex gap-[2px]">
+        {segs.map((s, i) => (
+          <div key={s} className="h-1.5 flex-1" style={{ background: on(i) ? tone : 'rgba(120,132,145,.2)' }} />
+        ))}
+      </div>
+      <div className="mt-1 flex gap-[2px]">
+        {segs.map((s, i) => (
+          <div key={s} className="flex-1 text-center text-[8.5px] font-bold" style={{ color: on(i) ? tone : 'var(--muted-foreground)' }}>{s}</div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 // ============ 报告版块注册表（单一真源） ============
@@ -780,8 +846,8 @@ type ScoreBreakdownRow = {
   rawScore?: number;
 };
 
-/** 应用版本号（正式版 v1.0.0 起，与 package.json 同步维护） */
-const APP_VERSION = '2.16.3';
+/** 应用版本号（代号 + 版本号，与 package.json / CHANGELOG 同步维护） */
+const APP_VERSION = '天枢 1.1.0';
 
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
@@ -813,6 +879,8 @@ export default function BaZiAnalyzerPage() {
   const [expandedDY, setExpandedDY] = useState<number | null>(null);
   // 报告视图：conclusion = 结论视图（依据类块默认收起）；full = 全量视图（依据类块默认展开）
   const [reportView, setReportView] = useState<'conclusion' | 'full'>('conclusion');
+  // 分析线：null = 仅展示 01 排盘；选中后展开该线 02–06 完整报告
+  const [activeLine, setActiveLine] = useState<AnalysisLineKey | null>(null);
   // —— 回到顶部 ——
   const [showBackTop, setShowBackTop] = useState(false);
 
@@ -877,6 +945,7 @@ export default function BaZiAnalyzerPage() {
     setChart(result);
     // 根据命主出生日月日切换节气配色与诗句主题
     setSolarTermTheme(getSolarTermThemeByBirthDate(y, m, d));
+    setActiveLine(null);
     setAnalyzed(true);
     toast.success('排盘完成，正在生成分析报告...');
   };
@@ -962,6 +1031,7 @@ export default function BaZiAnalyzerPage() {
     };
     setChart(manualChart);
     setSolarTermTheme(getSolarTermThemeByBirthDate(by, 1, 1));
+    setActiveLine(null);
     setAnalyzed(true);
     toast.success('手动四柱排盘完成，正在生成分析报告...');
   };
@@ -969,6 +1039,7 @@ export default function BaZiAnalyzerPage() {
   const handleReset = () => {
     setAnalyzed(false);
     setChart(null);
+    setActiveLine(null);
     setSolarTermTheme(getDefaultSolarTermTheme());
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -982,49 +1053,29 @@ export default function BaZiAnalyzerPage() {
     setGender('male');
   };
 
-  const monthQi = useMemo<MonthQiResult | null>(() => {
-    if (!chart) return null;
-    return analyzeMonthQi(chart.monthBranchIndex);
-  }, [chart]);
-
-  const yongJi = useMemo<YongJiResult | null>(() => {
-    if (!chart || !monthQi) return null;
-    return analyzeYongJi(chart, monthQi);
-  }, [chart, monthQi]);
+  // 阴阳线上下文：原整套逻辑，始终构建，供 01 排盘与阴阳线报告使用
+  const analysis = useMemo(
+    () => (chart ? buildYinyangAnalysis(chart, currentYear) : null),
+    [chart, currentYear],
+  );
+  // 沛然堂线上下文：独立纳音体系，与阴阳线互不依赖
+  const peiranAnalysis = useMemo(
+    () => (chart ? buildPeiranAnalysis(chart, currentYear) : null),
+    [chart, currentYear],
+  );
+  const monthQi = analysis?.monthQi ?? null;
+  const yongJi = analysis?.yongJi ?? null;
+  const elementPower = analysis?.elementPower ?? null;
+  const pattern = analysis?.pattern ?? null;
+  const wealthNobility = analysis?.wealthNobility ?? null;
+  const mingPanScore = analysis?.mingPanScore ?? null;
+  const daYunAnalysis = analysis?.daYunAnalysis ?? null;
 
   // 老高判据复核（判词层）：柱意优先 / 十神克向 / 生气成气克门控
   const laoGaoRules = useMemo(() => {
     if (!chart || !yongJi) return null;
     return analyzeLaoGaoRules(chart, yongJi);
   }, [chart, yongJi]);
-
-  const elementPower = useMemo(() => {
-    if (!chart) return null;
-    return calculateElementPower(chart);
-  }, [chart]);
-
-  // 阴阳气 / 寒热气占比、六十甲子平铺：随「寒热气·阴阳气占比」与「特别提示」模块一并移除
-
-  const pattern = useMemo(() => {
-    if (!chart || !monthQi || !yongJi) return null;
-    return analyzeMingJuPattern(chart, monthQi, yongJi);
-  }, [chart, monthQi, yongJi]);
-
-  const wealthNobility = useMemo(() => {
-    if (!chart || !monthQi || !yongJi || !elementPower) return null;
-    return analyzeWealthNobility(chart, monthQi, yongJi, elementPower, pattern?.nianYueTaiJi ?? undefined);
-  }, [chart, monthQi, yongJi, elementPower, pattern]);
-
-  // 命盘综合评分（新机制：三维度平衡度+用神+忌神，作为大运流年联动基准）
-  const mingPanScore = useMemo(() => {
-    if (!chart || !yongJi) return null;
-    return scoreMingPan(chart, yongJi);
-  }, [chart, yongJi]);
-
-  const daYunAnalysis = useMemo(() => {
-    if (!chart || !yongJi || !monthQi || !elementPower) return null;
-    return analyzeDaYunLiuNian(chart, yongJi, elementPower, currentYear);
-  }, [chart, yongJi, monthQi, elementPower, currentYear]);
 
   // 第一次算出分析结果后，默认把「当前步大运」展开
   // 用 ref 标记"已初始化"：仅首次自动展开当前大运；之后展开/收缩完全交给用户（修复当前大运无法收缩的 bug）
@@ -1223,6 +1274,12 @@ export default function BaZiAnalyzerPage() {
   const analyzedBoolean = analyzed && chart && monthQi && yongJi && elementPower && pattern && wealthNobility && daYunAnalysis;
   // 全量视图：依据类折叠块默认展开（结论视图默认收起）
   const fullView = reportView === 'full';
+  // 未选线时目录只保留 01；选线后展开该线自己的 02–06
+  const visibleSections = activeLine === 'peiran'
+    ? PEIRAN_SECTIONS
+    : activeLine === 'yinyang'
+      ? REPORT_SECTIONS
+      : REPORT_SECTIONS.slice(0, 1);
 
   // 出生地时区板块 → 经度 → 真太阳时校正分钟
   const selectedRegion = BIRTH_REGION_CFG.regions.find((r) => r.key === birthRegion)
@@ -1250,6 +1307,8 @@ export default function BaZiAnalyzerPage() {
     if (mark === 'taboo') return <Badge className={base} style={{ background: '#FFFFFF', color: '#E31C29', border: '1.5px solid #E31C29', boxShadow: 'none' }}>忌</Badge>;
     return <Badge className={base} style={{ background: '#FFFFFF', color: '#64748B', border: '1.5px solid #94A3B8', boxShadow: 'none' }}>中</Badge>;
   };
+  // 沛然堂线为独立纳音体系：01 共用排盘不再显示阴阳线的用/忌角标，改示纳音
+  const showYongJiMarks = activeLine !== 'peiran';
   // 四柱徽章取值：优先月令逐字资料库（xi/ji 定论），dai 待定或缺字回退引擎用忌 marks
   const pillarStemMark = (c: string, fallback: 'useful' | 'taboo' | 'neutral'): PillarMark => {
     const z = zhuZiXiJi?.stems.find((r) => r.char === c)?.mark;
@@ -1384,7 +1443,7 @@ export default function BaZiAnalyzerPage() {
         <div className="mx-auto flex w-full max-w-[1440px] flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2 md:px-6">
           <span className="label-mono">沛然堂 · 八字系统</span>
           <span className="label-mono">
-            纯本地计算 · v{APP_VERSION}
+            纯本地计算 · {APP_VERSION}
           </span>
         </div>
       </div>
@@ -1428,7 +1487,7 @@ export default function BaZiAnalyzerPage() {
                 导航 / INDEX
               </div>
               <ul>
-                {REPORT_SECTIONS.map((item) => (
+                {visibleSections.map((item) => (
                   <li key={item.id} className="border-b border-border">
                     <a
                       href={`#section-${item.id}`}
@@ -1464,7 +1523,7 @@ export default function BaZiAnalyzerPage() {
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">版本</dt>
-                  <dd className="font-bold">v{APP_VERSION}</dd>
+                  <dd className="font-bold">{APP_VERSION}</dd>
                 </div>
               </dl>
             </div>
@@ -1965,7 +2024,9 @@ export default function BaZiAnalyzerPage() {
                   命局分析报告
                 </h2>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  基于沛然堂八字命理体系 · 完整结构化解读
+                  {activeLine
+                    ? `当前分析线 · ${activeLine === 'yinyang' ? '阴阳线（原体系）' : '沛然堂线（纳音体系）'}`
+                    : '已排盘 · 请选择阴阳线或沛然堂线展开 02–06 完整报告'}
                 </p>
                 <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-3">
                   <span className="num-tabular text-sm font-bold text-foreground" style={{ fontFamily: 'var(--font-mono)' }}>{chart.birthInfo.solarDate}</span>
@@ -2070,9 +2131,9 @@ export default function BaZiAnalyzerPage() {
                               ? 'neutral'
                               : pillarStemMark(pillar.stem, yongJi.stemMarks[`${['年', '月', '日', '时'][idx]}干`]);
                             const stemStyle: React.CSSProperties =
-                              !isRiZhu && stemMark === 'useful'
+                              showYongJiMarks && !isRiZhu && stemMark === 'useful'
                                 ? { background: 'rgba(46,118,84,0.07)', color: '#2E7654', border: '2px solid #2E7654', borderRadius: 0 }
-                                : !isRiZhu && stemMark === 'taboo'
+                                : showYongJiMarks && !isRiZhu && stemMark === 'taboo'
                                   ? { background: 'rgba(227,28,41,0.06)', color: '#E31C29', border: '2px solid #E31C29', borderRadius: 0 }
                                   : { background: 'white', color: 'var(--foreground)', border: '2px solid var(--border)', borderRadius: 0 };
                             return (
@@ -2096,9 +2157,9 @@ export default function BaZiAnalyzerPage() {
                                     >
                                       日主
                                     </span>
-                                  ) : (
+                                  ) : showYongJiMarks ? (
                                     renderMarkBadge(stemMark)
-                                  )}
+                                  ) : null}
                                 </div>
                               </>
                             );
@@ -2120,9 +2181,9 @@ export default function BaZiAnalyzerPage() {
                               yongJi.branchMarks[`${['年', '月', '日', '时'][idx]}支`],
                             );
                             const branchStyle: React.CSSProperties =
-                              branchMark === 'useful'
+                              showYongJiMarks && branchMark === 'useful'
                                 ? { background: '#2E7654', color: '#FFFFFF', border: '2px solid #2E7654', borderRadius: 0 }
-                                : branchMark === 'taboo'
+                                : showYongJiMarks && branchMark === 'taboo'
                                   ? { background: '#E31C29', color: '#FFFFFF', border: '2px solid #E31C29', borderRadius: 0 }
                                   : { background: 'white', color: 'var(--foreground)', border: '2px solid var(--border)', borderRadius: 0 };
                             return (
@@ -2134,7 +2195,7 @@ export default function BaZiAnalyzerPage() {
                                   {pillar.branch}
                                 </div>
                                 <div className="absolute -right-1.5 -top-1.5">
-                                  {renderMarkBadge(branchMark)}
+                                  {showYongJiMarks ? renderMarkBadge(branchMark) : null}
                                 </div>
                               </>
                             );
@@ -2149,8 +2210,8 @@ export default function BaZiAnalyzerPage() {
                             {pillar.hiddenStems.map((s, i) => {
                               // 与天干/地支同源：逐字定论（xi/ji）优先，待定/缺字回退引擎干支级 marks（待定按中性，与打分一致）
                               const hsMark: PillarMark = pillarStemMark(s, yongJi?.allStemMarks?.[s] ?? 'neutral');
-                              const isUseful = hsMark === 'useful';
-                              const isTaboo = hsMark === 'taboo';
+                              const isUseful = showYongJiMarks && hsMark === 'useful';
+                              const isTaboo = showYongJiMarks && hsMark === 'taboo';
                               const zzNote = zhuZiXiJi?.stems.find((r) => r.char === s)?.note ?? '';
                               const tagText = isUseful ? '喜用（吉）' : isTaboo ? '忌神（凶）' : '中性';
                               return (
@@ -2188,12 +2249,135 @@ export default function BaZiAnalyzerPage() {
                             })}
                           </div>
                         </div>
+                        {activeLine === 'peiran' && peiranAnalysis && (
+                          <div className="mt-2.5 w-full border-t border-border pt-2 text-center">
+                            <div className="label-mono text-[8.5px] text-muted-foreground">纳音 NAYIN</div>
+                            <div
+                              className="mt-0.5 text-[12px] font-black"
+                              style={{ color: ELEMENT_COLORS[peiranAnalysis.pillars[idx].entry.element] }}
+                            >
+                              {peiranAnalysis.pillars[idx].entry.name}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
                   </SplitBody>
                 </CardContent>
               </Card>
+
+
+              {/* ===== 分析线选择：01 排盘后，02–06 默认隐藏，选中线后才展开 ===== */}
+              {analysis && peiranAnalysis && (
+                <div className="border-2 border-foreground bg-card">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4 md:px-8">
+                    <div>
+                      <div className="label-mono text-primary">LINE / 分析线</div>
+                      <h3 className="mt-1 text-xl font-black tracking-tight text-foreground md:text-2xl">
+                        同盘两读 · 选择一条线展开 02–06
+                      </h3>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="label-mono text-muted-foreground">
+                        {activeLine
+                          ? `当前 · ${activeLine === 'yinyang' ? '阴阳线' : '沛然堂线'}`
+                          : '未选线 · 仅显示 01'}
+                      </span>
+                      {activeLine && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveLine(null)}
+                          className="border border-border px-3 py-1.5 text-[11px] font-bold text-foreground/75 transition-colors hover:border-foreground hover:bg-foreground hover:text-background focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                        >
+                          收起报告 ↑
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="grid gap-3 p-4 md:grid-cols-2 md:p-6">
+                    {([
+                      {
+                        key: 'yinyang' as const,
+                        name: '阴阳线',
+                        en: 'YIN-YANG LINE',
+                        tone: '#E31C29',
+                        badge: '原体系',
+                        desc: '月气为权 · 用神忌神 · 原整套逻辑，一字不改',
+                        leftLabel: '用神 / FAVORABLE',
+                        leftValue: analysis.yongJi.usefulElements.map((el) => ELEMENT_NAMES[el]).join(' · ') || '—',
+                        rightLabel: '忌神 / TABOO',
+                        rightValue: analysis.yongJi.tabooElements.map((el) => ELEMENT_NAMES[el]).join(' · ') || '—',
+                      },
+                      {
+                        key: 'peiran' as const,
+                        name: '沛然堂线',
+                        en: 'PEIRAN LINE · NAYIN',
+                        tone: ELEMENT_COLORS[peiranAnalysis.yearNayin.element] ?? '#B98C31',
+                        badge: '纳音体系',
+                        desc: '年命纳音为身 · 四柱纳音生克 · 大运流年纳音',
+                        leftLabel: '年命纳音 / BODY',
+                        leftValue: peiranAnalysis.yearNayin.name,
+                        rightLabel: '日柱纳音 / SELF',
+                        rightValue: peiranAnalysis.dayNayin.name,
+                      },
+                    ]).map((line) => {
+                      const on = activeLine === line.key;
+                      return (
+                        <button
+                          key={line.key}
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() => setActiveLine(on ? null : line.key)}
+                          className={`group flex flex-col items-start border-2 p-5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                            on
+                              ? 'border-foreground bg-foreground text-background'
+                              : 'border-border bg-card text-foreground hover:border-foreground'
+                          }`}
+                        >
+                          <div className="flex w-full items-start justify-between gap-3">
+                            <div>
+                              <div className={`label-mono ${on ? 'text-background/60' : 'text-muted-foreground'}`}>{line.en}</div>
+                              <div className="mt-1 text-2xl font-black tracking-tight md:text-3xl">{line.name}</div>
+                            </div>
+                            <span
+                              className="shrink-0 px-2 py-1 text-[11px] font-black text-white"
+                              style={{ background: line.tone, borderRadius: 0 }}
+                            >
+                              {line.badge}
+                            </span>
+                          </div>
+                          <p className={`mt-3 text-[12px] font-bold leading-relaxed ${on ? 'text-background/75' : 'text-muted-foreground'}`}>
+                            {line.desc}
+                          </p>
+                          <div className={`mt-4 grid w-full grid-cols-2 gap-3 border-t pt-3 ${on ? 'border-background/25' : 'border-border'}`}>
+                            <div>
+                              <div className={`label-mono ${on ? 'text-background/60' : 'text-muted-foreground'}`}>{line.leftLabel}</div>
+                              <div className="mt-0.5 text-sm font-black" style={{ color: '#2E7654' }}>
+                                {line.leftValue}
+                              </div>
+                            </div>
+                            <div>
+                              <div className={`label-mono ${on ? 'text-background/60' : 'text-muted-foreground'}`}>{line.rightLabel}</div>
+                              <div className="mt-0.5 text-sm font-black" style={{ color: '#E31C29' }}>
+                                {line.rightValue}
+                              </div>
+                            </div>
+                          </div>
+                          <span className={`mt-3 label-mono text-[10px] font-black ${on ? 'text-background/70' : 'text-primary'}`}>
+                            {on ? '当前展开 · 点击收起' : '点击展开完整报告 →'}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+
+              {/* 阴阳线 02–06：仅选中阴阳线时显示 */}
+              {activeLine === 'yinyang' && (
+              <div className="space-y-5">
 
 
               {/* 四、命主速览 */}
@@ -2211,24 +2395,25 @@ export default function BaZiAnalyzerPage() {
                 </div>
                 <CardContent className="p-4 md:p-8">
                   <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-                    {/* 1. 用神 */}
-                    <div
-                      className="rounded-none p-4"
-                      style={{
-                        backgroundColor: 'rgba(46,118,84,0.07)',
-                        border: '2px solid #2E7654',
-                      }}
-                    >
-                      <div className="label-mono" style={{ color: '#2E7654' }}>用神 FAVORABLE</div>
-                      <div className="mt-2 text-2xl font-black" style={{ fontFamily: 'var(--font-sans)', color: '#1E5239' }}>
-                        {yongJi.usefulElements.length > 0
-                          ? yongJi.usefulElements.map((el) => ELEMENT_NAMES[el]).join(' · ')
-                          : '—'}
-                      </div>
-                      <div className="mt-1 text-[10px] font-bold" style={{ color: '#2E7654' }}>
-                        {yongJi.usefulElements.length > 0 ? '月气大方向 · 助平衡为吉' : '待细查'}
-                      </div>
-                    </div>
+                    {/* 1. 用神（五行谱条：高亮取用五行，点击跳 04 用神忌神） */}
+                    <MetricCard
+                      tone="#2E7654"
+                      href="#section-yongji"
+                      label="用神 FAVORABLE"
+                      value={yongJi.usefulElements.length > 0
+                        ? yongJi.usefulElements.map((el) => ELEMENT_NAMES[el]).join(' · ')
+                        : '—'}
+                      bar={
+                        <SegmentBar
+                          tone="#2E7654"
+                          segs={['木', '火', '土', '金', '水']}
+                          active={yongJi.usefulElements
+                            .map((el) => ['wood', 'fire', 'earth', 'metal', 'water'].indexOf(el))
+                            .filter((i) => i >= 0)}
+                        />
+                      }
+                      note={yongJi.usefulElements.length > 0 ? '月气大方向 · 助平衡为吉' : '待细查'}
+                    />
 
                     {/* 4. 格局综合分（0-100）：原局先天 + 一生大运均分梯度 加权合成 */}
                     {(() => {
@@ -2255,12 +2440,6 @@ export default function BaZiAnalyzerPage() {
                         letterLv === 'B+' ? '平顺' :
                         letterLv === 'B-' ? '欠佳' :
                         letterLv === 'C' || letterLv === 'C-' ? '偏差' : '极差';
-                      const tagColor =
-                        letterLv === 'S+' || letterLv === 'S' ? '#B0141F' :
-                        letterLv === 'A+' || letterLv === 'A' ? '#1E5239' :
-                        letterLv === 'B+' ? '#234C75' :
-                        letterLv === 'B-' ? '#4A5461' :
-                        letterLv === 'C' || letterLv === 'C-' ? '#C2410C' : '#9A3412';
                       const letterColorMap: Record<string, string> = {
                         'S+': '#E31C29','S':'#B98C31','A+':'#2E7654','A':'#4A834E',
                         'B+':'#31669B','B-':'#788491','C':'#C2410C','C-':'#9A3412','D':'#9CA3AF',
@@ -2268,65 +2447,44 @@ export default function BaZiAnalyzerPage() {
                       const letterCol = letterColorMap[letterLv] ?? '#2E7654';
                       const fmt = (n: number) => (n >= 0 ? '+' : '') + Math.round(n * 10) / 10;
                       return (
-                        <div
-                          className="col-span-2 p-4 md:col-span-1"
-                          style={{
-                            background: 'white',
-                            border: `2px solid ${letterCol}`,
-                            borderRadius: 0,
-                          }}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="label-mono" style={{ color: letterCol }}>
-                              格局综合分 SCORE
-                            </div>
-                            <div className="flex items-center gap-1.5">
+                        <MetricCard
+                          tone={letterCol}
+                          href="#section-dayun"
+                          label="格局综合分 SCORE"
+                          value={(
+                            <>
+                              <span className="num-tabular">{overall}</span>
+                              <span className="ml-1 text-[10px] font-bold text-muted-foreground">/ 100</span>
+                            </>
+                          )}
+                          badges={(
+                            <>
                               <span
-                                className="px-2.5 py-0.5 text-[11px] font-black text-white"
-                                style={{
-                                  background: letterCol,
-                                  borderRadius: 0,
-                                  letterSpacing: '0.06em',
-                                  fontFamily: 'var(--font-mono)',
-                                }}
+                                className="px-2 py-0.5 text-[11px] font-black text-white"
+                                style={{ background: letterCol, letterSpacing: '0.06em', fontFamily: 'var(--font-mono)' }}
                               >
                                 {letterLv}
                               </span>
-                              <span
-                                className="px-2 py-0.5 text-[10px] font-black"
-                                style={{
-                                  color: letterCol,
-                                  border: `1px solid ${letterCol}`,
-                                  borderRadius: 0,
-                                }}
-                              >
+                              <span className="px-1.5 py-0.5 text-[10px] font-black" style={{ color: letterCol, border: `1px solid ${letterCol}` }}>
                                 {lvTag}
                               </span>
+                            </>
+                          )}
+                          bar={(
+                            <div>
+                              <div className="h-1.5 w-full overflow-hidden" style={{ backgroundColor: 'rgba(120,132,145,.2)' }}>
+                                <div
+                                  className="h-full transition-all"
+                                  style={{ width: `${Math.max(0, Math.min(100, overall))}%`, background: letterCol }}
+                                />
+                              </div>
+                              <div className="mt-1 flex justify-between text-[8.5px] font-bold text-muted-foreground">
+                                {['0', '25', '50', '75', '100'].map((s) => <span key={s}>{s}</span>)}
+                              </div>
                             </div>
-                          </div>
-                          <div className="mt-1 flex items-baseline gap-1">
-                            <span className="num-tabular text-[34px] font-black leading-none" style={{ color: letterCol, fontFamily: 'var(--font-mono)' }}>
-                              {overall}
-                            </span>
-                            <span className="text-[10px] font-bold text-muted-foreground">/ 100</span>
-                          </div>
-                          <div className="mt-2 h-2 w-full overflow-hidden" style={{ backgroundColor: '#F1F5F9', borderRadius: 0 }}>
-                            <div className="h-full transition-all"
-                              style={{ width: `${Math.max(0, Math.min(100, overall))}%`, background: letterCol }}
-                            />
-                          </div>
-                          <div className="mt-2 space-y-0.5">
-                            <div className="label-mono text-[9.5px] leading-snug text-muted-foreground">
-                              · 原局先天 {fmt(mingRaw)}（{mingPanScore?.letterLevel ?? '—'}）
-                            </div>
-                            <div className="label-mono text-[9.5px] leading-snug text-muted-foreground">
-                              · 一生大运均分 {fmt(dyAvg)}（{daysArr.length} 步）
-                            </div>
-                            <div className="label-mono text-[9.5px] leading-snug" style={{ color: letterCol }}>
-                              · 综合 = 原局60% + 大运40%
-                            </div>
-                          </div>
-                        </div>
+                          )}
+                          note={`原局 ${fmt(mingRaw)} · 大运均分 ${fmt(dyAvg)}（${daysArr.length} 步）· 60/40 加权`}
+                        />
                       );
                     })()}
 
@@ -2334,88 +2492,60 @@ export default function BaZiAnalyzerPage() {
                     {educationVerdict && (() => {
                       const t = educationVerdict.tendency;
                       const col = t === 'elite' ? '#2E7654' : t === 'weak' ? '#E31C29' : '#788491';
-                      const bg = t === 'elite' ? 'rgba(46,118,84,.07)' : t === 'weak' ? 'rgba(227,28,41,.06)' : 'rgba(120,132,145,.08)';
                       // 大概率区间（0=初中及以下 … 5=博士）：精英→本科~博士，中平→高中~本科，偏弱→初中~大专
+                      const segs = ['初中', '高中', '大专', '本科', '硕士', '博士'];
                       const band: [number, number] = t === 'elite' ? [3, 5] : t === 'weak' ? [0, 2] : [1, 3];
-                      const SEGS = ['初中', '高中', '大专', '本科', '硕士', '博士'];
+                      const active = segs.map((_, i) => i).filter((i) => i >= band[0] && i <= band[1]);
                       return (
-                        <div className="col-span-2 p-4 md:col-span-1" style={{ background: bg, border: `1px solid ${col}55`, borderRadius: 0 }}>
-                          <div className="label-mono" style={{ color: col }}>学历倾向 EDUCATION</div>
-                          <div className="mt-2 text-xl font-black" style={{ color: col }}>{educationVerdict.tendencyLabel}</div>
-                          <div className="mt-2">
-                            <div className="flex gap-[2px]">
-                              {SEGS.map((s, i) => (
-                                <div
-                                  key={s}
-                                  className="h-1.5 flex-1"
-                                  style={{ background: i >= band[0] && i <= band[1] ? col : 'rgba(120,132,145,.2)' }}
-                                />
-                              ))}
-                            </div>
-                            <div className="mt-0.5 flex gap-[2px]">
-                              {SEGS.map((s, i) => (
-                                <div key={s} className="flex-1 text-center text-[8.5px] font-bold" style={{ color: i >= band[0] && i <= band[1] ? col : 'var(--muted-foreground)' }}>{s}</div>
-                              ))}
-                            </div>
-                          </div>
-                          <div className="mt-1 text-[10px] font-bold" style={{ color: col }}>大概率落在 {SEGS[band[0]]} ~ {SEGS[band[1]]} 区间</div>
-                        </div>
+                        <MetricCard
+                          tone={col}
+                          href="#section-xiangfa"
+                          label="学历倾向 EDUCATION"
+                          value={educationVerdict.tendencyLabel}
+                          bar={<SegmentBar tone={col} segs={segs} active={active} />}
+                          note={`大概率落在 ${segs[band[0]]} ~ ${segs[band[1]]} 区间`}
+                        />
                       );
                     })()}
 
                     {/* 4. 财富区间（区间谱条，不打分） */}
                     {wealthNobility && (() => {
                       const col = '#B98C31';
-                      const SEGS = ['贫', '温饱', '小康', '小富', '大富'];
+                      const segs = ['贫', '温饱', '小康', '小富', '大富'];
                       const wl = wealthNobility.wealthLevel;
                       const band: [number, number] = wl === '富' ? [3, 4] : wl === '小康' ? [2, 2] : wl === '小康偏下' ? [1, 2] : wl === '偏贫' ? [0, 1] : [0, 0];
                       const label = wl === '富' ? '富裕倾向' : wl === '小康' ? '小康倾向' : wl === '小康偏下' ? '温饱至小康' : '温饱偏紧';
+                      const active = segs.map((_, i) => i).filter((i) => i >= band[0] && i <= band[1]);
                       return (
-                        <div className="p-4" style={{ background: 'rgba(185,140,49,.06)', border: '1px solid rgba(185,140,49,.4)', borderRadius: 0 }}>
-                          <div className="label-mono" style={{ color: col }}>财富 WEALTH</div>
-                          <div className="mt-2 text-xl font-black" style={{ color: col }}>{label}</div>
-                          <div className="mt-2">
-                            <div className="flex gap-[2px]">
-                              {SEGS.map((s, i) => (
-                                <div key={s} className="h-1.5 flex-1" style={{ background: i >= band[0] && i <= band[1] ? col : 'rgba(120,132,145,.2)' }} />
-                              ))}
-                            </div>
-                            <div className="mt-0.5 flex gap-[2px]">
-                              {SEGS.map((s, i) => (
-                                <div key={s} className="flex-1 text-center text-[8.5px] font-bold" style={{ color: i >= band[0] && i <= band[1] ? col : 'var(--muted-foreground)' }}>{s}</div>
-                              ))}
-                            </div>
-                          </div>
-                          <div className="mt-1 text-[10px] font-bold" style={{ color: col }}>大概率落在 {SEGS[band[0]]}{band[0] !== band[1] ? ` ~ ${SEGS[band[1]]}` : ''} 区间</div>
-                        </div>
+                        <MetricCard
+                          tone={col}
+                          href="#section-xiangfa"
+                          label="财富 WEALTH"
+                          value={label}
+                          bar={<SegmentBar tone={col} segs={segs} active={active} />}
+                          note={`大概率落在 ${segs[band[0]]}${band[0] !== band[1] ? ` ~ ${segs[band[1]]}` : ''} 区间`}
+                        />
                       );
                     })()}
 
                     {/* 5. 事业地位区间（区间谱条，不打分；不判寿夭） */}
                     {wealthNobility && (() => {
                       const col = '#31669B';
-                      const SEGS = ['偏弱', '平常', '显贵'];
+                      const segs = ['偏弱', '平常', '显贵'];
                       const nl = wealthNobility.nobilityLevel;
                       const band: [number, number] = nl === '贵' ? [2, 2] : nl === '平常' ? [1, 1] : [0, 0];
                       const label = nl === '贵' ? '贵气倾向' : nl === '平常' ? '平常' : '偏弱';
+                      const active = segs.map((_, i) => i).filter((i) => i >= band[0] && i <= band[1]);
                       return (
-                        <div className="p-4" style={{ background: 'rgba(49,102,155,.06)', border: '1px solid rgba(49,102,155,.4)', borderRadius: 0 }}>
-                          <div className="label-mono" style={{ color: col }}>事业 CAREER</div>
-                          <div className="mt-2 text-xl font-black" style={{ color: col }}>{label}</div>
-                          <div className="mt-2">
-                            <div className="flex gap-[2px]">
-                              {SEGS.map((s, i) => (
-                                <div key={s} className="h-1.5 flex-1" style={{ background: i >= band[0] && i <= band[1] ? col : 'rgba(120,132,145,.2)' }} />
-                              ))}
-                            </div>
-                            <div className="mt-0.5 flex gap-[2px]">
-                              {SEGS.map((s, i) => (
-                                <div key={s} className="flex-1 text-center text-[8.5px] font-bold" style={{ color: i >= band[0] && i <= band[1] ? col : 'var(--muted-foreground)' }}>{s}</div>
-                              ))}
-                            </div>
-                          </div>
-                          <div className="mt-1 text-[10px] font-bold" style={{ color: col }}>大概率落在 {SEGS[band[0]]}{band[0] !== band[1] ? ` ~ ${SEGS[band[1]]}` : ''} 区间</div>
-                        </div>
+                        <MetricCard
+                          tone={col}
+                          href="#section-xiangfa"
+                          label="事业 CAREER"
+                          value={label}
+                          bar={<SegmentBar tone={col} segs={segs} active={active} />}
+                          note={`大概率落在 ${segs[band[0]]}${band[0] !== band[1] ? ` ~ ${segs[band[1]]}` : ''} 区间`}
+                          className="col-span-2 md:col-span-1"
+                        />
                       );
                     })()}
                   </div>
@@ -3645,6 +3775,16 @@ export default function BaZiAnalyzerPage() {
               </Card>
 
 
+              </div>
+              )}
+
+
+              {/* 沛然堂线 02–06：独立纳音体系 */}
+              {activeLine === 'peiran' && peiranAnalysis && (
+                <PeiranReport analysis={peiranAnalysis} fullView={fullView} />
+              )}
+
+
             {/* 底部操作区 */}
             <div className="flex flex-wrap justify-center gap-3 py-4">
               <Button variant="outline" size="lg" onClick={handleReset} className="font-bold">
@@ -3668,7 +3808,7 @@ export default function BaZiAnalyzerPage() {
           <div className="label-mono mb-3 text-primary">PEIRAN TANG / 沛然堂</div>
           <p className="mt-2 text-xs">本工具仅供命理研究与学习参考，不构成任何人生决策建议</p>
           <div className="mt-4 flex items-center justify-center gap-3">
-            <span className="num-tabular px-2 py-0.5 text-xs font-bold" style={{ border: '1px solid var(--border)', fontFamily: 'var(--font-mono)', color: 'var(--foreground)' }}>v{APP_VERSION}</span>
+            <span className="num-tabular px-2 py-0.5 text-xs font-bold" style={{ border: '1px solid var(--border)', fontFamily: 'var(--font-mono)', color: 'var(--foreground)' }}>{APP_VERSION}</span>
             <span className="h-3 w-px bg-border" />
             <span className="label-mono">正式版</span>
           </div>

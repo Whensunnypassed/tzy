@@ -17,8 +17,8 @@
  * 瑞士风约束：全直角、无阴影、无渐变、无 emoji，色彩仅承载语义（阳橙 / 阴靛蓝 / 五行平涂色）。
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { BaZiChart } from '@/utils/baziCalculator';
-import type { XiJiMark, YongJiResult } from '@/utils/baziAnalyzer';
+import type { BaZiChart } from '@/analysis/common/baziCalculator';
+import type { XiJiMark, YongJiResult } from '@/analysis/yinyang/engine';
 import {
   buildMingJuField,
   MINGJU_FIELD_CFG,
