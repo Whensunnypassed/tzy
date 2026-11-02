@@ -91,8 +91,27 @@ function ageOf(a: PeiranAnalysis, currentYear: number): number | null {
   return m ? currentYear - +m[1] : null;
 }
 
+/** 社区软规则权重。默认值为回测网格校准结果，可用 analyzeFiveDimensions 第三参覆盖。 */
+export interface FiveDimWeights {
+  rootPenalty: number;
+  rankWealth: number;
+  rankLevel: number;
+}
+
+export const FIVE_DIM_WEIGHTS: FiveDimWeights = {
+  // 网格校准结果：59 例视频 + 1180 例命海，无根与位次加权均未带来正贡献；
+  // 计分权归零，规则语义保留在 genRoot / rank 的展示层。
+  rootPenalty: 0,
+  rankWealth: 0,
+  rankLevel: 0,
+};
+
 /** 五维总评：只消费纳音身命法结果。 */
-export function analyzeFiveDimensions(a: PeiranAnalysis, currentYear = new Date().getFullYear()): FiveDimensions {
+export function analyzeFiveDimensions(
+  a: PeiranAnalysis,
+  currentYear = new Date().getFullYear(),
+  weights: FiveDimWeights = FIVE_DIM_WEIGHTS,
+): FiveDimensions {
   const yearEl = a.yearNayin.element;
   const dayEl = a.dayNayin.element;
   const chainScore = CHAIN_SCORE[a.chain.kind];
@@ -103,9 +122,9 @@ export function analyzeFiveDimensions(a: PeiranAnalysis, currentYear = new Date(
   const pureAdj = a.pure.isPure ? (a.pure.label === '一行独盛' ? -4 : 2) : 0;
 
   // 社区规则：见根才兑现（无根降权）；同五行位次只作平台/量级弱信号。
-  const rootAdj = a.genRoot.rooted ? 0 : -8;
-  const wealthRankAdj = a.rank.year.tier === 'high' ? 3 : a.rank.year.tier === 'low' ? -3 : 0;
-  const levelRankAdj = a.rank.year.tier === 'high' ? 2 : a.rank.year.tier === 'low' ? -2 : 0;
+  const rootAdj = a.genRoot.rooted ? 0 : weights.rootPenalty;
+  const wealthRankAdj = a.rank.year.tier === 'high' ? weights.rankWealth : a.rank.year.tier === 'low' ? -weights.rankWealth : 0;
+  const levelRankAdj = a.rank.year.tier === 'high' ? weights.rankLevel : a.rank.year.tier === 'low' ? -weights.rankLevel : 0;
 
   // ---------- 学历 ----------
   const eduEvidence: string[] = [];
@@ -140,11 +159,13 @@ export function analyzeFiveDimensions(a: PeiranAnalysis, currentYear = new Date(
     eduScore += 4;
     eduEvidence.push(`日柱纳音${dayEl === 'wood' ? '木' : '水'} · 文秀之气 +4`);
   }
-  if (rootAdj) {
+  if (a.genRoot.rooted) {
+    eduEvidence.push(`纳音见根（${a.genRoot.branches.join('、')}）`);
+  } else if (rootAdj) {
     eduScore += rootAdj;
     eduEvidence.push(`纳音无根 ${rootAdj}`);
   } else {
-    eduEvidence.push(`纳音见根（${a.genRoot.branches.join('、')}）`);
+    eduEvidence.push('纳音无根（仅提示，不计分）');
   }
   if (xingPenalty) {
     eduScore -= Math.min(8, xingPenalty);

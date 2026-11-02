@@ -15,7 +15,7 @@ import esbuild from 'esbuild';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(ROOT, 'dist');
 const MD = path.join(ROOT, 'docs', '视频案例库.md');
-const OUT = path.join(DIST, 'peiran-validation.json');
+const OUT = process.env.PEIRAN_OUT ? path.resolve(process.env.PEIRAN_OUT) : path.join(DIST, 'peiran-validation.json');
 
 function loadCore() {
   if (!fs.existsSync(DIST)) fs.mkdirSync(DIST, { recursive: true });
@@ -189,9 +189,11 @@ const cases = blocks.map((block) => {
   return { ...rec, wealth, education, work, emotion, level, chart: makeChart(rec) };
 }).filter((c) => c.chart);
 
+const WEIGHTS = process.env.PEIRAN_WEIGHTS ? JSON.parse(process.env.PEIRAN_WEIGHTS) : undefined;
+
 const results = cases.map((c) => {
   const a = core.buildPeiranAnalysis(c.chart, 2026);
-  const five = core.analyzeFiveDimensions(a, 2026);
+  const five = core.analyzeFiveDimensions(a, 2026, WEIGHTS);
   return { id: c.id, expected: { wealth: c.wealth, education: c.education, work: c.work, emotion: c.emotion, level: c.level }, actual: { wealth: five.wealth.grade, education: five.education.grade, work: five.work.type, emotion: five.emotion.state, level: five.level.grade }, detail: five, nayin: { year: a.yearNayin.name, day: a.dayNayin.name, chain: a.chain.kind, body: a.body.score } };
 });
 
@@ -254,10 +256,11 @@ fs.mkdirSync(path.dirname(OUT), { recursive: true });
 fs.writeFileSync(OUT, JSON.stringify(summary, null, 2));
 
 console.log(`cases: ${cases.length}/${blocks.length}`);
+console.log('weights:', WEIGHTS ?? 'default');
 console.log('label coverage:', summary.labelCoverage);
 for (const k of ['level', 'education', 'wealth', 'work', 'emotion']) {
   const m = summary.metrics[k];
   console.log(`${k}: n=${m.n} acc=${m.acc}% (${m.ok}/${m.n})`);
-  if (m.errors.length) console.log(`  errors:`, m.errors.slice(0, 8));
+  if (m.errors.length && !process.env.PEIRAN_QUIET) console.log(`  errors:`, m.errors.slice(0, 8));
 }
 console.log('written', OUT);

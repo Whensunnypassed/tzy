@@ -15,7 +15,7 @@ import esbuild from 'esbuild';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(ROOT, 'dist');
 const SRC = path.join(process.env.TEMP || '/tmp', 'tzy-minghai-cases.jsonl');
-const OUT = path.join(DIST, 'peiran-minghai-validation.json');
+const OUT = process.env.PEIRAN_OUT ? path.resolve(process.env.PEIRAN_OUT) : path.join(DIST, 'peiran-minghai-validation.json');
 
 function loadCore() {
   if (!fs.existsSync(DIST)) fs.mkdirSync(DIST, { recursive: true });
@@ -197,9 +197,11 @@ const FEATURE_NAMES = [
   'daYunAvg', 'currentDaYun',
 ];
 
+const WEIGHTS = process.env.PEIRAN_WEIGHTS ? JSON.parse(process.env.PEIRAN_WEIGHTS) : undefined;
+
 const results = cases.map((c) => {
   const a = core.buildPeiranAnalysis(c.chart, 2026);
-  const five = core.analyzeFiveDimensions(a, 2026);
+  const five = core.analyzeFiveDimensions(a, 2026, WEIGHTS);
   return {
     id: c.id,
     expected: c.expected,
@@ -295,17 +297,19 @@ function hashId(id) {
   return h;
 }
 
-for (const dim of ['level', 'education', 'wealth', 'work', 'emotion']) {
-  const usable = results.filter((r) => r.expected[dim] != null);
-  const train = usable.filter((r) => hashId(r.id) < 700);
-  const test = usable.filter((r) => hashId(r.id) >= 700);
-  const trainLabels = train.map((r) => r.expected[dim]);
-  const tree = buildTree(train.map((r) => r.features), trainLabels, train.map((_, i) => i));
-  const trainAcc = train.length ? train.filter((r) => predictTree(tree, r.features) === r.expected[dim]).length / train.length : 0;
-  const testAcc = test.length ? test.filter((r) => predictTree(tree, r.features) === r.expected[dim]).length / test.length : 0;
-  const baseline = test.length ? test.filter((r) => r.expected[dim] === majority(trainLabels)).length / test.length : 0;
-  console.log(`\n=== tree ${dim} train=${train.length} test=${test.length} trainAcc=${(trainAcc * 100).toFixed(1)}% testAcc=${(testAcc * 100).toFixed(1)}% baseline=${(baseline * 100).toFixed(1)}%`);
-  console.log(printTree(tree).split('\n').slice(0, 18).join('\n'));
+if (!process.env.PEIRAN_SKIP_TREE) {
+  for (const dim of ['level', 'education', 'wealth', 'work', 'emotion']) {
+    const usable = results.filter((r) => r.expected[dim] != null);
+    const train = usable.filter((r) => hashId(r.id) < 700);
+    const test = usable.filter((r) => hashId(r.id) >= 700);
+    const trainLabels = train.map((r) => r.expected[dim]);
+    const tree = buildTree(train.map((r) => r.features), trainLabels, train.map((_, i) => i));
+    const trainAcc = train.length ? train.filter((r) => predictTree(tree, r.features) === r.expected[dim]).length / train.length : 0;
+    const testAcc = test.length ? test.filter((r) => predictTree(tree, r.features) === r.expected[dim]).length / test.length : 0;
+    const baseline = test.length ? test.filter((r) => r.expected[dim] === majority(trainLabels)).length / test.length : 0;
+    console.log(`\n=== tree ${dim} train=${train.length} test=${test.length} trainAcc=${(trainAcc * 100).toFixed(1)}% testAcc=${(testAcc * 100).toFixed(1)}% baseline=${(baseline * 100).toFixed(1)}%`);
+    console.log(printTree(tree).split('\n').slice(0, 18).join('\n'));
+  }
 }
 
 
@@ -339,6 +343,7 @@ const summary = {
 
 fs.writeFileSync(OUT, JSON.stringify(summary, null, 2));
 console.log(`cases: ${cases.length}/${lines.length}`);
+console.log('weights:', WEIGHTS ?? 'default');
 console.log('coverage', summary.labelCoverage);
 for (const k of ['level', 'education', 'wealth', 'work', 'emotion']) {
   const m = summary.metrics[k];
