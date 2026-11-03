@@ -272,6 +272,31 @@ export const DECANS: readonly (readonly [Planet, Planet, Planet])[] = [
 ] as const;
 
 // ------------------------------------------------------------
+// 宫位吉凶分档（传统「吉宫 / 坏宫」）
+// 吉：第 1 / 2 / 5 / 10 / 11 宫；凶：第 6 / 8 / 12 宫；其余为平宫
+// ------------------------------------------------------------
+export type HouseTone = 'auspicious' | 'neutral' | 'adverse';
+
+const HOUSE_TONE_BY_NUMBER: Record<number, HouseTone> = {
+  1: 'auspicious',
+  2: 'auspicious',
+  3: 'neutral',
+  4: 'neutral',
+  5: 'auspicious',
+  6: 'adverse',
+  7: 'neutral',
+  8: 'adverse',
+  9: 'neutral',
+  10: 'auspicious',
+  11: 'auspicious',
+  12: 'adverse',
+};
+
+export function houseTone(house: number): HouseTone {
+  return HOUSE_TONE_BY_NUMBER[house] ?? 'neutral';
+}
+
+// ------------------------------------------------------------
 // 喜乐宫（planetary joys）：行星在哪个整宫宫位最自在
 // ------------------------------------------------------------
 export const JOYS: Record<Planet, number> = {

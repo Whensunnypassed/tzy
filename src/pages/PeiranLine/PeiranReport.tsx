@@ -26,6 +26,7 @@ import {
   SOLAR_STATE_LABELS,
   SPEED_LABELS,
   PLANET_NAMES_ZH,
+  houseTone,
   type PeiranModel,
   type Planet,
 } from '@/analysis/peiran';
@@ -411,6 +412,20 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
 
       {/* 02 十二宫位 */}
       <Section no="02" title="十二宫位" en="THE TWELVE HOUSES" meta="WHOLE SIGN">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-border px-4 py-2 label-mono text-[9px] text-muted-foreground md:px-6">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="inline-block h-1.5 w-1.5" style={{ background: '#D9B36A' }} />
+            吉宫 · 恒明
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="inline-block h-1.5 w-1.5" style={{ background: 'var(--muted-foreground)' }} />
+            平宫 · 常亮
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="inline-block h-1.5 w-1.5" style={{ background: '#E31C29' }} />
+            凶宫 · 闪烁
+          </span>
+        </div>
         <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 md:p-6 lg:grid-cols-4">
           {chart.houseSigns.map((signIdx, i) => {
             const house = i + 1;
@@ -418,6 +433,7 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
               <ZodiacTile
                 key={house}
                 house={house}
+                tone={houseTone(house)}
                 signIndex={signIdx}
                 signName={ZODIAC_SIGNS[signIdx]}
                 signEn={ZODIAC_SIGNS_EN[signIdx]}

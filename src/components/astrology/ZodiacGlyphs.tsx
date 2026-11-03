@@ -176,12 +176,32 @@ export interface ZodiacTileProps {
   signEn: string;
   bodies?: string[];
   size?: number;
+  /** 宫位吉凶分档：决定光效与闪烁节奏 */
+  tone?: 'auspicious' | 'neutral' | 'adverse';
 }
 
-export function ZodiacTile({ signIndex, house, signName, signEn, bodies = [], size = 76 }: ZodiacTileProps) {
+const TONE_MARK: Record<NonNullable<ZodiacTileProps['tone']>, { text: string; label: string; color: string }> = {
+  auspicious: { text: '吉', label: '吉宫', color: '#D9B36A' },
+  neutral: { text: '平', label: '平宫', color: 'var(--muted-foreground)' },
+  adverse: { text: '凶', label: '凶宫', color: '#E31C29' },
+};
+
+export function ZodiacTile({
+  signIndex,
+  house,
+  signName,
+  signEn,
+  bodies = [],
+  size = 76,
+  tone = 'neutral',
+}: ZodiacTileProps) {
   const color = ELEMENT_GLOW[SIGN_ELEMENT_OF[signIndex] ?? 'fire'];
+  const mark = TONE_MARK[tone];
   return (
-    <div className="zodiac-tile">
+    <div className="zodiac-tile" data-tone={tone} title={`第 ${house} 宫 · ${mark.label}`}>
+      <span className="zodiac-tone" style={{ color: mark.color }} aria-hidden>
+        {mark.text}
+      </span>
       <div className="label-mono text-[9px]" style={{ color, opacity: 0.75 }}>
         {String(house).padStart(2, '0')} HOUSE
       </div>
