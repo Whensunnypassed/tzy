@@ -25,7 +25,7 @@ import { toast } from 'sonner';
 import MingJuFieldChart from '@/components/MingJuFieldChart';
 import ChangShengRingChart from '@/components/ChangShengRingChart';
 import PeiranReport from '@/pages/PeiranLine/PeiranReport';
-import { buildPeiranModelFromChart, buildAstroChart } from '@/analysis/peiran';
+import { buildPeiranModelFromChart, buildAstroChart, type TimePrecision } from '@/analysis/peiran';
 import InkScenery from '@/components/scenery/InkScenery';
 import StarField from '@/components/scenery/StarField';
 
@@ -859,12 +859,39 @@ type ScoreBreakdownRow = {
 /** 应用版本号（代号 + 版本号，与 package.json / CHANGELOG 同步维护） */
 const APP_VERSION = '天枢 1.1.0';
 
+/** 十二时辰：索引 0 = 子时；中点小时 = 索引 × 2（子时跨日，取 00:00 为中点） */
+const SHICHEN_INFO: ReadonlyArray<{ branch: string; range: string }> = [
+  { branch: '子', range: '23–01' },
+  { branch: '丑', range: '01–03' },
+  { branch: '寅', range: '03–05' },
+  { branch: '卯', range: '05–07' },
+  { branch: '辰', range: '07–09' },
+  { branch: '巳', range: '09–11' },
+  { branch: '午', range: '11–13' },
+  { branch: '未', range: '13–15' },
+  { branch: '申', range: '15–17' },
+  { branch: '酉', range: '17–19' },
+  { branch: '戌', range: '19–21' },
+  { branch: '亥', range: '21–23' },
+];
+
+/** 由钟表小时取时辰索引（23 点与 0 点同属子时） */
+const shichenIndexOfHour = (h: number): number => Math.floor((h + 1) / 2) % 12;
+
+const PRECISION_OPTIONS: ReadonlyArray<{ key: TimePrecision; label: string; hint: string }> = [
+  { key: 'minute', label: '分钟', hint: '知道几点几分' },
+  { key: 'branch', label: '时辰', hint: '只知道时辰' },
+  { key: 'day', label: '日期', hint: '只知道日期' },
+];
+
 export default function BaZiAnalyzerPage() {
   const [year, setYear] = useState('2000');
   const [month, setMonth] = useState('1');
   const [day, setDay] = useState('1');
   const [hour, setHour] = useState('0');
   const [minute, setMinute] = useState('0');
+  /** 出生时刻精度：分钟级 / 只到时辰 / 只知道日期；决定时柱与上升点的可信度标注 */
+  const [timePrecision, setTimePrecision] = useState<TimePrecision>('minute');
   const [gender, setGender] = useState<'male' | 'female'>('male');
   // 出生地：默认北京（经纬度制，阴阳线只取经度做真太阳时；希腊占星线取经纬度算轴点）
   const [birthCity, setBirthCity] = useState<string>(CITY_DEFAULT_KEY);
@@ -975,7 +1002,11 @@ export default function BaZiAnalyzerPage() {
     setSolarTermTheme(getSolarTermThemeByBirthDate(y, m, d));
     setActiveLine(null);
     setAnalyzed(true);
-    toast.success('排盘完成，正在生成分析报告...');
+    toast.success(
+      timePrecision === 'day'
+        ? '排盘完成（时刻按正午推定），正在生成分析报告...'
+        : '排盘完成，正在生成分析报告...',
+    );
   };
 
   const handleManualAnalyze = () => {
@@ -1099,9 +1130,10 @@ export default function BaZiAnalyzerPage() {
       hour: parseInt(hour, 10) || 0,
       minute: parseInt(minute, 10) || 0,
       city,
+      precision: timePrecision,
     });
     return buildPeiranModelFromChart(chart, { currentYear, gender });
-  }, [analyzed, year, month, day, hour, minute, birthCity, currentYear, gender]);
+  }, [analyzed, year, month, day, hour, minute, birthCity, currentYear, gender, timePrecision]);
   const monthQi = analysis?.monthQi ?? null;
   const yongJi = analysis?.yongJi ?? null;
   const elementPower = analysis?.elementPower ?? null;
@@ -1902,43 +1934,105 @@ export default function BaZiAnalyzerPage() {
 
                     {/* 时辰 + 性别 */}
                     <div className="grid grid-cols-2 gap-3 md:gap-4">
-                      {/* 出生时辰 */}
+                      {/* 出生时辰 + 时刻精度 */}
                       <div className="border border-border bg-muted/40 p-3">
-                        <div className="label-mono mb-2">
-                          时辰 / TIME
+                        <div className="mb-2 flex items-baseline justify-between gap-3">
+                          <div className="label-mono">时辰 / TIME</div>
+                          <div className="label-mono text-muted-foreground">
+                            {timePrecision === 'day' ? '按正午推定' : timePrecision === 'branch' ? '±1 小时' : '精确到分'}
+                          </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <Select value={hour} onValueChange={setHour}>
+
+                        {/* 精度三档：分钟 / 时辰 / 日期 */}
+                        <div className="mb-2 grid grid-cols-3 gap-1">
+                          {PRECISION_OPTIONS.map((opt) => {
+                            const active = timePrecision === opt.key;
+                            return (
+                              <button
+                                key={opt.key}
+                                type="button"
+                                title={opt.hint}
+                                onClick={() => {
+                                  setTimePrecision(opt.key);
+                                  if (opt.key === 'day') {
+                                    setHour('12');
+                                    setMinute('0');
+                                  } else if (opt.key === 'branch') {
+                                    const idx = shichenIndexOfHour(parseInt(hour, 10) || 0);
+                                    setHour(String(idx * 2));
+                                    setMinute('0');
+                                  }
+                                }}
+                                className="h-8 rounded-none text-[11px] font-bold tracking-[0.1em] transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2"
+                                style={{
+                                  fontFamily: 'var(--font-mono)',
+                                  background: active ? 'var(--foreground)' : 'var(--popover)',
+                                  color: active ? 'var(--background)' : 'var(--foreground)',
+                                  border: '1px solid var(--border)',
+                                }}
+                              >
+                                {opt.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {timePrecision === 'branch' ? (
+                          <Select
+                            value={String(shichenIndexOfHour(parseInt(hour, 10) || 0))}
+                            onValueChange={(v) => {
+                              setHour(String(parseInt(v, 10) * 2));
+                              setMinute('0');
+                            }}
+                          >
                             <SelectTrigger
                               className="!h-10 !justify-center !rounded-none !border-2 !border-foreground/20 !bg-popover !text-sm font-bold focus-visible:!border-foreground [&>svg]:opacity-60"
                               style={{ fontFamily: 'var(--font-mono)' }}
                             >
-                              <SelectValue placeholder="时" />
+                              <SelectValue placeholder="时辰" />
                             </SelectTrigger>
                             <SelectContent>
-                              {Array.from({ length: 24 }, (_, i) => (
-                                <SelectItem key={i} value={String(i)} className="!rounded-none !text-sm font-medium">
-                                  {i.toString().padStart(2, '0')} 时
+                              {SHICHEN_INFO.map((s, i) => (
+                                <SelectItem key={s.branch} value={String(i)} className="!rounded-none !text-sm font-medium">
+                                  {s.branch}时 · {s.range}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
-                          <Select value={minute} onValueChange={setMinute}>
-                            <SelectTrigger
-                              className="!h-10 !justify-center !rounded-none !border-2 !border-foreground/20 !bg-popover !text-sm font-bold focus-visible:!border-foreground [&>svg]:opacity-60"
-                              style={{ fontFamily: 'var(--font-mono)' }}
-                            >
-                              <SelectValue placeholder="分" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Array.from({ length: 60 }, (_, i) => (
-                                <SelectItem key={i} value={String(i)} className="!rounded-none !text-sm font-medium">
-                                  {i.toString().padStart(2, '0')} 分
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-2">
+                            <Select value={hour} onValueChange={setHour} disabled={timePrecision === 'day'}>
+                              <SelectTrigger
+                                className="!h-10 !justify-center !rounded-none !border-2 !border-foreground/20 !bg-popover !text-sm font-bold focus-visible:!border-foreground disabled:opacity-50 [&>svg]:opacity-60"
+                                style={{ fontFamily: 'var(--font-mono)' }}
+                              >
+                                <SelectValue placeholder="时" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 24 }, (_, i) => (
+                                  <SelectItem key={i} value={String(i)} className="!rounded-none !text-sm font-medium">
+                                    {i.toString().padStart(2, '0')} 时
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Select value={minute} onValueChange={setMinute} disabled={timePrecision === 'day'}>
+                              <SelectTrigger
+                                className="!h-10 !justify-center !rounded-none !border-2 !border-foreground/20 !bg-popover !text-sm font-bold focus-visible:!border-foreground disabled:opacity-50 [&>svg]:opacity-60"
+                                style={{ fontFamily: 'var(--font-mono)' }}
+                              >
+                                <SelectValue placeholder="分" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 60 }, (_, i) => (
+                                  <SelectItem key={i} value={String(i)} className="!rounded-none !text-sm font-medium">
+                                    {i.toString().padStart(2, '0')} 分
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
                       </div>
                       {/* 性别选择 */}
                       <div className="border border-border bg-muted/40 p-3">

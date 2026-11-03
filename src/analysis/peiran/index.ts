@@ -29,7 +29,7 @@ export const PEIRAN_LINE = {
 
 // 星盘
 export { buildAstroChart, buildAstroChartFromUtc } from './astroChart';
-export type { AstroChart, AstroChartInput, BodyFact, SignAspect } from './astroChart';
+export type { AstroChart, AstroChartInput, BodyFact, SignAspect, TimePrecision } from './astroChart';
 
 // 汇总
 export { buildPeiranModel, buildPeiranModelFromChart } from './analysis';

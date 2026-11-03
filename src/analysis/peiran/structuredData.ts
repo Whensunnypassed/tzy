@@ -143,7 +143,13 @@ export function buildStructuredData(model: PeiranModel, gender?: 'male' | 'femal
   if (chart.timezoneAccuracy === 'approx') {
     flags.push({ level: 'warn', code: 'TZ_APPROX', message: '时区按简化夏令时规则推算，边界日期（夏令时切换日）可能差 1 小时。' });
   }
-  if (chart.local.minute === 0 && chart.local.hour % 2 === 0) {
+  if (chart.timePrecision === 'branch') {
+    flags.push({ level: 'warn', code: 'PRECISION_BRANCH', message: '出生时刻只精确到时辰，上升点与宫位存在约 ±1 小时误差，宫位相关判读仅供参考。' });
+  }
+  if (chart.timePrecision === 'day') {
+    flags.push({ level: 'risk', code: 'PRECISION_DAY', message: '出生时刻未知，时柱与上升点均为推定值，宫位相关判读不可用于定论。' });
+  }
+  if (chart.timePrecision === 'minute' && chart.local.minute === 0 && chart.local.hour % 2 === 0) {
     flags.push({ level: 'info', code: 'ROUND_TIME', message: '出生时刻为整点，可能是估算时间；上升点与宫位对分钟级误差敏感。' });
   }
   if (!gender) {

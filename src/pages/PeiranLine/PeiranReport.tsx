@@ -41,6 +41,12 @@ import {
 
 const PLANET_ORDER: readonly Planet[] = ['sun', 'moon', 'mercury', 'venus', 'mars', 'jupiter', 'saturn'];
 
+/** 时刻精度对应的口径提示（分钟级不提示） */
+const PRECISION_NOTE: Record<'branch' | 'day', string> = {
+  branch: '时刻只到时辰 · 宫位可浮动约 ±1 小时',
+  day: '时刻未知 · 按正午推定',
+};
+
 /** 出生时间校准面板：按年龄给默认三条，可展开补充，覆盖度不足时提示 */
 function RectifyPanel({ chart, age }: { chart: AstroChart; age: number }) {
   const [openMore, setOpenMore] = useState(false);
@@ -363,6 +369,8 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
         <h2 className="cosmos-title mt-2 text-3xl leading-tight md:text-5xl">星 盘</h2>
         <p className="cosmos-subtitle mt-3 text-[11px] leading-loose md:text-[12px]">
           {chart.city.key} · {chart.sect === 'diurnal' ? '昼盘' : '夜盘'} · 整宫制
+          {chart.timePrecision !== 'minute' &&
+            ` · ${PRECISION_NOTE[chart.timePrecision]}`}
         </p>
         <div className="cosmos-rule mt-4">
           <span className="cosmos-rule-diamond" />

@@ -152,6 +152,9 @@ export function signAspectBetween(aSign: number, bSign: number): SignAspect {
   return 'aversion';
 }
 
+/** 出生时刻精度：分钟级 / 只知道时辰（±1 小时）/ 只知道日期（时柱未知） */
+export type TimePrecision = 'minute' | 'branch' | 'day';
+
 export interface AstroChartInput {
   year: number;
   month: number;
@@ -159,6 +162,7 @@ export interface AstroChartInput {
   hour: number;
   minute: number;
   city: CityRecord;
+  precision?: TimePrecision;
 }
 
 export interface AstroChart {
@@ -169,6 +173,8 @@ export interface AstroChart {
   utcOffsetMinutes: number;
   timezoneNote: string;
   timezoneAccuracy: 'exact' | 'approx' | 'rough';
+  /** 出生时刻精度（缺省视为分钟级） */
+  timePrecision: TimePrecision;
   /** 自 J2000（1999-12-31 00:00，Schlyter 历元）的日数，行星算法用 */
   days: number;
   /** 自真 J2000（2000-01-01 12:00 UT）的日数，恒星时用 */
@@ -193,7 +199,7 @@ export interface AstroChart {
 
 /** 由当地钟表时间与城市构建星盘 */
 export function buildAstroChart(input: AstroChartInput): AstroChart {
-  const { year, month, day, hour, minute, city } = input;
+  const { year, month, day, hour, minute, city, precision } = input;
   const tz = resolveUtcOffsetMinutes(city, year, month, day);
   const utc = toUtcParts(year, month, day, hour, minute, tz.offsetMinutes);
   return buildAstroChartFromUtc(utc, city, {
@@ -201,6 +207,7 @@ export function buildAstroChart(input: AstroChartInput): AstroChart {
     utcOffsetMinutes: tz.offsetMinutes,
     timezoneNote: tz.note,
     timezoneAccuracy: tz.accuracy,
+    timePrecision: precision,
   });
 }
 
@@ -209,6 +216,7 @@ export interface AstroChartUtcMeta {
   utcOffsetMinutes: number;
   timezoneNote: string;
   timezoneAccuracy: 'exact' | 'approx' | 'rough';
+  timePrecision?: TimePrecision;
 }
 
 /**
@@ -271,6 +279,7 @@ export function buildAstroChartFromUtc(
     utcOffsetMinutes: meta.utcOffsetMinutes,
     timezoneNote: meta.timezoneNote,
     timezoneAccuracy: meta.timezoneAccuracy,
+    timePrecision: meta.timePrecision ?? 'minute',
     days,
     daysJ2000,
     ramc,
