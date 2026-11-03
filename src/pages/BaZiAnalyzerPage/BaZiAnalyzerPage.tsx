@@ -1852,7 +1852,7 @@ export default function BaZiAnalyzerPage() {
                           value={year}
                           onChange={(e) => setYear(e.target.value)}
                           placeholder="1990"
-                          className="num-tabular !h-11 !rounded-none !border-2 !border-foreground/20 !bg-white !text-center !text-lg font-bold focus-visible:!border-foreground"
+                          className="num-tabular !h-11 !rounded-none !border-2 !border-foreground/20 !bg-popover !text-center !text-lg font-bold focus-visible:!border-foreground"
                           style={{ fontFamily: 'var(--font-mono)' }}
                         />
                       </div>
@@ -1863,7 +1863,7 @@ export default function BaZiAnalyzerPage() {
                         </div>
                         <Select value={month} onValueChange={setMonth}>
                           <SelectTrigger
-                            className="!h-11 !justify-center !rounded-none !border-2 !border-foreground/20 !bg-white !text-base font-bold focus-visible:!border-foreground [&>svg]:opacity-60"
+                            className="!h-11 !justify-center !rounded-none !border-2 !border-foreground/20 !bg-popover !text-base font-bold focus-visible:!border-foreground [&>svg]:opacity-60"
                             style={{ fontFamily: 'var(--font-mono)' }}
                           >
                             <SelectValue placeholder="月份" />
@@ -1884,7 +1884,7 @@ export default function BaZiAnalyzerPage() {
                         </div>
                         <Select value={day} onValueChange={setDay}>
                           <SelectTrigger
-                            className="!h-11 !justify-center !rounded-none !border-2 !border-foreground/20 !bg-white !text-base font-bold focus-visible:!border-foreground [&>svg]:opacity-60"
+                            className="!h-11 !justify-center !rounded-none !border-2 !border-foreground/20 !bg-popover !text-base font-bold focus-visible:!border-foreground [&>svg]:opacity-60"
                             style={{ fontFamily: 'var(--font-mono)' }}
                           >
                             <SelectValue placeholder="日期" />
@@ -1910,7 +1910,7 @@ export default function BaZiAnalyzerPage() {
                         <div className="grid grid-cols-2 gap-2">
                           <Select value={hour} onValueChange={setHour}>
                             <SelectTrigger
-                              className="!h-10 !justify-center !rounded-none !border-2 !border-foreground/20 !bg-white !text-sm font-bold focus-visible:!border-foreground [&>svg]:opacity-60"
+                              className="!h-10 !justify-center !rounded-none !border-2 !border-foreground/20 !bg-popover !text-sm font-bold focus-visible:!border-foreground [&>svg]:opacity-60"
                               style={{ fontFamily: 'var(--font-mono)' }}
                             >
                               <SelectValue placeholder="时" />
@@ -1925,7 +1925,7 @@ export default function BaZiAnalyzerPage() {
                           </Select>
                           <Select value={minute} onValueChange={setMinute}>
                             <SelectTrigger
-                              className="!h-10 !justify-center !rounded-none !border-2 !border-foreground/20 !bg-white !text-sm font-bold focus-visible:!border-foreground [&>svg]:opacity-60"
+                              className="!h-10 !justify-center !rounded-none !border-2 !border-foreground/20 !bg-popover !text-sm font-bold focus-visible:!border-foreground [&>svg]:opacity-60"
                               style={{ fontFamily: 'var(--font-mono)' }}
                             >
                               <SelectValue placeholder="分" />
@@ -1952,7 +1952,7 @@ export default function BaZiAnalyzerPage() {
                             className="h-10 rounded-none text-sm font-bold tracking-[0.15em] transition-colors"
                             style={{
                               fontFamily: 'var(--font-mono)',
-                              background: gender === 'male' ? '#1F2937' : 'white',
+                              background: gender === 'male' ? '#1F2937' : 'var(--popover)',
                               color: gender === 'male' ? '#FFFFFF' : 'var(--foreground)',
                               border: '1px solid ' + (gender === 'male' ? '#1F2937' : 'var(--border)'),
                             }}
@@ -1965,7 +1965,7 @@ export default function BaZiAnalyzerPage() {
                             className="h-10 rounded-none text-sm font-bold tracking-[0.15em] transition-colors"
                             style={{
                               fontFamily: 'var(--font-mono)',
-                              background: gender === 'female' ? '#E31C29' : 'white',
+                              background: gender === 'female' ? '#E31C29' : 'var(--popover)',
                               color: gender === 'female' ? '#FFFFFF' : 'var(--foreground)',
                               border: '1px solid ' + (gender === 'female' ? '#E31C29' : 'var(--border)'),
                             }}
@@ -2017,11 +2017,11 @@ export default function BaZiAnalyzerPage() {
                             if (e.key === 'Escape') setCityOpen(false);
                           }}
                           placeholder="输入城市名，如 北京 / 乌鲁木齐 / 纽约"
-                          className="!h-11 !rounded-none !border-2 !border-foreground/20 !bg-white !text-sm font-bold focus-visible:!border-foreground"
+                          className="!h-11 !rounded-none !border-2 !border-foreground/20 !bg-popover !text-sm font-bold focus-visible:!border-foreground"
                           style={{ fontFamily: 'var(--font-mono)' }}
                         />
                         {cityOpen && cityMatches.length > 0 && (
-                          <div className="absolute left-0 right-0 z-30 mt-1 max-h-60 overflow-auto border-2 border-foreground bg-white">
+                          <div className="absolute left-0 right-0 z-30 mt-1 max-h-60 overflow-auto border-2 border-foreground bg-popover">
                             {cityMatches.map((c) => (
                               <button
                                 key={c.key}
@@ -2194,7 +2194,7 @@ export default function BaZiAnalyzerPage() {
                             忌神 · 破坏平衡
                           </li>
                           <li className="flex items-start gap-2">
-                            <span className="mt-0.5 inline-block size-3 shrink-0 border-2 border-border bg-white" />
+                            <span className="mt-0.5 inline-block size-3 shrink-0 border-2 border-border bg-popover" />
                             中性 · 无直接助损（逐字待定字按中性计，详见逐字喜忌表）
                           </li>
                         </ul>
