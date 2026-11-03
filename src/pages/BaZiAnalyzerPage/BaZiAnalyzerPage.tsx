@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 import MingJuFieldChart from '@/components/MingJuFieldChart';
 import ChangShengRingChart from '@/components/ChangShengRingChart';
 import PeiranReport from '@/pages/PeiranLine/PeiranReport';
+import { buildAstroChart } from '@/analysis/peiran/astroChart';
 
 import {
   calculateBaZi,
@@ -84,6 +85,13 @@ import {
   type SolarTermTheme,
 } from '@/data/solarTermsTheme';
 import { JIAZI_PILLARS_BY_XUN, MONTH_QI_EXPANDED, ULTIMATE_SUMMARY, ZHI_ZUO_YONG_RULES, BIRTH_REGION_CFG, type IXunGroup } from '@/data/baziData';
+import {
+  CITY_DEFAULT_KEY,
+  findCity,
+  searchCity,
+  resolveUtcOffsetMinutes,
+  type CityRecord,
+} from '@/data/cityData';
 
 const ELEMENT_NAMES: Record<string, string> = {
   wood: '木',
@@ -856,8 +864,10 @@ export default function BaZiAnalyzerPage() {
   const [hour, setHour] = useState('0');
   const [minute, setMinute] = useState('0');
   const [gender, setGender] = useState<'male' | 'female'>('male');
-  // 出生地时区板块（真太阳时经度校正）：默认北京，与旧版排盘口径一致
-  const [birthRegion, setBirthRegion] = useState<string>(BIRTH_REGION_CFG.defaultKey);
+  // 出生地：默认北京（经纬度制，阴阳线只取经度做真太阳时；希腊占星线取经纬度算轴点）
+  const [birthCity, setBirthCity] = useState<string>(CITY_DEFAULT_KEY);
+  const [cityQuery, setCityQuery] = useState<string>(CITY_DEFAULT_KEY);
+  const [cityOpen, setCityOpen] = useState(false);
   const [fullBirthInput, setFullBirthInput] = useState('');
   // —— 手动四柱模式（自选四柱排盘）：mode 切换 + 四柱干支 + 手动出生年份 ——
   const [inputMode, setInputMode] = useState<'date' | 'manual'>('date');
@@ -941,7 +951,7 @@ export default function BaZiAnalyzerPage() {
       return;
     }
 
-    const result = calculateBaZi(y, m, d, h, min, gender, birthRegion);
+    const result = calculateBaZi(y, m, d, h, min, gender, birthCity);
     setChart(result);
     // 根据命主出生日月日切换节气配色与诗句主题
     setSolarTermTheme(getSolarTermThemeByBirthDate(y, m, d));
@@ -1058,6 +1068,20 @@ export default function BaZiAnalyzerPage() {
     () => (chart ? buildYinyangAnalysis(chart, currentYear) : null),
     [chart, currentYear],
   );
+
+  // 希腊占星线：星盘基础。仅在排盘完成后计算，输入阶段不跑星历。
+  const astroChart = useMemo(() => {
+    if (!analyzed) return null;
+    const city = findCity(birthCity) ?? (findCity(CITY_DEFAULT_KEY) as CityRecord);
+    return buildAstroChart({
+      year: parseInt(year, 10) || 2000,
+      month: parseInt(month, 10) || 1,
+      day: parseInt(day, 10) || 1,
+      hour: parseInt(hour, 10) || 0,
+      minute: parseInt(minute, 10) || 0,
+      city,
+    });
+  }, [analyzed, year, month, day, hour, minute, birthCity]);
   const monthQi = analysis?.monthQi ?? null;
   const yongJi = analysis?.yongJi ?? null;
   const elementPower = analysis?.elementPower ?? null;
@@ -1272,12 +1296,17 @@ export default function BaZiAnalyzerPage() {
   // 未选线或沛然堂线（空壳）时目录只保留 01；阴阳线展开 02–06
   const visibleSections = activeLine === 'yinyang' ? REPORT_SECTIONS : REPORT_SECTIONS.slice(0, 1);
 
-  // 出生地时区板块 → 经度 → 真太阳时校正分钟
-  const selectedRegion = BIRTH_REGION_CFG.regions.find((r) => r.key === birthRegion)
-    ?? BIRTH_REGION_CFG.regions.find((r) => r.key === BIRTH_REGION_CFG.defaultKey)
-    ?? BIRTH_REGION_CFG.regions[0];
+  // 出生地 → 城市记录（经纬度 + 时区规则）
+  const selectedCity: CityRecord = findCity(birthCity) ?? (findCity(CITY_DEFAULT_KEY) as CityRecord);
+  const cityOffset = resolveUtcOffsetMinutes(
+    selectedCity,
+    parseInt(year, 10) || 2000,
+    parseInt(month, 10) || 1,
+    parseInt(day, 10) || 1,
+  );
+  // 相对北京时间基准经线（120°E）的经度差 → 真太阳时分钟校正（仍按原阴阳线口径）
   const regionOffsetMinutes = Math.round(
-    (selectedRegion.longitude - BIRTH_REGION_CFG.standardMeridian) * BIRTH_REGION_CFG.minutesPerDegree,
+    (selectedCity.lon - BIRTH_REGION_CFG.standardMeridian) * BIRTH_REGION_CFG.minutesPerDegree,
   );
   const regionOffsetText = (() => {
     const abs = Math.abs(regionOffsetMinutes);
@@ -1287,6 +1316,12 @@ export default function BaZiAnalyzerPage() {
     const parts = [h > 0 ? `${h} 时` : '', mi > 0 ? `${mi} 分` : ''].filter(Boolean).join(' ');
     return `${sign}${parts || '0 分'}`;
   })();
+  const cityMatches = useMemo(() => (cityOpen ? searchCity(cityQuery, 10) : []), [cityQuery, cityOpen]);
+  const selectCity = (city: CityRecord) => {
+    setBirthCity(city.key);
+    setCityQuery(city.key);
+    setCityOpen(false);
+  };
 
   // 角标统一不透明白底 + 实色描边彩字：无论压在描边天干块还是实心地支块上，视觉完全一致
   // 排盘总览只出「用/忌/中」三态：月令逐字资料库中的「待定（dai）」不在总览显示问号，
@@ -1298,7 +1333,7 @@ export default function BaZiAnalyzerPage() {
     if (mark === 'taboo') return <Badge className={base} style={{ background: '#FFFFFF', color: '#E31C29', border: '1.5px solid #E31C29', boxShadow: 'none' }}>忌</Badge>;
     return <Badge className={base} style={{ background: '#FFFFFF', color: '#64748B', border: '1.5px solid #94A3B8', boxShadow: 'none' }}>中</Badge>;
   };
-  // 沛然堂线已清空为空壳：01 共用排盘在该线模式下不显示用/忌角标
+  // 沛然堂线已转为希腊占星：01 共用排盘在该线模式下不显示用/忌角标
   const showYongJiMarks = activeLine !== 'peiran';
   // 四柱徽章取值：优先月令逐字资料库（xi/ji 定论），dai 待定或缺字回退引擎用忌 marks
   const pillarStemMark = (c: string, fallback: 'useful' | 'taboo' | 'neutral'): PillarMark => {
@@ -1917,38 +1952,81 @@ export default function BaZiAnalyzerPage() {
                       </div>
                     </div>
 
-                    {/* 出生地时区板块：经度决定真太阳时校正 */}
+                    {/* 出生地：城市 → 经纬度 + 时区（阴阳线取经度做真太阳时，希腊占星线取经纬度算轴点） */}
                     <div className="border border-border bg-muted/40 p-3">
                       <div className="mb-2 flex items-baseline justify-between gap-3">
-                        <div className="label-mono">
-                          出生地 / REGION
-                        </div>
+                        <div className="label-mono">出生地 / CITY</div>
                         <div className="label-mono text-muted-foreground">
-                          {selectedRegion.longitude}°E · 真太阳时 {regionOffsetText}
+                          {selectedCity.lat.toFixed(2)}°N · {Math.abs(selectedCity.lon).toFixed(2)}°{selectedCity.lon >= 0 ? 'E' : 'W'}
                         </div>
                       </div>
-                      <Select value={birthRegion} onValueChange={setBirthRegion}>
-                        <SelectTrigger
-                          className="!h-11 !w-full !justify-between !rounded-none !border-2 !border-foreground/20 !bg-white !text-sm font-bold focus-visible:!border-foreground [&>svg]:opacity-60"
+
+                      <div className="relative">
+                        <Input
+                          value={cityQuery}
+                          onChange={(e) => {
+                            setCityQuery(e.target.value);
+                            setCityOpen(true);
+                          }}
+                          onFocus={() => setCityOpen(true)}
+                          onBlur={() => {
+                            // 失焦容错：输入名恰好等于某城市则直接采用，否则回退已选城市
+                            const hit = findCity(cityQuery.trim());
+                            if (hit) {
+                              selectCity(hit);
+                            } else {
+                              setCityQuery(selectedCity.key);
+                              setCityOpen(false);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && cityMatches.length > 0) {
+                              e.preventDefault();
+                              selectCity(cityMatches[0]);
+                            }
+                            if (e.key === 'Escape') setCityOpen(false);
+                          }}
+                          placeholder="输入城市名，如 北京 / 乌鲁木齐 / 纽约"
+                          className="!h-11 !rounded-none !border-2 !border-foreground/20 !bg-white !text-sm font-bold focus-visible:!border-foreground"
                           style={{ fontFamily: 'var(--font-mono)' }}
-                        >
-                          <SelectValue>{selectedRegion.name}</SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {BIRTH_REGION_CFG.regions.map((r) => (
-                            <SelectItem key={r.key} value={r.key} className="!rounded-none !text-sm font-medium">
-                              {r.name} · {r.longitude}°E · {r.cities}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <div className="mt-2 text-[11px] leading-snug text-muted-foreground">
-                        <span className="label-mono">{selectedRegion.span}</span>
-                        <span className="mx-1">·</span>
-                        {selectedRegion.note}
+                        />
+                        {cityOpen && cityMatches.length > 0 && (
+                          <div className="absolute left-0 right-0 z-30 mt-1 max-h-60 overflow-auto border-2 border-foreground bg-white">
+                            {cityMatches.map((c) => (
+                              <button
+                                key={c.key}
+                                type="button"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  selectCity(c);
+                                }}
+                                className="flex w-full items-baseline justify-between gap-3 border-b border-border px-3 py-2 text-left text-sm transition-colors last:border-b-0 hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
+                              >
+                                <span className="font-bold">{c.key}</span>
+                                <span className="label-mono text-[10px] text-muted-foreground">
+                                  {c.province ? `${c.province} · ` : ''}
+                                  {c.lat.toFixed(2)}°N {Math.abs(c.lon).toFixed(2)}°{c.lon >= 0 ? 'E' : 'W'}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-2 flex items-baseline justify-between gap-3 text-[11px] leading-snug text-muted-foreground">
+                        <span className="label-mono">
+                          UTC{cityOffset.offsetMinutes >= 0 ? '+' : '−'}
+                          {Math.floor(Math.abs(cityOffset.offsetMinutes) / 60)}
+                          {Math.abs(cityOffset.offsetMinutes) % 60 ? `:${String(Math.abs(cityOffset.offsetMinutes) % 60).padStart(2, '0')}` : ''}
+                          {cityOffset.isDst ? ' · 夏令时' : ''}
+                        </span>
+                        <span className="label-mono">真太阳时 {regionOffsetText}</span>
                       </div>
                       <div className="mt-1 text-[11px] leading-snug text-muted-foreground/80">
-                        1986–1991 夏令时出生按钟表时间自动回拨 1 小时；真太阳时含经度差与均时差。
+                        {cityOffset.note}
+                      </div>
+                      <div className="mt-1 text-[11px] leading-snug text-muted-foreground/80">
+                        阴阳线只需经度做真太阳时；<strong className="font-bold text-foreground">希腊占星线需要城市经纬度与准确到分钟的出生时刻</strong>，未填城市时按北京默认值计算。
                       </div>
                     </div>
 
@@ -2016,7 +2094,7 @@ export default function BaZiAnalyzerPage() {
                 </h2>
                 <p className="mt-2 text-sm text-muted-foreground">
                   {activeLine
-                    ? `当前分析线 · ${activeLine === 'yinyang' ? '阴阳线（原体系）' : '沛然堂线（待重建）'}`
+                    ? `当前分析线 · ${activeLine === 'yinyang' ? '阴阳线（原体系）' : '沛然堂线（希腊占星）'}`
                     : '已排盘 · 请选择阴阳线或沛然堂线展开 02–06 完整报告'}
                 </p>
                 <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-3">
@@ -2294,12 +2372,12 @@ export default function BaZiAnalyzerPage() {
                         name: '沛然堂线',
                         en: 'PEIRAN LINE',
                         tone: '#788491',
-                        badge: '待重建',
-                        desc: '线路重定中 · 内容已清空',
-                        leftLabel: '状态 / STATUS',
-                        leftValue: '空壳',
-                        rightLabel: '备注 / NOTE',
-                        rightValue: '等待重建',
+                        badge: '希腊占星',
+                        desc: '宗派 / 轴点 / 七政落座 / 整宫制',
+                        leftLabel: '体系 / SYSTEM',
+                        leftValue: 'Hellenistic',
+                        rightLabel: '阶段 / STAGE',
+                        rightValue: '星盘基础',
                       },
                     ]).map((line) => {
                       const on = activeLine === line.key;
@@ -3759,9 +3837,9 @@ export default function BaZiAnalyzerPage() {
               )}
 
 
-              {/* 沛然堂线：空壳占位，等待重建 */}
+              {/* 沛然堂线：希腊占星星盘基础 */}
               {activeLine === 'peiran' && (
-                <PeiranReport />
+                <PeiranReport astro={astroChart} />
               )}
 
 

@@ -15,6 +15,8 @@
 //          + reference/docs/十二月份取用.md（十二月令逐干取用、体用论断、富贵贫贱与健康取象）
 //          + reference/docs/04_古法辑要·五虎遁原理·六十甲子·春秋月取用.md（五虎遁原理/干支一体/干支自合九柱/春秋月节气三段/五行四季宜忌）
 
+import { findCity } from './cityData'
+
 export interface IHeavenlyStem {
   char: string
   element: 'wood' | 'fire' | 'earth' | 'metal' | 'water'
@@ -1938,10 +1940,13 @@ export const BIRTH_REGION_CFG = {
   ] as const,
 } as const
 
-/** 出生地 → 经度；未收录的名称回退默认项（北京，与旧版口径一致） */
+/** 出生地 → 经度；支持「时区大区」与「精确城市」两种键，未收录时回退北京 */
 export function birthRegionLongitude(place: string | undefined | null): number {
-  const hit = BIRTH_REGION_CFG.regions.find((r) => r.key === place);
-  if (hit) return hit.longitude;
+  const region = BIRTH_REGION_CFG.regions.find((r) => r.key === place);
+  if (region) return region.longitude;
+  // 精确城市：来自 CITY_DB（希腊占星线同样使用该表取经纬度）
+  const city = findCity(place);
+  if (city) return city.lon;
   const def = BIRTH_REGION_CFG.regions.find((r) => r.key === BIRTH_REGION_CFG.defaultKey);
   return def ? def.longitude : 116.41;
 }

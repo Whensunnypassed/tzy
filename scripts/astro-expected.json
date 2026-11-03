@@ -1,0 +1,16 @@
+{
+  "_note": "权威星历基线：NASA/JPL Horizons (DE441) 视黄经，地心，IAU76/80 ecliptic-of-date。用例时间均为该案例的实际 UT 时刻。",
+  "_source": "https://ssd.jpl.nasa.gov/api/horizons.api",
+  "1990-05-15 12:00 北京": {
+    "utc": "1990-05-15 03:00",
+    "bodies": {
+      "sun": 54.0344892,
+      "moon": 292.5448019,
+      "mercury": 38.0628355,
+      "venus": 12.3906754,
+      "mars": 348.0552929,
+      "jupiter": 99.4708711,
+      "saturn": 295.2556292
+    }
+  }
+}

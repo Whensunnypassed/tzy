@@ -27,6 +27,13 @@
 - 04 新增根气 / 年命位次 / 时柱归宿 / 空亡四张卡，文案只给结论，不出现内部推理话术
 - 经内部商议，沛然堂线纳音路线判定为错误：清空纳音引擎、数据书、五维评分、回测脚本与 `docs/peiran` 研究文档，仅保留入口与空状态页
 - 沛然堂线重建方向经国内外资料比对（英/中，多轮检索）定为**希腊占星主干 + 阿拉伯中世纪技法扩展**；新增资料台账 `docs/astrology/resources.md`（原典译本、现代教材、开源引擎、数据源、中文资源与现有资产复用清单）
+- 新增 `src/data/cityData.ts`：187 座城市经纬度 + 历史时区规则（中国 1949 前五时区、1986–1991 夏令时、主要国家 DST），每条结果自带 exact/approx/rough 精度标记
+- 新增 `src/analysis/peiran/ephemeris.ts`：自研七政黄历（VSOP87 / Meeus 公开算法），对 NASA JPL Horizons DE441 比对误差 ≤3 角分
+- 新增 `src/analysis/peiran/astroChart.ts`：恒星时 / 上升点 / 中天 / 整宫制 / 宗派 / 整宫相位；修复 Schlyter 历元与 J2000 差 1.5 天导致轴点偏移 150° 的缺陷
+- 新增 `scripts/astro-check.mjs` 与 `scripts/astro-expected.json`：星历回归护栏（JPL 基线比对 + ASC/太阳黄经自洽）
+- 输入区出生地改为城市检索（默认北京），显示经纬度、UTC 偏移、夏令时状态与真太阳时校正；提示希腊占星线需城市经纬度与分钟级时刻
+- 删除 `baziCalculator` 内的 `CITY_LONGITUDE` 冗余表，经度统一由 `CITY_DB` 解析（单一真相源）
+- 沛然堂线页面由空状态改为星盘页：宗派 / 轴点 / 七政落座 / 整宫制宫位 / 整宫相位
 
 ---
 

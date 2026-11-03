@@ -396,34 +396,8 @@ const adjustTrueSolarTime = (
   };
 };
 
-// 常用城市经度
-const CITY_LONGITUDE: Record<string, number> = {
-  北京: 116.41,
-  上海: 121.47,
-  广州: 113.26,
-  深圳: 114.06,
-  成都: 104.07,
-  重庆: 106.55,
-  西安: 108.94,
-  武汉: 114.31,
-  杭州: 120.15,
-  南京: 118.78,
-  天津: 117.20,
-  苏州: 120.62,
-  郑州: 113.65,
-  长沙: 112.94,
-  沈阳: 123.43,
-  青岛: 120.38,
-  大连: 121.62,
-  厦门: 118.08,
-  昆明: 102.71,
-  乌鲁木齐: 87.62,
-  拉萨: 91.13,
-  哈尔滨: 126.53,
-  海口: 110.33,
-  香港: 114.17,
-  台北: 121.56,
-};
+// 常用城市经度已并入 src/data/cityData.ts 的 CITY_DB（单一真相源），
+// 由此处的 birthRegionLongitude 统一解析：城市表 → 时区大区 → 北京默认。
 
 export interface Pillar {
   stem: string;
@@ -483,8 +457,8 @@ export function calculateBaZi(
   gender: 'male' | 'female',
   birthPlace: string = '北京',
 ): BaZiChart {
-  // 经度优先级：城市表 → 出生地时区板块（BIRTH_REGION_CFG）→ 默认北京
-  const longitude = CITY_LONGITUDE[birthPlace] ?? birthRegionLongitude(birthPlace);
+  // 经度：城市表（CITY_DB）→ 出生地时区大区（BIRTH_REGION_CFG）→ 默认北京
+  const longitude = birthRegionLongitude(birthPlace);
 
   // ① 夏令时回拨：输入为出生地钟表时间，1986–1991 夏令时需先减 60 分钟得到标准时
   const dstOffsetMinutes = chinaDstOffsetMinutes(year, month, day, hour, minute);
@@ -589,7 +563,6 @@ export {
   BRANCH_YINYANG,
   HIDDEN_STEMS,
   MONTH_BRANCHES,
-  CITY_LONGITUDE,
   getShiShen,
   getLiuNian,
   MOCK_HEAVENLY_STEMS,
