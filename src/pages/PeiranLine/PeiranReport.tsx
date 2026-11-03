@@ -263,9 +263,58 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
         </div>
       </Section>
 
-      {/* 05 相位 */}
+      {/* 05 阿拉伯扩展点 */}
       <Section
         no="05"
+        title="阿拉伯点"
+        en="ARABIC PARTS"
+        meta={`${model.arabicLots.length} 点 · ${chart.sect === 'diurnal' ? '昼盘公式' : '夜盘公式'}`}
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-border">
+                {['阿拉伯点', '位置', '宫位', '公式', '来源'].map((h) => (
+                  <th key={h} className="label-mono px-3 py-2 text-left text-muted-foreground md:px-4">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {model.arabicLots.map((l) => (
+                <tr key={l.key} className="border-b border-border last:border-b-0">
+                  <td className="px-3 py-2 md:px-4">
+                    <span className="text-sm font-black text-foreground">{l.nameZh}</span>
+                    <span className="label-mono ml-2 text-[9] text-muted-foreground">{l.nameEn}</span>
+                    {l.genderUndetermined && (
+                      <span className="label-mono ml-2 text-[9] text-primary">性别未匹配 · 仅参考</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 font-bold text-foreground md:px-4">
+                    {ZODIAC_SIGNS[l.signIndex]} {formatArc(l.lon)}
+                  </td>
+                  <td className="num-tabular px-3 py-2 text-foreground md:px-4">第 {l.house} 宫</td>
+                  <td className="px-3 py-2 text-[11px] font-bold text-muted-foreground md:px-4" style={{ fontFamily: 'var(--font-mono)' }}>
+                    {l.formula}
+                  </td>
+                  <td className="px-3 py-2 md:px-4">
+                    <span className="label-mono text-[9] text-muted-foreground">{l.source}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="border-t border-border px-4 py-2 text-[11px] leading-snug text-muted-foreground md:px-6">
+          阿拉伯点与七虚点同构：ASC + A − B，夜盘互换 A / B。本表只收来源可核验、公式无实质分歧的 10 点；
+          婚姻点分男女两式，未匹配命主性别的一条标注为「仅参考」。公式分裂较严重的点（如疾病、死亡、旅行）暂不收录。
+        </div>
+      </Section>
+
+      {/* 06 相位 */}
+      <Section
+        no="06"
         title="相位"
         en="ASPECTS"
         meta={`${model.degreeAspects.length} 组度相位 · ${model.aversions.length} 组映照`}
@@ -320,8 +369,8 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
         </div>
       </Section>
 
-      {/* 06 时间主星 */}
-      <Section no="06" title="时间主星" en="TIME LORDS" meta={`当前 ${model.age} 岁 · ${currentYearLabel(model)}`}>
+      {/* 07 时间主星 */}
+      <Section no="07" title="时间主星" en="TIME LORDS" meta={`当前 ${model.age} 岁 · ${currentYearLabel(model)}`}>
         <div className="grid gap-6 p-4 md:grid-cols-2 md:p-6">
           <div>
             <div className="label-mono mb-2 text-muted-foreground">周年推运 / PROFECTIONS</div>
@@ -437,8 +486,8 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
         </div>
       </Section>
 
-      {/* 07 整宫相位简表 */}
-      <Section no="07" title="整宫相位" en="SIGN ASPECTS" meta="WHOLE SIGN">
+      {/* 08 整宫相位简表 */}
+      <Section no="08" title="整宫相位" en="SIGN ASPECTS" meta="WHOLE SIGN">
         {chart.aspects.length === 0 ? (
           <div className="px-4 py-4 text-sm font-bold text-muted-foreground md:px-6">七政之间无整宫相位。</div>
         ) : (
@@ -468,9 +517,9 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
         </div>
       </Section>
 
-      {/* 08 自检 */}
+      {/* 09 自检 */}
       <Section
-        no="08"
+        no="09"
         title="引擎自检"
         en="SELF-CHECK"
         meta={`${sc.passed} 通过 / ${sc.failed} 失败`}

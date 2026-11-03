@@ -26,7 +26,7 @@ import {
   type LotKey,
   type Planet,
 } from './tables';
-import { calculateLots } from './lots';
+import { calculateLots, calculateArabicLots } from './lots';
 import { planetDignity } from './dignity';
 import type { AstroChart } from './astroChart';
 
@@ -281,6 +281,23 @@ export function checkCrossModule(chart: AstroChart): CheckItem[] {
     lotHouseOk
       ? ok('X4', 'cross', '虚点落宫', '七虚点宫位均在 1–12')
       : fail('X4', 'cross', '虚点落宫', '存在越界虚点'),
+  );
+
+  // C5 阿拉伯点昼夜互补：昼公式与夜公式的结果关于 ASC 对称（和 ≡ 2·ASC）
+  // 例外：foundation 依赖 fortune / spirit，而这两点本身随宗派互换，故不参与。
+  const dayLots = calculateArabicLots(bodiesLon, lots, chart.asc.lon, 'diurnal', undefined, chart.asc.signIndex);
+  const nightLots = calculateArabicLots(bodiesLon, lots, chart.asc.lon, 'nocturnal', undefined, chart.asc.signIndex);
+  let arabicBad = 0;
+  for (let i = 0; i < dayLots.length; i += 1) {
+    if (dayLots[i].key === 'foundation') continue;
+    const sum = norm360(dayLots[i].lon + nightLots[i].lon);
+    const expect = norm360(2 * chart.asc.lon);
+    if (Math.abs(norm180(sum - expect)) > 0.01) arabicBad += 1;
+  }
+  out.push(
+    arabicBad === 0
+      ? ok('X5', 'cross', '阿拉伯点昼夜互补', '昼 / 夜公式结果关于 ASC 对称（foundation 例外）')
+      : fail('X5', 'cross', '阿拉伯点昼夜互补', `${arabicBad} 点不满足镜像关系`),
   );
 
   return out;

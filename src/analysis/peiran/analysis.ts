@@ -8,7 +8,7 @@
 
 import { buildAstroChart, type AstroChart, type AstroChartInput } from './astroChart';
 import { almutenOfDegree, planetDignity, type PlanetDignity } from './dignity';
-import { calculateLots, type LotsResult } from './lots';
+import { calculateArabicLots, calculateLots, type ArabicLotFact, type LotsResult } from './lots';
 import { calculatePlanetStates, type PlanetStateFact } from './planetaryState';
 import {
   calculateAversions,
@@ -50,6 +50,8 @@ export interface PeiranModel {
   almutenAsc: AlmutenFact;
   almutenMc: AlmutenFact;
   lots: LotsResult;
+  /** 阿拉伯扩展点（父母 / 兄弟 / 子女 / 婚姻 / 债务 / 根基 / 背叛 / 困难） */
+  arabicLots: ArabicLotFact[];
   planetStates: Record<Planet, PlanetStateFact>;
   degreeAspects: DegreeAspect[];
   aversions: AversionPair[];
@@ -74,6 +76,8 @@ export interface BuildPeiranOptions {
   now?: UtcParts;
   /** 黄道释放起点虚点 */
   zrFrom?: 'fortune' | 'spirit';
+  /** 命主性别（用于区分男女婚姻点） */
+  gender?: 'male' | 'female';
 }
 
 /** 由出生信息直接构建完整事实模型 */
@@ -112,6 +116,14 @@ export function buildPeiranModelFromChart(chart: AstroChart, options: BuildPeira
   for (const p of PLANETS) dignities[p] = planetDignity(p, bodiesLon[p], chart.sect);
 
   const lots = calculateLots(bodiesLon, chart.asc.lon, chart.sect, chart.asc.signIndex);
+  const arabicLots = calculateArabicLots(
+    bodiesLon,
+    lots,
+    chart.asc.lon,
+    chart.sect,
+    options.gender,
+    chart.asc.signIndex,
+  );
 
   const degreeAspects = calculateDegreeAspects(bodiesLon, speeds);
   const aversions = calculateAversions(bodiesSign);
@@ -142,6 +154,7 @@ export function buildPeiranModelFromChart(chart: AstroChart, options: BuildPeira
     almutenAsc: almutenOfDegree(chart.asc.lon, chart.sect),
     almutenMc: almutenOfDegree(chart.mc.lon, chart.sect),
     lots,
+    arabicLots,
     planetStates,
     degreeAspects,
     aversions,

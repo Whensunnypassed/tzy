@@ -218,8 +218,28 @@
 | 技法 | 原因 |
 | --- | --- |
 | 主方向 primary directions | 多种口径（Ptolemaic / Placidian / Naibod），未取得可靠对照前不写入引擎 |
-| 阿拉伯扩展虚点（婚姻 / 子女 / 疾病等） | 不同阿拉伯作者公式存在实质分歧 |
+| 阿拉伯扩展点中公式分歧较大者（疾病 / 死亡 / 旅行 / 盗贼等） | 不同阿拉伯作者公式存在实质分歧；已收录 10 个可核验点，其余暂缓 |
 | 卜卦 / 择时 | 需独立的提问时刻与「有效盘」判定模型，不属于本命盘管线 |
+
+### 9.4 阿拉伯点（Arabic Parts）落地清单
+
+七虚点（Paulus 七点）之外，另收录 10 个来源可核验、公式无实质分歧的阿拉伯点。
+统一公式：`ASC + A − B`，夜盘互换 A / B；全部由 `calculateArabicLots` 产出，并由自检 X5 校验昼夜镜像关系。
+
+| 点 | 昼盘公式 | 来源 |
+| --- | --- | --- |
+| 父点 | ASC + 土星 − 太阳 | Paulus |
+| 母点 | ASC + 月亮 − 金星 | Paulus |
+| 兄弟点 | ASC + 木星 − 土星 | Paulus |
+| 子女点 | ASC + 土星 − 木星 | Paulus |
+| 婚姻点（男） | ASC + 金星 − 土星 | Paulus |
+| 婚姻点（女） | ASC + 土星 − 金星 | Paulus |
+| 债务点 | ASC + 土星 − 水星 | Valens |
+| 根基点 | ASC + 福点 − 精神点 | Valens |
+| 背叛点 | ASC + 火星 − 太阳 | Liber Hermetis |
+| 困难点 | ASC + 火星 − 土星 | Liber Hermetis |
+
+整理来源：Patrice Guinard 的阿拉伯点表（Astrotheme），逐条标注原始传统层。
 
 ---
 

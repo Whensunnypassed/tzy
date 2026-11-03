@@ -1100,8 +1100,8 @@ export default function BaZiAnalyzerPage() {
       minute: parseInt(minute, 10) || 0,
       city,
     });
-    return buildPeiranModelFromChart(chart, { currentYear });
-  }, [analyzed, year, month, day, hour, minute, birthCity, currentYear]);
+    return buildPeiranModelFromChart(chart, { currentYear, gender });
+  }, [analyzed, year, month, day, hour, minute, birthCity, currentYear, gender]);
   const monthQi = analysis?.monthQi ?? null;
   const yongJi = analysis?.yongJi ?? null;
   const elementPower = analysis?.elementPower ?? null;

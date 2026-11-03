@@ -405,6 +405,77 @@ export const LOT_FORMULAS: Record<
 };
 
 // ------------------------------------------------------------
+// 阿拉伯扩展点（Arabic Parts）
+// 与七虚点同构（ASC + A − B，夜盘互换），但由阿拉伯作者扩充。
+// 本表只收「来源可核验、公式无实质分歧」的一批；
+// 来源：Paulus Alexandrinus / Vettius Valens / Liber Hermetis 传统，
+//       经 Patrice Guinard 整理（Astrotheme 阿拉伯点表）。
+// ------------------------------------------------------------
+
+export type ArabicLotKey =
+  | 'father'
+  | 'mother'
+  | 'siblings'
+  | 'children'
+  | 'marriageMale'
+  | 'marriageFemale'
+  | 'debt'
+  | 'foundation'
+  | 'treachery'
+  | 'difficulty';
+
+export const ARABIC_LOT_NAMES_ZH: Record<ArabicLotKey, string> = {
+  father: '父点',
+  mother: '母点',
+  siblings: '兄弟点',
+  children: '子女点',
+  marriageMale: '婚姻点（男）',
+  marriageFemale: '婚姻点（女）',
+  debt: '债务点',
+  foundation: '根基点',
+  treachery: '背叛点',
+  difficulty: '困难点',
+};
+
+export const ARABIC_LOT_NAMES_EN: Record<ArabicLotKey, string> = {
+  father: 'Part of the Father',
+  mother: 'Part of the Mother',
+  siblings: 'Part of Siblings',
+  children: 'Part of Children',
+  marriageMale: 'Part of Marriage (male)',
+  marriageFemale: 'Part of Marriage (female)',
+  debt: 'Part of Debt',
+  foundation: 'Part of Foundation',
+  treachery: 'Part of Treachery',
+  difficulty: 'Part of Difficulty',
+};
+
+export interface ArabicLotDef {
+  key: ArabicLotKey;
+  nameZh: string;
+  nameEn: string;
+  /** 昼盘公式 ASC + plus − minus；夜盘互换 */
+  plus: LotPoint;
+  minus: LotPoint;
+  /** 性别限定（婚姻点分男女） */
+  gender?: 'male' | 'female';
+  source: string;
+}
+
+export const ARABIC_LOTS: readonly ArabicLotDef[] = [
+  { key: 'father', nameZh: ARABIC_LOT_NAMES_ZH.father, nameEn: ARABIC_LOT_NAMES_EN.father, plus: 'saturn', minus: 'sun', source: 'Paulus' },
+  { key: 'mother', nameZh: ARABIC_LOT_NAMES_ZH.mother, nameEn: ARABIC_LOT_NAMES_EN.mother, plus: 'moon', minus: 'venus', source: 'Paulus' },
+  { key: 'siblings', nameZh: ARABIC_LOT_NAMES_ZH.siblings, nameEn: ARABIC_LOT_NAMES_EN.siblings, plus: 'jupiter', minus: 'saturn', source: 'Paulus' },
+  { key: 'children', nameZh: ARABIC_LOT_NAMES_ZH.children, nameEn: ARABIC_LOT_NAMES_EN.children, plus: 'saturn', minus: 'jupiter', source: 'Paulus' },
+  { key: 'marriageMale', nameZh: ARABIC_LOT_NAMES_ZH.marriageMale, nameEn: ARABIC_LOT_NAMES_EN.marriageMale, plus: 'venus', minus: 'saturn', gender: 'male', source: 'Paulus' },
+  { key: 'marriageFemale', nameZh: ARABIC_LOT_NAMES_ZH.marriageFemale, nameEn: ARABIC_LOT_NAMES_EN.marriageFemale, plus: 'saturn', minus: 'venus', gender: 'female', source: 'Paulus' },
+  { key: 'debt', nameZh: ARABIC_LOT_NAMES_ZH.debt, nameEn: ARABIC_LOT_NAMES_EN.debt, plus: 'saturn', minus: 'mercury', source: 'Valens' },
+  { key: 'foundation', nameZh: ARABIC_LOT_NAMES_ZH.foundation, nameEn: ARABIC_LOT_NAMES_EN.foundation, plus: 'fortune', minus: 'spirit', source: 'Valens' },
+  { key: 'treachery', nameZh: ARABIC_LOT_NAMES_ZH.treachery, nameEn: ARABIC_LOT_NAMES_EN.treachery, plus: 'mars', minus: 'sun', source: 'Liber Hermetis' },
+  { key: 'difficulty', nameZh: ARABIC_LOT_NAMES_ZH.difficulty, nameEn: ARABIC_LOT_NAMES_EN.difficulty, plus: 'mars', minus: 'saturn', source: 'Liber Hermetis' },
+] as const;
+
+// ------------------------------------------------------------
 // 相位容许度（度相位 orb）
 // ------------------------------------------------------------
 export const ASPECT_ORBS: Record<'conjunction' | 'opposition' | 'trine' | 'square' | 'sextile', number> = {
