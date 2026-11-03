@@ -214,6 +214,7 @@
 | `dignity.ts` | 尊贵计分（5/4/3/2/1） | Ibn Ezra / Lilly 五点制 |
 | `lilly.ts` | 本质 + 偶然尊贵计分表（原书 p.115 逐项） | William Lilly《Christian Astrology》(1647) |
 | `judgement.ts` | 六主题判读框架（宫主 + 主题宫 + 档位） | Lilly 宫主判读框架 + 希腊主题宫传统 |
+| `rectify.ts` | 验前事与出生时间校准（事件年份 → 推运匹配） | 传统 rectification 做法（事件反推） |
 
 ### 9.3 明确未落地（口径分歧未决）
 

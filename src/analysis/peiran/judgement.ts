@@ -38,10 +38,56 @@ export interface Verdict {
   level: VerdictLevel;
   /** 一句话结论 */
   headline: string;
+  /** 该档位对应的可观测判据（回测时用来判定命中与否） */
+  observable: string;
   /** 判读依据（每条都可回溯到事实） */
   evidence: string[];
   significators: SignificatorFact[];
 }
+
+/**
+ * 档位 → 可观测判据。
+ * 这是回测的前提：没有可观测判据，「偏强 / 偏弱」无法被验证。
+ * 判据只描述外部可核对的状态，不涉及主观感受。
+ */
+export const OBSERVABLE_CRITERIA: Record<VerdictKey, Record<VerdictLevel, string>> = {
+  temperament: {
+    strong: '自我驱动力与承压能力明显高于同龄人，长期承担主导角色',
+    moderate: '性格平稳，能适应多数环境',
+    mixed: '性格在不同场合差异明显，状态起伏较大',
+    weak: '长期内在耗损，易受环境牵制',
+  },
+  career: {
+    strong: '担任管理或专业岗，职业路径连续向上',
+    moderate: '职业稳定，有阶段性波动',
+    mixed: '多次转行或长期处于探索期',
+    weak: '长期从事基础执行岗，晋升受阻',
+  },
+  wealth: {
+    strong: '收入位于同龄段前 30%，或有可持续积累的资产',
+    moderate: '收入与同龄段中位相当，收支平衡',
+    mixed: '收入波动明显，有明显起伏',
+    weak: '长期低于同龄段中位，财务紧张',
+  },
+  relationship: {
+    strong: '有稳定的长期伴侣，关系持续多年',
+    moderate: '有稳定关系，或经历 1–2 次重要关系',
+    mixed: '关系反复，长期不稳定',
+    weak: '长期单身，或多次短期关系',
+  },
+  health: {
+    strong: '体质恢复能力强，少有长期慢性问题',
+    moderate: '偶有小病，整体可控',
+    mixed: '有阶段性健康问题，需要管理',
+    weak: '长期慢性问题，或恢复缓慢',
+  },
+  annual: {
+    strong: '本年有明确的推进与机会窗口',
+    moderate: '本年平稳，无大起大落',
+    mixed: '本年起伏明显，需谨慎决策',
+    weak: '本年阻力较大，宜守不宜进',
+  },
+};
 
 export interface JudgementReport {
   verdicts: Verdict[];
@@ -115,6 +161,7 @@ export function judgeChart(model: PeiranModel): JudgementReport {
       en: 'TEMPERAMENT',
       level,
       headline: `上升${signName}，命主星${PLANET_NAMES_ZH[ascLord]}${LEVEL_TEXT[level]}。`,
+      observable: OBSERVABLE_CRITERIA.temperament[level],
       evidence: [
         `上升星座：${signName}（${chart.sect === 'diurnal' ? '昼盘' : '夜盘'}）`,
         `命主星${PLANET_NAMES_ZH[ascLord]}：Lilly ${lord.score > 0 ? '+' : ''}${lord.score} 分，${lord.grade}，落第 ${lord.house} 宫`,
@@ -139,6 +186,7 @@ export function judgeChart(model: PeiranModel): JudgementReport {
       en: 'CAREER',
       level,
       headline: `十宫主${PLANET_NAMES_ZH[lord10]}${LEVEL_TEXT[level]}，事业载体${inGoodHouse ? '可用' : '须借运扶起'}。`,
+      observable: OBSERVABLE_CRITERIA.career[level],
       evidence: [
         `中天落${chart.mc.sign}，十宫为${SIGN_NAMES_ZH[houseSign(10)]}，宫主${PLANET_NAMES_ZH[lord10]}`,
         `十宫主：Lilly ${mcLord.score > 0 ? '+' : ''}${mcLord.score} 分，${mcLord.grade}，落第 ${mcLord.house} 宫`,
@@ -167,6 +215,7 @@ export function judgeChart(model: PeiranModel): JudgementReport {
       en: 'WEALTH',
       level,
       headline: `二宫主${PLANET_NAMES_ZH[lord2]}${LEVEL_TEXT[level]}，福点落第 ${fortune.house} 宫。`,
+      observable: OBSERVABLE_CRITERIA.wealth[level],
       evidence: [
         `二宫为${SIGN_NAMES_ZH[houseSign(2)]}，宫主${PLANET_NAMES_ZH[lord2]}：${lord.score > 0 ? '+' : ''}${lord.score} 分，落第 ${lord.house} 宫`,
         `福点：${fortune.signDeg.toFixed(1)}° ${SIGN_NAMES_ZH[fortune.signIndex]}，落第 ${fortune.house} 宫`,
@@ -191,6 +240,7 @@ export function judgeChart(model: PeiranModel): JudgementReport {
       en: 'RELATIONSHIP',
       level,
       headline: `七宫主${PLANET_NAMES_ZH[lord7]}${LEVEL_TEXT[level]}${marriageLot ? `，婚姻点落第 ${marriageLot.house} 宫` : ''}。`,
+      observable: OBSERVABLE_CRITERIA.relationship[level],
       evidence: [
         `七宫为${SIGN_NAMES_ZH[houseSign(7)]}，宫主${PLANET_NAMES_ZH[lord7]}：${lord.score > 0 ? '+' : ''}${lord.score} 分，落第 ${lord.house} 宫`,
         `金星（情感之星）：${venus.score > 0 ? '+' : ''}${venus.score} 分，落第 ${venus.house} 宫`,
@@ -219,6 +269,7 @@ export function judgeChart(model: PeiranModel): JudgementReport {
       headline: sameStar
         ? `命主星即月亮，月亮${LEVEL_TEXT[level]}。`
         : `命主星${ascLord.name}与月亮综合${LEVEL_TEXT[level]}，六宫主${lord.name}落第 ${lord.house} 宫。`,
+      observable: OBSERVABLE_CRITERIA.health[level],
       evidence: [
         `命主星${ascLord.name}：${ascLord.score > 0 ? '+' : ''}${ascLord.score} 分`,
         `月亮（体液与恢复）：${moon.score > 0 ? '+' : ''}${moon.score} 分，落第 ${moon.house} 宫，${model.lilly.moonWaxing ? '增光' : '减光'}`,
@@ -243,6 +294,7 @@ export function judgeChart(model: PeiranModel): JudgementReport {
       en: 'ANNUAL',
       level,
       headline: `本命年推运至第 ${model.profections.house} 宫（${model.profections.signName}），年主星${PLANET_NAMES_ZH[yearLord]}${LEVEL_TEXT[level]}。`,
+      observable: OBSERVABLE_CRITERIA.annual[level],
       evidence: [
         `周年推运：第 ${model.profections.house} 宫 ${model.profections.signName}，年主星${PLANET_NAMES_ZH[yearLord]}`,
         `年主星：${yl.score > 0 ? '+' : ''}${yl.score} 分，落第 ${yl.house} 宫，${houseTone(yl.house)}`,

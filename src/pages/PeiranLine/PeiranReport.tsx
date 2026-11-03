@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   ZODIAC_SIGNS,
   ZODIAC_SIGNS_EN,
@@ -7,6 +8,7 @@ import {
 } from '@/analysis/peiran/astroChart';
 import { ZodiacTile } from '@/components/astrology/ZodiacGlyphs';
 import { judgeChart, type VerdictLevel } from '@/analysis/peiran/judgement';
+import { rectifyBirthTime, EVENT_NAMES_ZH, type LifeEvent, type LifeEventType, type RectificationResult } from '@/analysis/peiran/rectify';
 import {
   DEGREE_ASPECT_LABELS,
   MOTION_LABELS,
@@ -28,6 +30,125 @@ import {
 // ============================================================
 
 const PLANET_ORDER: readonly Planet[] = ['sun', 'moon', 'mercury', 'venus', 'mars', 'jupiter', 'saturn'];
+
+/** 出生时间校准面板：录入人生事件，扫描最相容时刻 */
+function RectifyPanel({ chart }: { chart: AstroChart }) {
+  const [rows, setRows] = useState<Array<{ year: string; type: LifeEventType }>>([
+    { year: '2015', type: 'marriage' },
+    { year: '2018', type: 'child' },
+    { year: '2021', type: 'career' },
+  ]);
+  const [result, setResult] = useState<RectificationResult | null>(null);
+
+  const run = () => {
+    const events: LifeEvent[] = rows
+      .map((r) => ({ year: parseInt(r.year, 10), type: r.type }))
+      .filter((e) => Number.isFinite(e.year) && e.year > 1900);
+    if (events.length === 0) return;
+    setResult(
+      rectifyBirthTime(
+        {
+          year: chart.local.year,
+          month: chart.local.month,
+          day: chart.local.day,
+          hour: chart.local.hour,
+          minute: chart.local.minute,
+          city: chart.city,
+        },
+        events,
+        { windowMinutes: 20, stepMinutes: 2 },
+      ),
+    );
+  };
+
+  return (
+    <div className="p-4 md:p-6">
+      <p className="cosmos-prose mb-4 text-center !text-[12px]">
+        录入你能确认年份的人生事件，系统会在出生时刻前后 20 分钟内扫描，找与这批事件最相容的时点。
+      </p>
+
+      <div className="space-y-2">
+        {rows.map((r, i) => (
+          <div key={i} className="flex flex-wrap items-center gap-2">
+            <input
+              value={r.year}
+              onChange={(e) => {
+                const next = [...rows];
+                next[i] = { ...r, year: e.target.value };
+                setRows(next);
+              }}
+              placeholder="年份"
+              className="w-24 border border-border bg-transparent px-2 py-1 text-sm"
+              style={{ color: 'var(--foreground)' }}
+            />
+            <select
+              value={r.type}
+              onChange={(e) => {
+                const next = [...rows];
+                next[i] = { ...r, type: e.target.value as LifeEventType };
+                setRows(next);
+              }}
+              className="flex-1 border border-border bg-transparent px-2 py-1 text-sm"
+              style={{ color: 'var(--foreground)' }}
+            >
+              {(Object.keys(EVENT_NAMES_ZH) as LifeEventType[]).map((t) => (
+                <option key={t} value={t} style={{ background: 'var(--popover)' }}>
+                  {EVENT_NAMES_ZH[t]}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => setRows(rows.filter((_, k) => k !== i))}
+              className="label-mono px-2 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              删除
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setRows([...rows, { year: '', type: 'career' }])}
+          className="label-mono border border-border px-3 py-1.5 transition-colors hover:bg-accent"
+        >
+          添加事件
+        </button>
+        <button
+          type="button"
+          onClick={run}
+          className="label-mono border px-3 py-1.5 transition-colors"
+          style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }}
+        >
+          开始校准
+        </button>
+      </div>
+
+      {result && (
+        <div className="mt-4 border-t border-border pt-4">
+          <div className="cosmos-prose text-center !text-[13px]">{result.note}</div>
+          <div className="mt-3 space-y-1">
+            {result.best.matches.map((m, i) => (
+              <div key={i} className="flex justify-between gap-3 text-[11px]">
+                <span style={{ color: 'var(--foreground)' }}>
+                  {m.event.year} · {EVENT_NAMES_ZH[m.event.type]}
+                </span>
+                <span style={{ color: m.score > 0 ? '#2E7654' : 'var(--muted-foreground)' }}>
+                  {m.score > 0 ? '命中' : '未命中'}（{m.score > 0 ? '+' : ''}{m.score}）
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 text-center text-[10px]" style={{ color: 'var(--muted-foreground)' }}>
+            校准只说明「与这批事件最相容」，不代表真实出生时间。
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function Section({
   no,
@@ -599,6 +720,11 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
             ))}
           </div>
         )}
+      </FoldSection>
+
+      {/* 10 出生时间校准 */}
+      <FoldSection no="10" title="出生时间校准" en="RECTIFICATION" meta="验前事">
+        <RectifyPanel chart={chart} />
       </FoldSection>
     </div>
   );

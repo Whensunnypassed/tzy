@@ -30,10 +30,11 @@ function loadPeiran() {
 import { buildPeiranModelFromChart } from '@/analysis/peiran/analysis';
 import { buildAstroChart } from '@/analysis/peiran/astroChart';
 import { runSelfCheck } from '@/analysis/peiran/selfCheck';
-import { judgeChart } from '@/analysis/peiran/judgement';
+import { judgeChart, OBSERVABLE_CRITERIA } from '@/analysis/peiran/judgement';
+import { rectifyBirthTime } from '@/analysis/peiran/rectify';
 import { buildStructuredData } from '@/analysis/peiran/structuredData';
 import { findCity } from '@/data/cityData';
-export { buildPeiranModelFromChart, buildAstroChart, runSelfCheck, judgeChart, buildStructuredData, findCity };
+export { buildPeiranModelFromChart, buildAstroChart, runSelfCheck, judgeChart, OBSERVABLE_CRITERIA, rectifyBirthTime, buildStructuredData, findCity };
 `,
   );
   esbuild.buildSync({
@@ -132,7 +133,7 @@ for (const c of CASES) {
   const judgement = core.judgeChart(model);
   const validLevels = new Set(['strong', 'moderate', 'mixed', 'weak']);
   const jBad = judgement.verdicts.filter(
-    (v) => !validLevels.has(v.level) || v.evidence.length < 2 || !v.headline,
+    (v) => !validLevels.has(v.level) || v.evidence.length < 2 || !v.headline || !v.observable,
   );
   totalPassed += jBad.length === 0 ? 1 : 0;
   totalFailed += jBad.length === 0 ? 0 : 1;
@@ -154,4 +155,25 @@ for (const c of CASES) {
 }
 
 console.log(`\n合计：${totalPassed} 项通过，${totalFailed} 项失败`);
+
+// 验前事校准：用人工事件做一次端到端演算
+{
+  const city = core.findCity('北京');
+  const base = { year: 1990, month: 5, day: 15, hour: 12, minute: 0, city };
+  const events = [
+    { year: 2015, type: 'marriage' },
+    { year: 2018, type: 'child' },
+    { year: 2021, type: 'career' },
+  ];
+  const res = core.rectifyBirthTime(base, events, { windowMinutes: 10, stepMinutes: 1 });
+  console.log('\n=== 验前事校准（示例事件） ===');
+  console.log(res.note);
+  console.log(
+    `候选 ${res.candidates.length} 个，最高分 ${res.best.totalScore}，是否平坦 ${res.flat ? '是' : '否'}`,
+  );
+  for (const m of res.best.matches) {
+    console.log(`  ${m.event.year} ${m.event.type}：${m.detail.join('；')}（小计 ${m.score}）`);
+  }
+}
+
 process.exitCode = totalFailed === 0 ? 0 : 1;
