@@ -39,8 +39,19 @@ export type { PeiranModel, BuildPeiranOptions, AlmutenFact } from './analysis';
 export * from './tables';
 export { planetDignity, almutenOfDegree, DIGNITY_LABELS, DIGNITY_SCORES } from './dignity';
 export type { PlanetDignity, DignityKind } from './dignity';
-export { calculateLots, lotFormulaText } from './lots';
-export type { LotsResult, LotFact } from './lots';
+export { calculateLots, lotFormulaText, calculateArabicLots } from './lots';
+export type { LotsResult, LotFact, ArabicLotFact } from './lots';
+export {
+  calculateLillyScore,
+  calculateLillyReport,
+  isMoonWaxing,
+  LILLY_ESSENTIAL,
+  LILLY_ACCIDENTAL,
+  FIXED_STARS,
+} from './lilly';
+export type { LillyScore, LillyReport, LillyInput, ScoreItem } from './lilly';
+export { buildStructuredData, structuredDataToMarkdown, STRUCTURED_DATA_VERSION } from './structuredData';
+export type { StructuredData, DataQualityFlag } from './structuredData';
 export { calculatePlanetStates, SOLAR_STATE_LABELS, ORIENTALITY_LABELS, MOTION_LABELS, SPEED_LABELS } from './planetaryState';
 export type { PlanetStateFact, SolarState, Orientality, MotionState, SpeedState } from './planetaryState';
 export {

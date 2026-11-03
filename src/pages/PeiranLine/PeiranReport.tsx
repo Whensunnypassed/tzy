@@ -288,6 +288,52 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
             </tbody>
           </table>
         </div>
+
+        {/* Lilly 强度（判读层地基） */}
+        <div className="border-t border-border p-4 md:p-6">
+          <div className="label-mono mb-3 text-muted-foreground">Lilly 强度 / FORTITUDE</div>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-border">
+                  {['行星', '本质', '偶然', '合计', '等级'].map((h) => (
+                    <th key={h} className="label-mono px-3 py-2 text-left text-muted-foreground">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {PLANET_ORDER.map((p) => {
+                  const s = model.lilly.scores[p];
+                  const gradeLabel = { strong: '强', good: '偏强', average: '中', weak: '偏弱', debilitated: '弱' }[s.grade];
+                  const tone =
+                    s.grade === 'strong' || s.grade === 'good'
+                      ? '#2E7654'
+                      : s.grade === 'weak' || s.grade === 'debilitated'
+                        ? 'var(--primary)'
+                        : 'var(--muted-foreground)';
+                  return (
+                    <tr key={p} className="border-b border-border last:border-b-0">
+                      <td className="px-3 py-2 font-black text-foreground">{PLANET_NAMES_ZH[p]}</td>
+                      <td className="num-tabular px-3 py-2 text-foreground">{s.essentialSum > 0 ? `+${s.essentialSum}` : s.essentialSum}</td>
+                      <td className="num-tabular px-3 py-2 text-foreground">{s.accidentalSum > 0 ? `+${s.accidentalSum}` : s.accidentalSum}</td>
+                      <td className="num-tabular px-3 py-2 font-black" style={{ color: tone }}>
+                        {s.total > 0 ? `+${s.total}` : s.total}
+                      </td>
+                      <td className="px-3 py-2">
+                        <span className="label-mono" style={{ color: tone }}>{gradeLabel}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-2 text-[11px] leading-snug text-muted-foreground">
+            最强 {PLANET_NAMES_ZH[model.lilly.strongest]} · 最弱 {PLANET_NAMES_ZH[model.lilly.weakest]}
+          </div>
+        </div>
       </FoldSection>
 
       {/* 05 七虚点 */}

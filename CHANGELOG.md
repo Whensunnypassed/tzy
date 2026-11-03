@@ -55,6 +55,11 @@
 - 新增阿拉伯点（Arabic Parts）10 项：父点 / 母点 / 兄弟点 / 子女点 / 婚姻点（男·女）/ 债务点 / 根基点 / 背叛点 / 困难点，公式 `ASC + A − B` 且夜盘互换，逐条标注来源（Paulus / Valens / Liber Hermetis）
 - 新增「05 阿拉伯点」版块：位置、宫位、公式、来源四列；婚姻点按命主性别自动匹配，未匹配者标「仅参考」
 - 自检新增 X5「阿拉伯点昼夜互补」：昼 / 夜公式结果须关于 ASC 对称；5 案例合计 95 项断言全通过
+- 新增 `lilly.ts`：William Lilly《Christian Astrology》p.115「Fortitudes and Debilities」完整计分表——本质（本宫 5 / 旺 4 / 三分 3 / 界 2 / 面 1 / 陷 −5 / 落 −4 / 无尊贵 −5）与偶然（宫位、顺逆、疾迟、东西出、月相、燃烧/日光/中心、与吉凶星精确相位、固定星 Regulus·Spica·Algol），实测量程 −38 ~ +38
+- 新增 `structuredData.ts`：版本化结构化契约（v1.0.0）+ Markdown 导出，含 input / chart / lilly / lots / arabicParts / aspects / timeLords / dataQuality 八段；数据质量单独成块并给出判读阻碍标记
+- 数据质量标记：时区精度（rough / approx）、整点估算时刻、性别缺失、引擎自检失败、上升点 ±4 分钟窗口
+- 新增自检 L1–L4：Lilly 分数量程、东出西入方向、合计自洽、最强最弱选取；5 案例合计 115 项断言全通过
+- 七政折叠区新增「Lilly 强度」表：本质 / 偶然 / 合计 / 等级，并标出全盘最强与最弱
 
 ---
 

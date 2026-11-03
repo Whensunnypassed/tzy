@@ -29,6 +29,7 @@ import {
 import { calculateLots, calculateArabicLots } from './lots';
 import { planetDignity } from './dignity';
 import type { AstroChart } from './astroChart';
+import type { LillyReport } from './lilly';
 
 export interface CheckItem {
   id: string;
@@ -307,6 +308,53 @@ export function checkCrossModule(chart: AstroChart): CheckItem[] {
 // 汇总
 // ------------------------------------------------------------
 
+/** Lilly 计分自检：量程、方向性（东出 / 西入对重轻行星的方向相反）、强弱一致性 */
+export function checkLilly(report: LillyReport): CheckItem[] {
+  const out: CheckItem[] = [];
+  const scores = Object.values(report.scores);
+
+  const inRange = scores.every((s) => s.total >= -38 && s.total <= 38);
+  out.push(
+    inRange
+      ? ok('L1', 'cross', 'Lilly 分数量程', '七政总分均在 −38 ~ +38 之间（Lilly 原表量程）')
+      : fail('L1', 'cross', 'Lilly 分数量程', '存在越界分数'),
+  );
+
+  // 方向性：土 / 木 / 火 东出为 +2，水 / 金 东出为 −2
+  let dirBad = 0;
+  for (const s of scores) {
+    for (const item of s.accidental) {
+      if (item.key === 'orientalHeavy' && item.value !== 2) dirBad += 1;
+      if (item.key === 'orientalLight' && item.value !== -2) dirBad += 1;
+      if (item.key === 'occidentalHeavy' && item.value !== -2) dirBad += 1;
+      if (item.key === 'occidentalLight' && item.value !== 2) dirBad += 1;
+    }
+  }
+  out.push(
+    dirBad === 0
+      ? ok('L2', 'cross', 'Lilly 东出西入方向', '重行星东出为吉、轻行星西入为吉，方向未反')
+      : fail('L2', 'cross', 'Lilly 东出西入方向', `${dirBad} 处方向相反`),
+  );
+
+  // 总分 = 本质和 + 偶然和
+  const sumOk = scores.every((s) => s.total === s.essentialSum + s.accidentalSum);
+  out.push(
+    sumOk
+      ? ok('L3', 'cross', 'Lilly 合计自洽', '总分等于本质与偶然之和')
+      : fail('L3', 'cross', 'Lilly 合计自洽', '合计与分项不符'),
+  );
+
+  // 最强 / 最弱必须落在五颗非发光体中
+  const validPick = !['sun', 'moon'].includes(report.strongest) && !['sun', 'moon'].includes(report.weakest);
+  out.push(
+    validPick
+      ? ok('L4', 'cross', 'Lilly 最强最弱选取', `${report.strongest} / ${report.weakest} 均为五星范围`)
+      : fail('L4', 'cross', 'Lilly 最强最弱选取', '把太阳或月亮选为最强 / 最弱'),
+  );
+
+  return out;
+}
+
 export interface SelfCheckReport {
   items: CheckItem[];
   passed: number;
@@ -314,10 +362,13 @@ export interface SelfCheckReport {
   allPassed: boolean;
 }
 
-export function runSelfCheck(chart?: AstroChart | null): SelfCheckReport {
+export function runSelfCheck(chart?: AstroChart | null, lilly?: LillyReport): SelfCheckReport {
   const items: CheckItem[] = [...checkTables()];
   if (chart) {
     items.push(...checkChart(chart), ...checkCrossModule(chart));
+  }
+  if (lilly) {
+    items.push(...checkLilly(lilly));
   }
   const passed = items.filter((i) => i.passed).length;
   const failed = items.length - passed;

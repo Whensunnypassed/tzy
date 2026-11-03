@@ -212,6 +212,7 @@
 | `tables.ts` | 黄道释放年数（15/8/20/25/19/20/8/15/12/27/30/12） | Vettius Valens《Anthology》IV |
 | `tables.ts` | 法尔达利亚（昼 / 夜 75 年） | 波斯 / 阿拉伯传统 |
 | `dignity.ts` | 尊贵计分（5/4/3/2/1） | Ibn Ezra / Lilly 五点制 |
+| `lilly.ts` | 本质 + 偶然尊贵计分表（原书 p.115 逐项） | William Lilly《Christian Astrology》(1647) |
 
 ### 9.3 明确未落地（口径分歧未决）
 

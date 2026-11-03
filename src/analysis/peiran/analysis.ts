@@ -10,6 +10,7 @@ import { buildAstroChart, type AstroChart, type AstroChartInput } from './astroC
 import { almutenOfDegree, planetDignity, type PlanetDignity } from './dignity';
 import { calculateArabicLots, calculateLots, type ArabicLotFact, type LotsResult } from './lots';
 import { calculatePlanetStates, type PlanetStateFact } from './planetaryState';
+import { calculateLillyReport, isMoonWaxing, type LillyReport } from './lilly';
 import {
   calculateAversions,
   calculateDegreeAspects,
@@ -53,6 +54,8 @@ export interface PeiranModel {
   /** 阿拉伯扩展点（父母 / 兄弟 / 子女 / 婚姻 / 债务 / 根基 / 背叛 / 困难） */
   arabicLots: ArabicLotFact[];
   planetStates: Record<Planet, PlanetStateFact>;
+  /** Lilly 计分（本质 + 偶然，判读层的地基） */
+  lilly: LillyReport;
   degreeAspects: DegreeAspect[];
   aversions: AversionPair[];
   voidOfCourse: Record<Planet, VoidOfCourseFact>;
@@ -115,6 +118,14 @@ export function buildPeiranModelFromChart(chart: AstroChart, options: BuildPeira
   const dignities = {} as Record<Planet, PlanetDignity>;
   for (const p of PLANETS) dignities[p] = planetDignity(p, bodiesLon[p], chart.sect);
 
+  const lilly = calculateLillyReport({
+    bodiesLon,
+    bodiesHouse,
+    states: planetStates,
+    sect: chart.sect,
+    moonWaxing: isMoonWaxing(bodiesLon.sun, bodiesLon.moon),
+  });
+
   const lots = calculateLots(bodiesLon, chart.asc.lon, chart.sect, chart.asc.signIndex);
   const arabicLots = calculateArabicLots(
     bodiesLon,
@@ -146,7 +157,7 @@ export function buildPeiranModelFromChart(chart: AstroChart, options: BuildPeira
 
   const solarReturn = calculateSolarReturn(chart.utc, chart.bodies.sun.lon, currentYear, chart.city);
 
-  const selfCheck = runSelfCheck(chart);
+  const selfCheck = runSelfCheck(chart, lilly);
 
   return {
     chart,
@@ -156,6 +167,7 @@ export function buildPeiranModelFromChart(chart: AstroChart, options: BuildPeira
     lots,
     arabicLots,
     planetStates,
+    lilly,
     degreeAspects,
     aversions,
     voidOfCourse,
