@@ -9,6 +9,7 @@ import {
 import { ZodiacTile } from '@/components/astrology/ZodiacGlyphs';
 import { judgeChart, type VerdictLevel } from '@/analysis/peiran/judgement';
 import { rectifyBirthTime, EVENT_NAMES_ZH, type LifeEvent, type LifeEventType, type RectificationResult } from '@/analysis/peiran/rectify';
+import { assessStability, levelDistribution, type StabilityReport } from '@/analysis/peiran/stability';
 import {
   DEGREE_ASPECT_LABELS,
   MOTION_LABELS,
@@ -275,6 +276,8 @@ function KeyValue({ label, value, mono = false }: { label: string; value: string
 }
 
 export default function PeiranReport({ model }: { model: PeiranModel | null }) {
+  const [stability, setStabilityState] = useState<StabilityReport | null>(null);
+
   if (!model) {
     return (
       <div className="cosmos-panel line-switch p-6 md:p-10">
@@ -294,6 +297,15 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
   const dignities = model.dignities;
   const states = model.planetStates;
   const judgement = judgeChart(model);
+
+  const chartInput = {
+    year: chart.local.year,
+    month: chart.local.month,
+    day: chart.local.day,
+    hour: chart.local.hour,
+    minute: chart.local.minute,
+    city: chart.city,
+  };
 
   const bodiesByHouse = (house: number): string[] =>
     PLANET_ORDER.filter((p) => chart.bodies[p].house === house).map((p) => PLANET_NAMES_ZH[p]);
@@ -382,6 +394,48 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
             />
           ))}
         </div>
+        <div className="border-t border-border px-4 py-3 md:px-6">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-[11px] leading-snug" style={{ color: 'var(--muted-foreground)' }}>
+              出生时刻只要差几分钟，上升点就会移动，结论可能翻转
+            </span>
+            <button
+              type="button"
+              onClick={() =>
+                setStabilityState(
+                  assessStability(chartInput, { currentYear: model.solarReturn.utc.year }),
+                )
+              }
+              className="label-mono border px-3 py-1.5 transition-colors hover:bg-accent"
+              style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }}
+            >
+              检测稳定性
+            </button>
+          </div>
+
+          {stability && (
+            <div className="mt-4 space-y-1.5">
+             {stability.themes.map((t) => {
+                const tone = t.grade === 'stable' ? '#2E7654' : t.grade === 'unstable' ? '#E8A24A' : '#C9A227';
+                return (
+                  <div key={t.key} className="flex flex-wrap items-baseline justify-between gap-2 text-[11px]">
+                    <span style={{ color: 'var(--foreground)' }}>{t.title}</span>
+                    <span className="flex items-baseline gap-2">
+                      <span style={{ color: 'var(--muted-foreground)' }}>{levelDistribution(t)}</span>
+                      <span className="label-mono" style={{ color: tone }}>
+                        一致 {(t.agreement * 100).toFixed(0)}%
+                      </span>
+                    </span>
+                  </div>
+                );
+              })}
+              <div className="pt-1 text-[10px] leading-relaxed" style={{ color: 'var(--muted-foreground)' }}>
+                {stability.note}
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="border-t border-border px-4 py-2 text-[10px] leading-snug text-muted-foreground md:px-6">
           {judgement.disclaimer}
         </div>

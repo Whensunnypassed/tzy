@@ -63,6 +63,8 @@ export type {
   RectificationResult,
   RectifyOptions,
 } from './rectify';
+export { assessStability, levelDistribution } from './stability';
+export type { StabilityReport, StabilityOptions, ThemeStability } from './stability';
 export { calculatePlanetStates, SOLAR_STATE_LABELS, ORIENTALITY_LABELS, MOTION_LABELS, SPEED_LABELS } from './planetaryState';
 export type { PlanetStateFact, SolarState, Orientality, MotionState, SpeedState } from './planetaryState';
 export {

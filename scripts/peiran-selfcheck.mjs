@@ -32,9 +32,10 @@ import { buildAstroChart } from '@/analysis/peiran/astroChart';
 import { runSelfCheck } from '@/analysis/peiran/selfCheck';
 import { judgeChart, OBSERVABLE_CRITERIA } from '@/analysis/peiran/judgement';
 import { rectifyBirthTime } from '@/analysis/peiran/rectify';
+import { assessStability } from '@/analysis/peiran/stability';
 import { buildStructuredData } from '@/analysis/peiran/structuredData';
 import { findCity } from '@/data/cityData';
-export { buildPeiranModelFromChart, buildAstroChart, runSelfCheck, judgeChart, OBSERVABLE_CRITERIA, rectifyBirthTime, buildStructuredData, findCity };
+export { buildPeiranModelFromChart, buildAstroChart, runSelfCheck, judgeChart, OBSERVABLE_CRITERIA, rectifyBirthTime, assessStability, buildStructuredData, findCity };
 `,
   );
   esbuild.buildSync({
@@ -174,6 +175,21 @@ console.log(`\n合计：${totalPassed} 项通过，${totalFailed} 项失败`);
   for (const m of res.best.matches) {
     console.log(`  ${m.event.year} ${m.event.type}：${m.detail.join('；')}（小计 ${m.score}）`);
   }
+}
+
+// 判读稳定性：对同一案例做 8 切片，看结论一致率
+{
+  const city = core.findCity('北京');
+  const st = core.assessStability(
+    { year: 1990, month: 5, day: 15, hour: 12, minute: 0, city },
+    { windowMinutes: 30, slices: 8, currentYear: 2026 },
+  );
+  console.log('\n=== 判读稳定性（±30 分钟 / 8 切片） ===');
+  console.log(st.note);
+  for (const t of st.themes) {
+    console.log(`  ${t.title}：一致 ${(t.agreement * 100).toFixed(0)}%（${t.grade}）`);
+  }
+  console.log(`  总体一致率 ${(st.overall * 100).toFixed(0)}%`);
 }
 
 process.exitCode = totalFailed === 0 ? 0 : 1;
