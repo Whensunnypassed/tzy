@@ -24,7 +24,7 @@ import { toast } from 'sonner';
 
 import MingJuFieldChart from '@/components/MingJuFieldChart';
 import ChangShengRingChart from '@/components/ChangShengRingChart';
-import PeiranReport, { PEIRAN_SECTIONS } from '@/pages/PeiranLine/PeiranReport';
+import PeiranReport from '@/pages/PeiranLine/PeiranReport';
 
 import {
   calculateBaZi,
@@ -65,7 +65,7 @@ import {
   type WuXingQuXiangResult,
   type TaiJiQiResult,
 } from '@/analysis/yinyang/engine';
-import { buildYinyangAnalysis, buildPeiranAnalysis, type AnalysisLineKey } from '@/analysis';
+import { buildYinyangAnalysis, type AnalysisLineKey } from '@/analysis';
 import {
   analyzeXiangYi,
   analyzeWealthVerdict,
@@ -1058,11 +1058,6 @@ export default function BaZiAnalyzerPage() {
     () => (chart ? buildYinyangAnalysis(chart, currentYear) : null),
     [chart, currentYear],
   );
-  // 沛然堂线上下文：独立纳音体系，与阴阳线互不依赖
-  const peiranAnalysis = useMemo(
-    () => (chart ? buildPeiranAnalysis(chart, currentYear) : null),
-    [chart, currentYear],
-  );
   const monthQi = analysis?.monthQi ?? null;
   const yongJi = analysis?.yongJi ?? null;
   const elementPower = analysis?.elementPower ?? null;
@@ -1274,12 +1269,8 @@ export default function BaZiAnalyzerPage() {
   const analyzedBoolean = analyzed && chart && monthQi && yongJi && elementPower && pattern && wealthNobility && daYunAnalysis;
   // 全量视图：依据类折叠块默认展开（结论视图默认收起）
   const fullView = reportView === 'full';
-  // 未选线时目录只保留 01；选线后展开该线自己的 02–06
-  const visibleSections = activeLine === 'peiran'
-    ? PEIRAN_SECTIONS
-    : activeLine === 'yinyang'
-      ? REPORT_SECTIONS
-      : REPORT_SECTIONS.slice(0, 1);
+  // 未选线或沛然堂线（空壳）时目录只保留 01；阴阳线展开 02–06
+  const visibleSections = activeLine === 'yinyang' ? REPORT_SECTIONS : REPORT_SECTIONS.slice(0, 1);
 
   // 出生地时区板块 → 经度 → 真太阳时校正分钟
   const selectedRegion = BIRTH_REGION_CFG.regions.find((r) => r.key === birthRegion)
@@ -1307,7 +1298,7 @@ export default function BaZiAnalyzerPage() {
     if (mark === 'taboo') return <Badge className={base} style={{ background: '#FFFFFF', color: '#E31C29', border: '1.5px solid #E31C29', boxShadow: 'none' }}>忌</Badge>;
     return <Badge className={base} style={{ background: '#FFFFFF', color: '#64748B', border: '1.5px solid #94A3B8', boxShadow: 'none' }}>中</Badge>;
   };
-  // 沛然堂线为独立纳音体系：01 共用排盘不再显示阴阳线的用/忌角标，改示纳音
+  // 沛然堂线已清空为空壳：01 共用排盘在该线模式下不显示用/忌角标
   const showYongJiMarks = activeLine !== 'peiran';
   // 四柱徽章取值：优先月令逐字资料库（xi/ji 定论），dai 待定或缺字回退引擎用忌 marks
   const pillarStemMark = (c: string, fallback: 'useful' | 'taboo' | 'neutral'): PillarMark => {
@@ -2025,7 +2016,7 @@ export default function BaZiAnalyzerPage() {
                 </h2>
                 <p className="mt-2 text-sm text-muted-foreground">
                   {activeLine
-                    ? `当前分析线 · ${activeLine === 'yinyang' ? '阴阳线（原体系）' : '沛然堂线（纳音体系）'}`
+                    ? `当前分析线 · ${activeLine === 'yinyang' ? '阴阳线（原体系）' : '沛然堂线（待重建）'}`
                     : '已排盘 · 请选择阴阳线或沛然堂线展开 02–06 完整报告'}
                 </p>
                 <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-3">
@@ -2249,17 +2240,6 @@ export default function BaZiAnalyzerPage() {
                             })}
                           </div>
                         </div>
-                        {activeLine === 'peiran' && peiranAnalysis && (
-                          <div className="mt-2.5 w-full border-t border-border pt-2 text-center">
-                            <div className="label-mono text-[8.5px] text-muted-foreground">纳音 NAYIN</div>
-                            <div
-                              className="mt-0.5 text-[12px] font-black"
-                              style={{ color: ELEMENT_COLORS[peiranAnalysis.pillars[idx].entry.element] }}
-                            >
-                              {peiranAnalysis.pillars[idx].entry.name}
-                            </div>
-                          </div>
-                        )}
                       </div>
                     ))}
                   </div>
@@ -2269,13 +2249,13 @@ export default function BaZiAnalyzerPage() {
 
 
               {/* ===== 分析线选择：01 排盘后，02–06 默认隐藏，选中线后才展开 ===== */}
-              {analysis && peiranAnalysis && (
+              {analysis && (
                 <div className="border-2 border-foreground bg-card">
                   <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4 md:px-8">
                     <div>
                       <div className="label-mono text-primary">LINE / 分析线</div>
                       <h3 className="mt-1 text-xl font-black tracking-tight text-foreground md:text-2xl">
-                        同盘两读 · 选择一条线展开 02–06
+                        选择一条线查看报告
                       </h3>
                     </div>
                     <div className="flex items-center gap-3">
@@ -2312,14 +2292,14 @@ export default function BaZiAnalyzerPage() {
                       {
                         key: 'peiran' as const,
                         name: '沛然堂线',
-                        en: 'PEIRAN LINE · NAYIN',
-                        tone: ELEMENT_COLORS[peiranAnalysis.yearNayin.element] ?? '#B98C31',
-                        badge: '纳音体系',
-                        desc: '年命纳音为身 · 四柱纳音生克 · 大运流年纳音',
-                        leftLabel: '年命纳音 / BODY',
-                        leftValue: peiranAnalysis.yearNayin.name,
-                        rightLabel: '日柱纳音 / SELF',
-                        rightValue: peiranAnalysis.dayNayin.name,
+                        en: 'PEIRAN LINE',
+                        tone: '#788491',
+                        badge: '待重建',
+                        desc: '线路重定中 · 内容已清空',
+                        leftLabel: '状态 / STATUS',
+                        leftValue: '空壳',
+                        rightLabel: '备注 / NOTE',
+                        rightValue: '等待重建',
                       },
                     ]).map((line) => {
                       const on = activeLine === line.key;
@@ -3779,9 +3759,9 @@ export default function BaZiAnalyzerPage() {
               )}
 
 
-              {/* 沛然堂线 02–06：独立纳音体系 */}
-              {activeLine === 'peiran' && peiranAnalysis && (
-                <PeiranReport analysis={peiranAnalysis} fullView={fullView} />
+              {/* 沛然堂线：空壳占位，等待重建 */}
+              {activeLine === 'peiran' && (
+                <PeiranReport />
               )}
 
 

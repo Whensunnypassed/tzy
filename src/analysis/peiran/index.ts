@@ -1,11 +1,8 @@
-// ============================================================
-// 沛然堂线（工作区）· 纳音身命法
-// 独立于阴阳线的月气/用忌/五行力量引擎：
-//   年柱纳音为身 → 四柱纳音生克链 → 刑冲/三合/纯旺 → 日柱纳音性情
-//   → 盲派纳音长生 → 大运/流年纳音 → 兰台妙选象格。
-// ============================================================
+// 沛然堂线（占位）
+// 路线重定：原纳音身命法引擎、数据书、五维与回测已清空，等待重建。
 
-import { buildPeiranAnalysis, type PeiranAnalysis } from './nayinAnalyzer';
-
-export type { PeiranAnalysis };
-export { buildPeiranAnalysis };
+export const PEIRAN_LINE = {
+  key: 'peiran',
+  label: '沛然堂线',
+  status: 'pending',
+} as const;
