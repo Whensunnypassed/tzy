@@ -857,7 +857,7 @@ type ScoreBreakdownRow = {
 };
 
 /** 应用版本号（代号 + 版本号，与 package.json / CHANGELOG 同步维护） */
-const APP_VERSION = '天枢 1.1.0';
+const APP_VERSION = '天枢 1.2.0';
 
 /** 十二时辰：索引 0 = 子时；中点小时 = 索引 × 2（子时跨日，取 00:00 为中点） */
 const SHICHEN_INFO: ReadonlyArray<{ branch: string; range: string }> = [
