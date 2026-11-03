@@ -7,7 +7,7 @@ import {
   type AstroChart,
 } from '@/analysis/peiran/astroChart';
 import { ZodiacTile } from '@/components/astrology/ZodiacGlyphs';
-import { judgeChart, type VerdictLevel } from '@/analysis/peiran/judgement';
+import { judgeChart, type Verdict, type VerdictLevel } from '@/analysis/peiran/judgement';
 import {
   rectifyBirthTime,
   EVENT_NAMES_ZH,
@@ -234,47 +234,94 @@ const LEVEL_TONE: Record<VerdictLevel, string> = {
   weak: '#E8A24A',
 };
 
-const LEVEL_LABEL: Record<VerdictLevel, string> = {
-  strong: '偏强',
-  moderate: '中平',
-  mixed: '有起伏',
-  weak: '偏弱',
-};
-
-/** 判读卡：结论大字 + 依据折叠 */
-function VerdictCard({
-  en,
-  title,
-  level,
-  headline,
-  evidence,
-}: {
-  en: string;
-  title: string;
-  level: VerdictLevel;
-  headline: string;
-  evidence: string[];
-}) {
-  const tone = LEVEL_TONE[level];
+/** 判读卡：区间谱条 + 具体读法 + 加减分来源 + 依据折叠 */
+function VerdictCard({ v }: { v: Verdict }) {
+  const tone = LEVEL_TONE[v.level];
+  const [lo, hi] = v.band.band;
   return (
     <div className="border px-4 py-5 md:px-5" style={{ borderColor: `${tone}44`, background: `${tone}0A` }}>
-      <div className="cosmos-panel-no">{en}</div>
-      <div className="cosmos-panel-title mt-1 !text-[15px]">{title}</div>
-      <div className="mt-2 text-center">
-        <span
-          className="label-mono inline-block border px-2 py-0.5"
-          style={{ color: tone, borderColor: `${tone}66`, textShadow: `0 0 10px ${tone}55` }}
-        >
-          {LEVEL_LABEL[level]}
-        </span>
+      <div className="flex items-baseline justify-between gap-2">
+        <div className="cosmos-panel-no">{v.en}</div>
+        <div className="label-mono text-[9px]" style={{ color: tone }}>
+          综合 {v.score > 0 ? '+' : ''}
+          {v.score}
+        </div>
       </div>
-      <p className="cosmos-prose mt-3 text-center !text-[13px] leading-relaxed">{headline}</p>
+      <div className="cosmos-panel-title mt-1 !text-[15px]">{v.title}</div>
+
+      {/* 区间谱条：六段，高亮大概率区间 */}
+      <div className="mt-3">
+        <div className="flex gap-[2px]">
+          {v.band.spectrum.map((s, i) => {
+            const on = i >= lo && i <= hi;
+            return (
+              <div
+                key={s}
+                className="h-1.5 flex-1"
+                style={{
+                  background: on ? tone : 'rgba(217, 179, 106, 0.16)',
+                  boxShadow: on ? `0 0 8px ${tone}55` : 'none',
+                }}
+              />
+            );
+          })}
+        </div>
+        <div className="mt-1 flex gap-[2px]">
+          {v.band.spectrum.map((s, i) => {
+            const on = i >= lo && i <= hi;
+            return (
+              <div
+                key={s}
+                className="flex-1 text-center text-[8.5px] font-bold"
+                style={{ color: on ? tone : 'var(--muted-foreground)', opacity: on ? 1 : 0.65 }}
+              >
+                {s}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mt-2 text-center text-[11px]" style={{ color: tone }}>
+        大概率落在「{v.band.label}」区间
+      </div>
+
+      <p className="cosmos-prose mt-3 !text-[12.5px] leading-relaxed">{v.reading.gist}</p>
+      <p className="cosmos-prose mt-1.5 !text-[11.5px] leading-relaxed" style={{ color: 'var(--muted-foreground)' }}>
+        注意：{v.reading.watch}
+      </p>
+
+      {(v.drivers.up.length > 0 || v.drivers.down.length > 0) && (
+        <div className="mt-3 space-y-1 border-t border-border pt-2">
+          {v.drivers.up.map((d) => (
+            <div key={`u-${d.name}`} className="flex items-baseline justify-between gap-2 text-[10px]">
+              <span style={{ color: '#2E7654' }}>
+                ↑ {d.name} {d.score > 0 ? '+' : ''}
+                {d.score}
+              </span>
+              <span style={{ color: 'var(--muted-foreground)' }}>第 {d.house} 宫</span>
+            </div>
+          ))}
+          {v.drivers.down.map((d) => (
+            <div key={`d-${d.name}`} className="flex items-baseline justify-between gap-2 text-[10px]">
+              <span style={{ color: '#E31C29' }}>
+                ↓ {d.name} {d.score}
+              </span>
+              <span style={{ color: 'var(--muted-foreground)' }}>第 {d.house} 宫</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       <details className="mt-3">
         <summary className="label-mono cursor-pointer text-center opacity-70 transition-opacity hover:opacity-100">
           依据 / EVIDENCE
         </summary>
         <ul className="mt-2 space-y-1">
-          {evidence.map((e, i) => (
+          <li className="text-[10px] leading-relaxed" style={{ color: 'var(--muted-foreground)' }}>
+            — 可核对判据：{v.observable}
+          </li>
+          {v.evidence.map((e, i) => (
             <li key={i} className="text-[10px] leading-relaxed" style={{ color: 'var(--muted-foreground)' }}>
               — {e}
             </li>
@@ -448,14 +495,7 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
       <Section no="03" title="命理解读" en="READING" meta="传统判读 · 非事实陈述">
         <div className="grid gap-3 p-4 sm:grid-cols-2 md:p-6 lg:grid-cols-3">
           {judgement.verdicts.map((v) => (
-            <VerdictCard
-              key={v.key}
-              en={v.en}
-              title={v.title}
-              level={v.level}
-              headline={v.headline}
-              evidence={v.evidence}
-            />
+            <VerdictCard key={v.key} v={v} />
           ))}
         </div>
         <div className="border-t border-border px-4 py-3 md:px-6">

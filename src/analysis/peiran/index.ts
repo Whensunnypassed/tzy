@@ -53,7 +53,7 @@ export type { LillyScore, LillyReport, LillyInput, ScoreItem } from './lilly';
 export { buildStructuredData, structuredDataToMarkdown, STRUCTURED_DATA_VERSION } from './structuredData';
 export type { StructuredData, DataQualityFlag } from './structuredData';
 export { judgeChart, OBSERVABLE_CRITERIA } from './judgement';
-export type { JudgementReport, Verdict, VerdictKey, VerdictLevel, SignificatorFact } from './judgement';
+export type { JudgementReport, Verdict, VerdictKey, VerdictLevel, SignificatorFact, VerdictBand, VerdictDriver } from './judgement';
 export {
   rectifyBirthTime,
   eventName,
