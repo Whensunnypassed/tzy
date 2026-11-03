@@ -105,6 +105,25 @@ const LEVEL_TEXT: Record<VerdictLevel, string> = {
   weak: '偏弱',
 };
 
+/**
+ * 档位阈值（已校准）。
+ * 校准依据：23 条有明确财富标签的视频案例，5 组阈值网格（见 scripts/astrology-backtest.mjs）。
+ *   · 初版 12/2/−8 预测分布 12/5/6/0，明显偏乐观（实际 6/13/2/2）；
+ *   · 18/6/−6 预测分布 3/14/6/0，最接近实际分布，命中率 34.8% → 47.8%。
+ * 局限：样本少、出生地缺失、出生时间只有时辰，故仍低于「一律猜中平」的 56.5% 基线。
+ * 该组值只表示「预测分布不再系统性偏乐观」，不代表判读已获验证。
+ */
+export let LEVEL_THRESHOLDS = {
+  strong: 18,
+  moderate: 6,
+  mixed: -6,
+};
+
+/** 仅供校准脚本使用；运行期不改 */
+export function setLevelThresholds(next: Partial<typeof LEVEL_THRESHOLDS>): void {
+  LEVEL_THRESHOLDS = { ...LEVEL_THRESHOLDS, ...next };
+}
+
 function levelOf(score: number, house?: number): VerdictLevel {
   let s = score;
   if (house !== undefined) {
@@ -112,9 +131,9 @@ function levelOf(score: number, house?: number): VerdictLevel {
     else if ([1, 10].includes(house)) s += 3;
     else if ([2, 5, 11].includes(house)) s += 1;
   }
-  if (s >= 12) return 'strong';
-  if (s >= 2) return 'moderate';
-  if (s >= -8) return 'mixed';
+  if (s >= LEVEL_THRESHOLDS.strong) return 'strong';
+  if (s >= LEVEL_THRESHOLDS.moderate) return 'moderate';
+  if (s >= LEVEL_THRESHOLDS.mixed) return 'mixed';
   return 'weak';
 }
 

@@ -32,9 +32,9 @@ function loadCore() {
     `
 import { buildPeiranModelFromChart } from '@/analysis/peiran/analysis';
 import { buildAstroChart } from '@/analysis/peiran/astroChart';
-import { judgeChart } from '@/analysis/peiran/judgement';
+import { judgeChart, setLevelThresholds } from '@/analysis/peiran/judgement';
 import { findCity } from '@/data/cityData';
-export { buildPeiranModelFromChart, buildAstroChart, judgeChart, findCity };
+export { buildPeiranModelFromChart, buildAstroChart, judgeChart, setLevelThresholds, findCity };
 `,
   );
   esbuild.buildSync({
@@ -111,77 +111,93 @@ const cases = parseCases(md);
 // 地区统一按北京（案例库出生地全部未提及）
 const city = core.findCity('北京');
 
-let usable = 0;
-let exactSingle = 0;
-let exactMode = 0;
-let exactMean = 0;
-const rows = [];
-
+// 先把所有案例 × 所有切片的模型算好并缓存；
+// 模型与阈值无关，切换阈值只需重跑 judgeChart。
+const cached = [];
 for (const c of cases) {
   const label = wealthLabel(c.wealthText);
   if (!label) continue;
-  usable += 1;
-
-  // 八个 15 分钟切片各建一盘、各跑一次判读
-  const levels = SLICE_OFFSETS.map((off) => {
+  const models = SLICE_OFFSETS.map((off) => {
     const t = shiftTime(c, off);
     const chart = core.buildAstroChart({ ...t, city });
-    const model = core.buildPeiranModelFromChart(chart, { currentYear: 2026, gender: c.gender });
-    const judgement = core.judgeChart(model);
-    return judgement.verdicts.find((v) => v.key === 'wealth').level;
+    return core.buildPeiranModelFromChart(chart, { currentYear: 2026, gender: c.gender });
   });
-
-  // 聚合一：众数
-  const counts = { strong: 0, moderate: 0, mixed: 0, weak: 0 };
-  for (const l of levels) counts[l] += 1;
-  const modeLevel = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
-
-  // 聚合二：档位均值（四舍五入回档）
-  const meanRank = Math.round(levels.reduce((s, l) => s + RANK[l], 0) / levels.length);
-  const meanLevel = LEVEL_OF_RANK[meanRank];
-
-  // 单点：中点（偏移 0，单独补算一次）
   const midChart = core.buildAstroChart({
     year: c.year, month: c.month, day: c.day, hour: c.hour, minute: c.minute, city,
   });
-  const midModel = core.buildPeiranModelFromChart(midChart, { currentYear: 2026, gender: c.gender });
-  const midLevel = core.judgeChart(midModel).verdicts.find((v) => v.key === 'wealth').level;
-
-  if (RANK[midLevel] === RANK[label]) exactSingle += 1;
-  if (RANK[modeLevel] === RANK[label]) exactMode += 1;
-  if (RANK[meanLevel] === RANK[label]) exactMean += 1;
-
-  const dist = `强${counts.strong} 中${counts.moderate} 起${counts.mixed} 弱${counts.weak}`;
-  rows.push({ id: c.id, label, midLevel, modeLevel, meanLevel, dist });
+  cached.push({
+    id: c.id,
+    label,
+    models,
+    midModel: core.buildPeiranModelFromChart(midChart, { currentYear: 2026, gender: c.gender }),
+  });
 }
 
-console.log('=== 希腊占星 · 视频案例回测（时辰切片版） ===\n');
-console.log(`案例总数：${cases.length}`);
-console.log(`财富标签可用：${usable}`);
-console.log(`出生地：0 条有值 → 统一按北京（39.90°N / 116.41°E）`);
-console.log(`时间处理：每个时辰切成 8 个 15 分钟切片，各建一盘\n`);
+/** 用当前阈值评估一轮 */
+function evaluate() {
+  let exactSingle = 0;
+  let exactMode = 0;
+  let exactMean = 0;
+  const predCounts = { strong: 0, moderate: 0, mixed: 0, weak: 0 };
+  const rows = [];
 
-console.log('| 案例 | 实际档 | 中点 | 众数 | 均值 | 八片分布 |');
-console.log('| --- | --- | --- | --- | --- | --- |');
-for (const r of rows) {
-  console.log(`| ${r.id} | ${r.label} | ${r.midLevel} | ${r.modeLevel} | ${r.meanLevel} | ${r.dist} |`);
+  for (const item of cached) {
+    const levels = item.models.map((m) =>
+      core.judgeChart(m).verdicts.find((v) => v.key === 'wealth').level,
+    );
+    const midLevel = core.judgeChart(item.midModel).verdicts.find((v) => v.key === 'wealth').level;
+
+    const counts = { strong: 0, moderate: 0, mixed: 0, weak: 0 };
+    for (const l of levels) counts[l] += 1;
+    const modeLevel = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+    const meanRank = Math.round(levels.reduce((s, l) => s + RANK[l], 0) / levels.length);
+    const meanLevel = LEVEL_OF_RANK[meanRank];
+
+    predCounts[modeLevel] += 1;
+    if (RANK[midLevel] === RANK[item.label]) exactSingle += 1;
+    if (RANK[modeLevel] === RANK[item.label]) exactMode += 1;
+    if (RANK[meanLevel] === RANK[item.label]) exactMean += 1;
+
+    rows.push({ id: item.id, label: item.label, midLevel, modeLevel, meanLevel, dist: counts });
+  }
+
+  return { exactSingle, exactMode, exactMean, predCounts, rows, usable: cached.length };
 }
 
-const pct = (n) => (usable ? ((n / usable) * 100).toFixed(1) : '0.0');
-console.log(`\n中点单盘命中：${exactSingle} / ${usable}（${pct(exactSingle)}%）`);
-console.log(`八片众数命中：${exactMode} / ${usable}（${pct(exactMode)}%）`);
-console.log(`八片均值命中：${exactMean} / ${usable}（${pct(exactMean)}%）`);
+const GRIDS = [
+  { name: '当前 12/2/−8', strong: 12, moderate: 2, mixed: -8 },
+  { name: '16/4/−8', strong: 16, moderate: 4, mixed: -8 },
+  { name: '18/6/−6', strong: 18, moderate: 6, mixed: -6 },
+  { name: '20/8/−4', strong: 20, moderate: 8, mixed: -4 },
+  { name: '22/10/−2', strong: 22, moderate: 10, mixed: -2 },
+];
 
-// 朴素基线
-if (usable > 0) {
-  const labelCounts = { strong: 0, moderate: 0, mixed: 0, weak: 0 };
-  for (const r of rows) labelCounts[r.label] += 1;
-  const modeLabel = Object.entries(labelCounts).sort((a, b) => b[1] - a[1])[0];
-  console.log(`\n朴素基线（一律猜「${modeLabel[0]}」）：${modeLabel[1]} / ${usable}（${pct(modeLabel[1])}%）`);
+console.log('=== 判读档位阈值网格校准 ===\n');
+console.log(`样本：${cached.length} 条有明确财富标签的视频案例（出生地按北京，时间按时辰切片）\n`);
+console.log('| 阈值 | 中点命中 | 众数命中 | 均值命中 | 预测分布（强/中/起/弱） |');
+console.log('| --- | --- | --- | --- | --- |');
+
+const results = [];
+for (const g of GRIDS) {
+  core.setLevelThresholds({ strong: g.strong, moderate: g.moderate, mixed: g.mixed });
+  const r = evaluate();
+  results.push({ g, r });
+  const usable = r.usable;
+  const pct = (n) => `${((n / usable) * 100).toFixed(1)}%`;
+  console.log(
+    `| ${g.name} | ${pct(r.exactSingle)} | ${pct(r.exactMode)} | ${pct(r.exactMean)} | ${r.predCounts.strong}/${r.predCounts.moderate}/${r.predCounts.mixed}/${r.predCounts.weak} |`,
+  );
 }
+
+// 标签真实分布（用于看预测是否偏离）
+const labelCounts = { strong: 0, moderate: 0, mixed: 0, weak: 0 };
+for (const item of cached) labelCounts[item.label] += 1;
+console.log(
+  `\n实际标签分布（强/中/起/弱）：${labelCounts.strong}/${labelCounts.moderate}/${labelCounts.mixed}/${labelCounts.weak}`,
+);
+console.log('朴素基线：一律猜「中平」得 ' + `${((labelCounts.moderate / cached.length) * 100).toFixed(1)}%`);
 
 console.log('\n说明：');
-console.log('1. 出生地全部缺失，按北京计算，真实经度偏差会直接改变 ASC 与宫位。');
-console.log('2. 出生时间只有时辰，ASC 最坏可差 30°，而本判读的财富档位依赖二宫主，二宫随 ASC 变动。');
-console.log('3. 因此上表只能验证「管线能跑通」，不能作为准确率结论。');
-console.log('4. 要得到可用结论，需要带出生地、精确到分钟的样本。');
+console.log('1. 出生地全部缺失，按北京计算，ASC 与宫位存在系统性偏差。');
+console.log('2. 出生时间只有时辰，切片跨度大，判读结论会翻转。');
+console.log('3. 因此本表只用于观察「阈值是否让预测分布更接近真实分布」，不作为准确率定论。');
