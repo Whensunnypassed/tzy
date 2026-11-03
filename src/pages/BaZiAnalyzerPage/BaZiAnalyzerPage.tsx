@@ -26,6 +26,8 @@ import MingJuFieldChart from '@/components/MingJuFieldChart';
 import ChangShengRingChart from '@/components/ChangShengRingChart';
 import PeiranReport from '@/pages/PeiranLine/PeiranReport';
 import { buildPeiranModelFromChart, buildAstroChart } from '@/analysis/peiran';
+import InkScenery from '@/components/scenery/InkScenery';
+import StarField from '@/components/scenery/StarField';
 
 import {
   calculateBaZi,
@@ -900,6 +902,22 @@ export default function BaZiAnalyzerPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // 主题皮肤：阴阳线走宣纸水墨（ink），沛然堂线走希腊夜空（cosmos）
+  // 同时挂到 <html> 与 <body>：html 供全局变量回落，body 承载底色与过渡
+  useEffect(() => {
+    const root = document.documentElement;
+    const body = document.body;
+    const theme = activeLine === 'peiran' ? 'cosmos' : 'ink';
+    root.dataset.theme = theme;
+    body.classList.remove('theme-ink', 'theme-cosmos');
+    body.classList.add(`theme-${theme}`);
+    return () => {
+      root.dataset.theme = 'ink';
+      body.classList.remove('theme-ink', 'theme-cosmos');
+      body.classList.add('theme-ink');
+    };
+  }, [activeLine]);
+
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
   const currentYear = new Date().getFullYear();
@@ -1459,13 +1477,17 @@ export default function BaZiAnalyzerPage() {
   const pillarLabels = ['祖上', '父母', '自己', '子女'];
 
   return (
-    <div
-      className="min-h-screen"
-      style={{
-        ...themeVarsStyle,
-        background: 'var(--background)',
-      }}
-    >
+    <>
+      {/* 背景皮肤层：水墨剪影 / 希腊星空，交叉淡入淡出 */}
+      <InkScenery active={activeLine !== 'peiran'} />
+      <StarField active={activeLine === 'peiran'} />
+
+      <div
+        className={`theme-root relative z-10 min-h-screen ${activeLine === 'peiran' ? 'theme-cosmos' : 'theme-ink'}`}
+        style={{
+          ...themeVarsStyle,
+        }}
+      >
       {/* ===== 顶部信息条：单行规线 + 等宽元信息 ===== */}
       <div className="w-full border-b border-border bg-card">
         <div className="mx-auto flex w-full max-w-[1440px] flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2 md:px-6">
@@ -3894,6 +3916,7 @@ export default function BaZiAnalyzerPage() {
           ↑
         </button>
       )}
-    </div>
+      </div>
+    </>
   );
 }

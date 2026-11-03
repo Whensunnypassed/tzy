@@ -1,9 +1,11 @@
 import {
   ZODIAC_SIGNS,
+  ZODIAC_SIGNS_EN,
   formatArc,
   SIGN_ASPECT_NAMES,
   type AstroChart,
 } from '@/analysis/peiran/astroChart';
+import { ZodiacTile } from '@/components/astrology/ZodiacGlyphs';
 import {
   DEGREE_ASPECT_LABELS,
   MOTION_LABELS,
@@ -39,12 +41,14 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="border-2 border-foreground bg-card">
-      <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border px-4 py-3 md:px-6">
-        <div className="label-mono text-primary">
-          {no} / {en} · {title}
+    <div className="cosmos-panel line-switch">
+      <div className="cosmos-panel-head">
+        <div className="cosmos-rule mb-3">
+          <span className="cosmos-rule-diamond" />
         </div>
-        {meta && <div className="label-mono text-muted-foreground">{meta}</div>}
+        <div className="cosmos-panel-no">{no} · {en}</div>
+        <div className="cosmos-panel-title">{title}</div>
+        {meta && <div className="cosmos-panel-en">{meta}</div>}
       </div>
       {children}
     </div>
@@ -55,7 +59,7 @@ function KeyValue({ label, value, mono = false }: { label: string; value: string
   return (
     <div className="flex items-baseline justify-between gap-4 border-b border-border py-1.5 last:border-b-0">
       <span className="label-mono text-muted-foreground">{label}</span>
-      <span className={`text-sm font-bold text-foreground ${mono ? 'num-tabular' : ''}`}>{value}</span>
+      <span className={`cosmos-prose !text-sm font-semibold ${mono ? 'num-tabular' : ''}`}>{value}</span>
     </div>
   );
 }
@@ -63,11 +67,14 @@ function KeyValue({ label, value, mono = false }: { label: string; value: string
 export default function PeiranReport({ model }: { model: PeiranModel | null }) {
   if (!model) {
     return (
-      <div className="border-2 border-foreground bg-card p-6 md:p-10">
-        <div className="label-mono text-primary">PEIRAN LINE / 沛然堂线 · 希腊占星</div>
-        <h2 className="mt-2 text-2xl font-black tracking-tight text-foreground md:text-3xl">等待排盘</h2>
-        <p className="mt-3 max-w-xl text-sm font-bold leading-relaxed text-muted-foreground">
-          请在上方填写出生日期、时刻与出生城市；希腊占星线需要经纬度与准确到分钟的时间。
+      <div className="cosmos-panel line-switch p-6 md:p-10">
+        <div className="cosmos-rule mb-4">
+          <span className="cosmos-rule-diamond" />
+        </div>
+        <div className="cosmos-title text-[10px]">PEIRAN LINE · HELLENISTIC</div>
+        <h2 className="cosmos-title mt-3 text-3xl md:text-4xl">等 待 排 盘</h2>
+        <p className="cosmos-subtitle mt-3 text-[12px] leading-loose">
+          请在上方填写出生日期、时刻与出生城市
         </p>
       </div>
     );
@@ -78,8 +85,29 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
   const states = model.planetStates;
   const sc = model.selfCheck;
 
+  // 各宫落星（用于十二宫床位图）
+  const bodiesByHouse = (house: number): string[] =>
+    PLANET_ORDER.filter((p) => chart.bodies[p].house === house).map((p) => PLANET_NAMES_ZH[p]);
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
+      {/* 线上公告：碑刻式入场 */}
+      <div className="rise-in">
+        <div className="cosmos-rule">
+          <span className="cosmos-rule-diamond" />
+        </div>
+        <div className="cosmos-title mt-4 text-[10px] md:text-[11px]">
+          ΚΑΤΑΣΤΑΣΙΣ · THE HELLENISTIC CHART
+        </div>
+        <h2 className="cosmos-title mt-2 text-3xl leading-tight md:text-5xl">星 盘 事 实</h2>
+        <p className="cosmos-subtitle mt-3 text-[11px] leading-loose md:text-[12px]">
+          {chart.city.key} · {chart.sect === 'diurnal' ? '昼盘' : '夜盘'} · 整宫制
+        </p>
+        <div className="cosmos-rule mt-4">
+          <span className="cosmos-rule-diamond" />
+        </div>
+      </div>
+
       {/* 01 星盘基础 */}
       <Section
         no="01"
@@ -108,8 +136,30 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
         </div>
       </Section>
 
-      {/* 02 七政落座 + 状态 */}
-      <Section no="02" title="七政落座与状态" en="PLANETS" meta="TROPICAL · 回归黄道">
+      {/* 02 十二宫位：星座图形为主 */}
+      <Section no="02" title="十二宫位" en="THE TWELVE HOUSES" meta="WHOLE SIGN · 以图形为主">
+        <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 md:p-6 lg:grid-cols-4">
+          {chart.houseSigns.map((signIdx, i) => {
+            const house = i + 1;
+            return (
+              <ZodiacTile
+                key={house}
+                house={house}
+                signIndex={signIdx}
+                signName={ZODIAC_SIGNS[signIdx]}
+                signEn={ZODIAC_SIGNS_EN[signIdx]}
+                bodies={bodiesByHouse(house)}
+              />
+            );
+          })}
+        </div>
+        <div className="border-t border-border px-4 py-2 text-[11px] leading-snug text-muted-foreground md:px-6">
+          整宫制：上升点所在星座为第 1 宫，其余按黄道顺序排布；方格内的发光字为落入该宫的天体。
+        </div>
+      </Section>
+
+      {/* 03 七政落座 + 状态 */}
+      <Section no="03" title="七政落座与状态" en="PLANETS" meta="TROPICAL · 回归黄道">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
@@ -175,8 +225,8 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
         </div>
       </Section>
 
-      {/* 03 七虚点 */}
-      <Section no="03" title="七虚点" en="LOTS" meta={chart.sect === 'diurnal' ? '昼盘公式' : '夜盘公式'}>
+      {/* 04 七虚点 */}
+      <Section no="04" title="七虚点" en="LOTS" meta={chart.sect === 'diurnal' ? '昼盘公式' : '夜盘公式'}>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
@@ -213,9 +263,9 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
         </div>
       </Section>
 
-      {/* 04 相位 */}
+      {/* 05 相位 */}
       <Section
-        no="04"
+        no="05"
         title="相位"
         en="ASPECTS"
         meta={`${model.degreeAspects.length} 组度相位 · ${model.aversions.length} 组映照`}
@@ -270,8 +320,8 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
         </div>
       </Section>
 
-      {/* 05 时间主星 */}
-      <Section no="05" title="时间主星" en="TIME LORDS" meta={`当前 ${model.age} 岁 · ${currentYearLabel(model)}`}>
+      {/* 06 时间主星 */}
+      <Section no="06" title="时间主星" en="TIME LORDS" meta={`当前 ${model.age} 岁 · ${currentYearLabel(model)}`}>
         <div className="grid gap-6 p-4 md:grid-cols-2 md:p-6">
           <div>
             <div className="label-mono mb-2 text-muted-foreground">周年推运 / PROFECTIONS</div>
@@ -387,8 +437,8 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
         </div>
       </Section>
 
-      {/* 06 整宫相位简表 */}
-      <Section no="06" title="整宫相位" en="SIGN ASPECTS" meta="WHOLE SIGN">
+      {/* 07 整宫相位简表 */}
+      <Section no="07" title="整宫相位" en="SIGN ASPECTS" meta="WHOLE SIGN">
         {chart.aspects.length === 0 ? (
           <div className="px-4 py-4 text-sm font-bold text-muted-foreground md:px-6">七政之间无整宫相位。</div>
         ) : (
@@ -418,9 +468,9 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
         </div>
       </Section>
 
-      {/* 07 自检 */}
+      {/* 08 自检 */}
       <Section
-        no="07"
+        no="08"
         title="引擎自检"
         en="SELF-CHECK"
         meta={`${sc.passed} 通过 / ${sc.failed} 失败`}
@@ -446,13 +496,16 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
       </Section>
 
       {/* 说明 */}
-      <div className="border border-border bg-card p-4 md:p-6">
-        <div className="label-mono text-muted-foreground">SCOPE · 本页范围</div>
-        <p className="mt-2 text-sm font-bold leading-relaxed text-foreground">
+      <div className="cosmos-panel p-4 md:p-6">
+        <div className="cosmos-rule mb-3">
+          <span className="cosmos-rule-diamond" />
+        </div>
+        <div className="cosmos-panel-no text-center">SCOPE · 本页范围</div>
+        <p className="cosmos-prose mt-3 text-center">
           本页只输出可确定性计算的事实，不含吉凶判读。尊贵 / 虚点 / 时间主星均按传统定义计算，
           判读层（把事实翻译为人事结论）尚未启用。
         </p>
-        <p className="mt-2 text-[11px] font-bold leading-relaxed text-muted-foreground">
+        <p className="mt-3 text-center text-[11px] leading-relaxed" style={{ color: 'var(--muted-foreground)' }}>
           未接入：主方向（primary directions，口径分歧未决）、阿拉伯扩展虚点（公式分歧未决）、
           卜卦与择时（需独立输入模型）。
         </p>
