@@ -1103,17 +1103,17 @@ export default function BaZiAnalyzerPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // 示例盘：2003-04-30 20:55 · 大理 · 男
+  // 示例盘：2000-12-10 00:00 · 北京 · 男
   const fillExample = () => {
-    setYear('2003');
-    setMonth('4');
-    setDay('30');
-    setHour('20');
-    setMinute('55');
+    setYear('2000');
+    setMonth('12');
+    setDay('10');
+    setHour('0');
+    setMinute('0');
     setGender('male');
     setTimePrecision('minute');
-    setBirthCity('大理');
-    setCityQuery('大理');
+    setBirthCity('北京');
+    setCityQuery('北京');
     setCityOpen(false);
   };
 
