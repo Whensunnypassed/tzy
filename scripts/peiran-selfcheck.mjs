@@ -30,8 +30,10 @@ function loadPeiran() {
 import { buildPeiranModelFromChart } from '@/analysis/peiran/analysis';
 import { buildAstroChart } from '@/analysis/peiran/astroChart';
 import { runSelfCheck } from '@/analysis/peiran/selfCheck';
+import { judgeChart } from '@/analysis/peiran/judgement';
+import { buildStructuredData } from '@/analysis/peiran/structuredData';
 import { findCity } from '@/data/cityData';
-export { buildPeiranModelFromChart, buildAstroChart, runSelfCheck, findCity };
+export { buildPeiranModelFromChart, buildAstroChart, runSelfCheck, judgeChart, buildStructuredData, findCity };
 `,
   );
   esbuild.buildSync({
@@ -125,6 +127,30 @@ for (const c of CASES) {
       console.log(`  [FAIL] ${item.id} ${item.name} — ${item.detail}`);
     }
   }
+
+  // 判读层校验：六个主题齐全、每条结论有依据、档位合法
+  const judgement = core.judgeChart(model);
+  const validLevels = new Set(['strong', 'moderate', 'mixed', 'weak']);
+  const jBad = judgement.verdicts.filter(
+    (v) => !validLevels.has(v.level) || v.evidence.length < 2 || !v.headline,
+  );
+  totalPassed += jBad.length === 0 ? 1 : 0;
+  totalFailed += jBad.length === 0 ? 0 : 1;
+  console.log(
+    `判读 ${judgement.verdicts.length} 个主题${jBad.length === 0 ? '（结构校验通过）' : `，${jBad.length} 个异常`}`,
+  );
+  for (const v of judgement.verdicts) {
+    console.log(`  ${v.title} [${v.level}] ${v.headline}`);
+  }
+
+  // 结构化契约校验：可序列化、八段齐全
+  const sd = core.buildStructuredData(model, 'male');
+  const sdOk =
+    typeof sd === 'object' &&
+    Boolean(sd.meta && sd.input && sd.chart && sd.lilly && sd.lots && sd.arabicParts && sd.aspects && sd.timeLords && sd.dataQuality);
+  totalPassed += sdOk ? 1 : 0;
+  totalFailed += sdOk ? 0 : 1;
+  console.log(`结构化契约 ${sdOk ? '完整' : '缺段'}（v${sd.meta.version}，质量标记 ${sd.dataQuality.flags.length} 条）`);
 }
 
 console.log(`\n合计：${totalPassed} 项通过，${totalFailed} 项失败`);

@@ -6,6 +6,7 @@ import {
   type AstroChart,
 } from '@/analysis/peiran/astroChart';
 import { ZodiacTile } from '@/components/astrology/ZodiacGlyphs';
+import { judgeChart, type VerdictLevel } from '@/analysis/peiran/judgement';
 import {
   DEGREE_ASPECT_LABELS,
   MOTION_LABELS,
@@ -23,20 +24,10 @@ import {
 // 面向用户只保留两块基础内容：星盘（上升 / 中天 / 宗派）与十二宫图。
 // 其余专业数据（七政状态、尊贵、虚点、阿拉伯点、相位、时间主星）
 // 收进页尾的「详细数据」，默认折叠。
-// 判读模块（性格 / 事业 / 财富 / 关系 / 健康 / 流年）以占位卡呈现。
+// 判读层输出六个主题的倾向判断，每条结论都挂依据。
 // ============================================================
 
 const PLANET_ORDER: readonly Planet[] = ['sun', 'moon', 'mercury', 'venus', 'mars', 'jupiter', 'saturn'];
-
-/** 未来判读模块的占位 */
-const PLACEHOLDERS = [
-  { title: '性格与天赋', en: 'TEMPERAMENT', hint: '宗派、发光体与上升主星' },
-  { title: '事业与地位', en: 'CAREER', hint: '中天、十宫与年主星' },
-  { title: '财富与资源', en: 'WEALTH', hint: '福点、二宫与木星' },
-  { title: '关系与婚姻', en: 'RELATIONSHIP', hint: '七宫、金星与婚姻点' },
-  { title: '健康与体质', en: 'HEALTH', hint: '六宫、上升与月亮' },
-  { title: '流年与应期', en: 'ANNUAL', hint: '推运、黄道释放与返照' },
-] as const;
 
 function Section({
   no,
@@ -66,7 +57,64 @@ function Section({
   );
 }
 
-/** 折叠版块：默认收起，点标题展开 */
+/** 判读档位配色 */
+const LEVEL_TONE: Record<VerdictLevel, string> = {
+  strong: '#2E7654',
+  moderate: '#C9A227',
+  mixed: '#8FC7D8',
+  weak: '#E8A24A',
+};
+
+const LEVEL_LABEL: Record<VerdictLevel, string> = {
+  strong: '偏强',
+  moderate: '中平',
+  mixed: '有起伏',
+  weak: '偏弱',
+};
+
+/** 判读卡：结论大字 + 依据折叠 */
+function VerdictCard({
+  en,
+  title,
+  level,
+  headline,
+  evidence,
+}: {
+  en: string;
+  title: string;
+  level: VerdictLevel;
+  headline: string;
+  evidence: string[];
+}) {
+  const tone = LEVEL_TONE[level];
+  return (
+    <div className="border px-4 py-5 md:px-5" style={{ borderColor: `${tone}44`, background: `${tone}0A` }}>
+      <div className="cosmos-panel-no">{en}</div>
+      <div className="cosmos-panel-title mt-1 !text-[15px]">{title}</div>
+      <div className="mt-2 text-center">
+        <span
+          className="label-mono inline-block border px-2 py-0.5"
+          style={{ color: tone, borderColor: `${tone}66`, textShadow: `0 0 10px ${tone}55` }}
+        >
+          {LEVEL_LABEL[level]}
+        </span>
+      </div>
+      <p className="cosmos-prose mt-3 text-center !text-[13px] leading-relaxed">{headline}</p>
+      <details className="mt-3">
+        <summary className="label-mono cursor-pointer text-center opacity-70 transition-opacity hover:opacity-100">
+          依据 / EVIDENCE
+        </summary>
+        <ul className="mt-2 space-y-1">
+          {evidence.map((e, i) => (
+            <li key={i} className="text-[10px] leading-relaxed" style={{ color: 'var(--muted-foreground)' }}>
+              — {e}
+            </li>
+          ))}
+        </ul>
+      </details>
+    </div>
+  );
+}
 function FoldSection({
   no,
   title,
@@ -124,6 +172,7 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
   const chart: AstroChart = model.chart;
   const dignities = model.dignities;
   const states = model.planetStates;
+  const judgement = judgeChart(model);
 
   const bodiesByHouse = (house: number): string[] =>
     PLANET_ORDER.filter((p) => chart.bodies[p].house === house).map((p) => PLANET_NAMES_ZH[p]);
@@ -198,21 +247,22 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
         </div>
       </Section>
 
-      {/* 03 判读模块占位 */}
-      <Section no="03" title="命理解读" en="READING" meta="COMING SOON">
+      {/* 03 命理解读 */}
+      <Section no="03" title="命理解读" en="READING" meta="传统判读 · 非事实陈述">
         <div className="grid gap-3 p-4 sm:grid-cols-2 md:p-6 lg:grid-cols-3">
-          {PLACEHOLDERS.map((p) => (
-            <div
-              key={p.en}
-              className="border border-dashed border-border px-4 py-5 text-center"
-              style={{ borderColor: 'rgba(217,179,106,0.22)' }}
-            >
-              <div className="cosmos-panel-no opacity-70">{p.en}</div>
-              <div className="cosmos-panel-title mt-1 !text-[15px] opacity-70">{p.title}</div>
-              <div className="cosmos-panel-en mt-1">{p.hint}</div>
-              <div className="cosmos-panel-en mt-2 !text-[8px] opacity-50">待开放</div>
-            </div>
+          {judgement.verdicts.map((v) => (
+            <VerdictCard
+              key={v.key}
+              en={v.en}
+              title={v.title}
+              level={v.level}
+              headline={v.headline}
+              evidence={v.evidence}
+            />
           ))}
+        </div>
+        <div className="border-t border-border px-4 py-2 text-[10px] leading-snug text-muted-foreground md:px-6">
+          {judgement.disclaimer}
         </div>
       </Section>
 

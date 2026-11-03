@@ -52,6 +52,8 @@ export {
 export type { LillyScore, LillyReport, LillyInput, ScoreItem } from './lilly';
 export { buildStructuredData, structuredDataToMarkdown, STRUCTURED_DATA_VERSION } from './structuredData';
 export type { StructuredData, DataQualityFlag } from './structuredData';
+export { judgeChart } from './judgement';
+export type { JudgementReport, Verdict, VerdictKey, VerdictLevel, SignificatorFact } from './judgement';
 export { calculatePlanetStates, SOLAR_STATE_LABELS, ORIENTALITY_LABELS, MOTION_LABELS, SPEED_LABELS } from './planetaryState';
 export type { PlanetStateFact, SolarState, Orientality, MotionState, SpeedState } from './planetaryState';
 export {
