@@ -2391,7 +2391,7 @@ export default function BaZiAnalyzerPage() {
                         en: 'YIN-YANG LINE',
                         tone: '#E31C29',
                         badge: '原体系',
-                        desc: '月气为权 · 用神忌神 · 原整套逻辑，一字不改',
+                        desc: '月气为权 · 用神忌神 · 五行旺衰 · 大运流年',
                         leftLabel: '用神 / FAVORABLE',
                         leftValue: analysis.yongJi.usefulElements.map((el) => ELEMENT_NAMES[el]).join(' · ') || '—',
                         rightLabel: '忌神 / TABOO',
@@ -2403,11 +2403,11 @@ export default function BaZiAnalyzerPage() {
                         en: 'PEIRAN LINE',
                         tone: '#788491',
                         badge: '希腊占星',
-                        desc: '宗派 / 轴点 / 七政落座 / 整宫制',
+                        desc: '星盘 · 十二宫 · 尊贵 · 虚点 · 时间主星',
                         leftLabel: '体系 / SYSTEM',
                         leftValue: 'Hellenistic',
-                        rightLabel: '阶段 / STAGE',
-                        rightValue: '星盘基础',
+                        rightLabel: '状态 / STATUS',
+                        rightValue: '已就绪',
                       },
                     ]).map((line) => {
                       const on = activeLine === line.key;

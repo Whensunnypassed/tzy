@@ -83,7 +83,6 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
   const chart: AstroChart = model.chart;
   const dignities = model.dignities;
   const states = model.planetStates;
-  const sc = model.selfCheck;
 
   // 各宫落星（用于十二宫床位图）
   const bodiesByHouse = (house: number): string[] =>
@@ -127,12 +126,12 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
             <KeyValue label="上升 / ASC" value={`${chart.asc.sign} ${formatArc(chart.asc.lon)}`} />
             <KeyValue label="中天 / MC" value={`${chart.mc.sign} ${formatArc(chart.mc.lon)}`} />
             <KeyValue label="宫制 / HOUSES" value="整宫制 Whole Sign" />
-            <KeyValue label="各点 Almuten / ASC" value={`${PLANET_NAMES_ZH[model.almutenAsc.planet]}（${model.almutenAsc.score} 分${model.almutenAsc.resolvedByRuler ? ' · 回退守护星' : ''}）`} />
+            <KeyValue label="上升点主星 / ALMUTEN" value={PLANET_NAMES_ZH[model.almutenAsc.planet]} />
             <KeyValue label="当地恒星时 / RAMC" value={`${chart.ramc.toFixed(3)}°`} mono />
           </div>
         </div>
         <div className="border-t border-border px-4 py-2 text-[11px] leading-snug text-muted-foreground md:px-6">
-          {chart.timezoneNote} 星历为本地自研（VSOP87 / Meeus 公开算法），七政黄经与 JPL DE441 比对误差 ≤ 3 角分。
+          {chart.timezoneNote}
         </div>
       </Section>
 
@@ -152,9 +151,6 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
               />
             );
           })}
-        </div>
-        <div className="border-t border-border px-4 py-2 text-[11px] leading-snug text-muted-foreground md:px-6">
-          整宫制：上升点所在星座为第 1 宫，其余按黄道顺序排布；方格内的发光字为落入该宫的天体。
         </div>
       </Section>
 
@@ -219,10 +215,6 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
             </tbody>
           </table>
         </div>
-        <div className="border-t border-border px-4 py-2 text-[11px] leading-snug text-muted-foreground md:px-6">
-          尊贵计分：庙 5 / 旺 4 / 三分 3 / 界 2 / 面 1 / 陷 −5 / 落 −4。界位用埃及界。
-          状态判定：与太阳距角 ≤17′ 为「中心」、≤8.5° 为「燃烧」、≤17° 为「日光下」；速度相对平均日行度 ±10% 判疾行 / 迟行。
-        </div>
       </Section>
 
       {/* 04 七虚点 */}
@@ -257,9 +249,6 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
               ))}
             </tbody>
           </table>
-        </div>
-        <div className="border-t border-border px-4 py-2 text-[11px] leading-snug text-muted-foreground md:px-6">
-          七虚点按 Paulus Alexandrinus 定义，昼夜按宗派互换。福点与精神点关于上升点对称（F + S ≡ 2·ASC）。
         </div>
       </Section>
 
@@ -306,10 +295,6 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
             </tbody>
           </table>
         </div>
-        <div className="border-t border-border px-4 py-2 text-[11px] leading-snug text-muted-foreground md:px-6">
-          阿拉伯点与七虚点同构：ASC + A − B，夜盘互换 A / B。本表只收来源可核验、公式无实质分歧的 10 点；
-          婚姻点分男女两式，未匹配命主性别的一条标注为「仅参考」。公式分裂较严重的点（如疾病、死亡、旅行）暂不收录。
-        </div>
       </Section>
 
       {/* 06 相位 */}
@@ -345,7 +330,7 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
         </div>
         {model.aversions.length > 0 && (
           <div className="border-t border-border px-4 py-3 md:px-6">
-            <div className="label-mono mb-2 text-muted-foreground">映照 / AVERSION（整宫相隔 1·5·7·11，彼此不相见）</div>
+            <div className="label-mono mb-2 text-muted-foreground">映照 / AVERSION</div>
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-bold text-foreground">
               {model.aversions.map((v) => (
                 <span key={`${v.a}-${v.b}`}>
@@ -355,18 +340,6 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
             </div>
           </div>
         )}
-        <div className="border-t border-border px-4 py-2 text-[11px] leading-snug text-muted-foreground md:px-6">
-          容许度：合 8° / 冲 8° / 三合 7° / 刑 7° / 六合 5°。整宫相位另见 01 星盘基础（按星座计）。
-          {model.voidOfCourse && (
-            <>
-              {' '}空亡判定：
-              {PLANET_ORDER.filter((p) => model.voidOfCourse[p]?.isVoid)
-                .map((p) => PLANET_NAMES_ZH[p])
-                .join('、') || '无'}
-              。
-            </>
-          )}
-        </div>
       </Section>
 
       {/* 07 时间主星 */}
@@ -416,7 +389,7 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
 
         <div className="border-t border-border p-4 md:p-6">
           <div className="label-mono mb-2 text-muted-foreground">
-            黄道释放 / ZODIACAL RELEASING（自{model.zodiacalReleasing.startLot === 'fortune' ? '福点' : '精神点'}释放，360 天年）
+            黄道释放 / ZODIACAL RELEASING（自{model.zodiacalReleasing.startLot === 'fortune' ? '福点' : '精神点'}释放）
           </div>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-sm">
@@ -446,9 +419,6 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
               </tbody>
             </table>
           </div>
-          <div className="mt-2 text-[11px] leading-snug text-muted-foreground">
-            PEAK = 该段星座与福点成角（自身 / 第 4 / 7 / 10 宫）；解结 = 走完十二星座后跳至对宫。
-          </div>
         </div>
 
         <div className="border-t border-border p-4 md:p-6">
@@ -462,7 +432,6 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
                 value={`${model.solarReturn.utc.year}-${String(model.solarReturn.utc.month).padStart(2, '0')}-${String(model.solarReturn.utc.day).padStart(2, '0')} ${String(model.solarReturn.utc.hour).padStart(2, '0')}:${String(model.solarReturn.utc.minute).padStart(2, '0')}`}
                 mono
               />
-              <KeyValue label="解算残差" value={`${model.solarReturn.residualDeg.toExponential(2)}°`} mono />
               <KeyValue label="返照 ASC" value={`${model.solarReturn.chart.asc.sign} ${formatArc(model.solarReturn.chart.asc.lon)}`} />
               <KeyValue label="返照 MC" value={`${model.solarReturn.chart.mc.sign} ${formatArc(model.solarReturn.chart.mc.lon)}`} />
             </div>
@@ -512,53 +481,7 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
             ))}
           </div>
         )}
-        <div className="border-t border-border px-4 py-2 text-[11px] leading-snug text-muted-foreground md:px-6">
-          希腊占星以整宫计相位：相隔 3/9 宫为刑，4/8 宫为三合，2/10 宫为六合，6 宫为冲；1/5/7/11 宫为映照。
-        </div>
       </Section>
-
-      {/* 09 自检 */}
-      <Section
-        no="09"
-        title="引擎自检"
-        en="SELF-CHECK"
-        meta={`${sc.passed} 通过 / ${sc.failed} 失败`}
-      >
-        <div className="grid gap-[1px] bg-border sm:grid-cols-2 lg:grid-cols-3">
-          {sc.items.map((item) => (
-            <div key={item.id} className="bg-card px-3 py-2">
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="label-mono text-[9px] text-muted-foreground">{item.id}</span>
-                <span className="label-mono" style={{ color: item.passed ? '#2E7654' : 'var(--primary)' }}>
-                  {item.passed ? 'PASS' : 'FAIL'}
-                </span>
-              </div>
-              <div className="mt-0.5 text-[11px] font-black text-foreground">{item.name}</div>
-              <div className="mt-0.5 text-[10px] leading-snug text-muted-foreground">{item.detail}</div>
-            </div>
-          ))}
-        </div>
-        <div className="border-t border-border px-4 py-2 text-[11px] leading-snug text-muted-foreground md:px-6">
-          自检覆盖：规则表全称性（界位 / 三分 / 庙旺 / 面 / 喜乐宫 / 黄道释放年数 / 法尔达利亚 / 虚点）、
-          星盘不变量（黄经范围 / 宫位覆盖 / 宗派自洽 / 轴点关系 / 落宫）、跨模块一致性（虚点镜像 / 尊贵互斥 / 界位无空隙）。
-        </div>
-      </Section>
-
-      {/* 说明 */}
-      <div className="cosmos-panel p-4 md:p-6">
-        <div className="cosmos-rule mb-3">
-          <span className="cosmos-rule-diamond" />
-        </div>
-        <div className="cosmos-panel-no text-center">SCOPE · 本页范围</div>
-        <p className="cosmos-prose mt-3 text-center">
-          本页只输出可确定性计算的事实，不含吉凶判读。尊贵 / 虚点 / 时间主星均按传统定义计算，
-          判读层（把事实翻译为人事结论）尚未启用。
-        </p>
-        <p className="mt-3 text-center text-[11px] leading-relaxed" style={{ color: 'var(--muted-foreground)' }}>
-          未接入：主方向（primary directions，口径分歧未决）、阿拉伯扩展虚点（公式分歧未决）、
-          卜卦与择时（需独立输入模型）。
-        </p>
-      </div>
     </div>
   );
 }
