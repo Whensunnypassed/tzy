@@ -28,7 +28,7 @@
 
 | 文献 | 作者/年代 | 英译与获取 | 用途 |
 | --- | --- | --- | --- |
-| *Anthology*（选集，10 卷） | Vettius Valens，2 世纪 | **Mark Riley 全 9 卷英译 PDF，免费在线**；Project Hindsight（Robert Schmidt）精译本部分卷；2022 年出纸本 | 时间主星总源：黄道释放、行星期间、大量实例盘（逾百例） |
+| *Anthology*（选集，10 卷） | Vettius Valens，2 世纪 | **Mark Riley 全 9 卷英译 PDF，免费**：原发布页 <http://www.csus.edu/indiv/r/rileymt/Vettius%20Valens%20entire.pdf>（若失效，可从 skyscript 或 UPenn Online Books 入口取）；Project Hindsight（Robert Schmidt）精译本部分卷；2022 年出纸本；希腊原文 Kroll 1908 版在 archive.org | 时间主星总源：黄道释放、行星期间、大量实例盘（逾百例） |
 | *Carmen Astrologicum* | Dorotheus of Sidon，1 世纪 | 希腊原文佚失，存 9 世纪阿拉伯译本（Umar ibn al-Farrukhan）；**Benjamin Dykes 第 2 修订版**（含希腊散文残篇） | 择时、本命、虚点用法 |
 | *Introductory Matters* | Paulus Alexandrinus，4 世纪 | Dorian Gieseler Greenbaum 2001（含 Olympiodorus 注释，已绝版）；James Holden 2012 | 七虚点定型的教科书 |
 | *Tetrabiblos* | Claudius Ptolemy，2 世纪 | **Loeb 435，F. E. Robbins 1940**（公有领域，免费在线）；Ashmand 1822 旧译；Project Hindsight 精译 I/III/IV 卷 | 体系骨架、行星条件、宗派 |
@@ -125,7 +125,8 @@
 ### 5.2 在线工具（做结果对照，不做依赖）
 
 - **Astro-Seek**：免费，含 Annual Profections、Firdaria、Distributions、Zodiacal Releasing。
-- **Astrolium**：免费 ZR 与虚点计算器；Pro $11/月、Adept $29/月（可比对其输出格式与措辞）。
+- **Augurine**：免费希腊占星计算器，直接给出 sect、尊贵、lots、chart ruler、**almuten figuris**、hyleg；另有时间主星计算器（profections / ZR / firdaria 三件套对照）。判读文案可作措辞参考。
+- **Astrolium**：免费 ZR 与虚点计算器；官方称整宫制、essential dignities、7 个 Hermetic lots 全覆盖，Pro $11/月、Adept $29/月。
 - **Astro.com**：专业级免费星盘（Swiss Ephemeris），配套 Astro-Databank。
 - **Astro Gold / Solar Fire / Janus 6（$275）/ TimePassages（$79+）**：商业桌面软件，含传统技法表。
 
@@ -211,7 +212,8 @@
 ## 参考链接
 
 - Project Hindsight Greek Track 卷目：https://projecthindsight.net/greek-track-summaries
-- Valens《选集》Riley 免费英译说明：https://www.roger-pearse.com/weblog/2010/12/page/5/
+- Valens《选集》Riley 免费英译：https://skyscript.co.uk/valens_riley.html
+- Valens 英译与希腊原文检索入口：https://onlinebooks.library.upenn.edu/webbin/book/lookupname?key=Vettius%20Valens
 - Seven Stars Astrology 原典资源页：https://sevenstarsastrology.com/resources/
 - Ptolemy *Tetrabiblos*（Loeb 435）：https://www.loebclassics.com/display/LCL435/1940/volume.xml
 - 阿拉伯虚点传承史：https://www.augurine.com/blog/insights/transmission-history-arabic-lots
