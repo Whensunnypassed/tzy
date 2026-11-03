@@ -1103,13 +1103,18 @@ export default function BaZiAnalyzerPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // 示例盘：2003-04-30 20:55 · 大理 · 男
   const fillExample = () => {
-    setYear('1990');
-    setMonth('5');
-    setDay('15');
-    setHour('12');
-    setMinute('0');
+    setYear('2003');
+    setMonth('4');
+    setDay('30');
+    setHour('20');
+    setMinute('55');
     setGender('male');
+    setTimePrecision('minute');
+    setBirthCity('大理');
+    setCityQuery('大理');
+    setCityOpen(false);
   };
 
   // 阴阳线上下文：原整套逻辑，始终构建，供 01 排盘与阴阳线报告使用
