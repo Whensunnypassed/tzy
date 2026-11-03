@@ -216,3 +216,74 @@ export function rectifyBirthTime(
 export function eventName(type: LifeEventType): string {
   return EVENT_NAMES_ZH[type];
 }
+
+// ------------------------------------------------------------
+// 按年龄给出建议事件
+// ------------------------------------------------------------
+// 不同人生阶段可用的里程碑事件不同：学生没有婚姻与子女，
+// 若统一问结婚 / 生子，学生用户会直接卡住。
+// 每组三条覆盖三个不同宫位，保证有区分力。
+// ------------------------------------------------------------
+
+interface StageSpec {
+  /** 该阶段年龄上限（含） */
+  maxAge: number;
+  label: string;
+  types: readonly [LifeEventType, LifeEventType, LifeEventType];
+}
+
+export const EVENT_STAGES: readonly StageSpec[] = [
+  { maxAge: 22, label: '学生阶段', types: ['education', 'relocation', 'illness'] },
+  { maxAge: 30, label: '青年阶段', types: ['education', 'career', 'relocation'] },
+  { maxAge: 45, label: '成家阶段', types: ['marriage', 'child', 'relocation'] },
+  { maxAge: 200, label: '中年以后', types: ['loss', 'illness', 'child'] },
+] as const;
+
+/** 由年龄取所处阶段 */
+export function stageOf(age: number): StageSpec {
+  return EVENT_STAGES.find((s) => age <= s.maxAge) ?? EVENT_STAGES[EVENT_STAGES.length - 1];
+}
+
+/** 该年龄段的默认三条建议事件 */
+export function suggestEvents(age: number): LifeEventType[] {
+  return [...stageOf(age).types];
+}
+
+/** 该年龄段的阶段名 */
+export function stageLabel(age: number): string {
+  return stageOf(age).label;
+}
+
+/**
+ * 事件覆盖度检查：事件若都落在同一宫位，不同出生时刻算出的推运
+ * 宫位差别不大，校准没有区分力。此时应提示用户补充别类事件。
+ */
+export function assessEventCoverage(events: LifeEventType[]): {
+  distinctHouses: number;
+  enough: boolean;
+  warning: string | null;
+} {
+  const houses = new Set(
+    events.map((t) => EVENT_HOUSE[t]).filter((h) => h > 0),
+  );
+  const distinctHouses = houses.size;
+
+  if (events.length < 2) {
+    return { distinctHouses, enough: false, warning: '至少需要 2 个不同年份的事件才能校准。' };
+  }
+  if (distinctHouses <= 1) {
+    return {
+      distinctHouses,
+      enough: false,
+      warning: '所有事件指向同一宫位，区分度不足。建议补充一个不同类型的事件（如搬家、住院、升学）。',
+    };
+  }
+  if (distinctHouses === 2) {
+    return {
+      distinctHouses,
+      enough: true,
+      warning: '仅覆盖两个宫位，校准结果仅供参考；再加一个不同宫位的事件会明显更稳。',
+    };
+  }
+  return { distinctHouses, enough: true, warning: null };
+}

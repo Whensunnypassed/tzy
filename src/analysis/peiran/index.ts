@@ -54,7 +54,17 @@ export { buildStructuredData, structuredDataToMarkdown, STRUCTURED_DATA_VERSION 
 export type { StructuredData, DataQualityFlag } from './structuredData';
 export { judgeChart, OBSERVABLE_CRITERIA } from './judgement';
 export type { JudgementReport, Verdict, VerdictKey, VerdictLevel, SignificatorFact } from './judgement';
-export { rectifyBirthTime, eventName, EVENT_HOUSE, EVENT_NAMES_ZH } from './rectify';
+export {
+  rectifyBirthTime,
+  eventName,
+  suggestEvents,
+  stageOf,
+  stageLabel,
+  assessEventCoverage,
+  EVENT_HOUSE,
+  EVENT_NAMES_ZH,
+  EVENT_STAGES,
+} from './rectify';
 export type {
   LifeEvent,
   LifeEventType,

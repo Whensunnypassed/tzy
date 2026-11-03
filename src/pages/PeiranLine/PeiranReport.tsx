@@ -8,7 +8,16 @@ import {
 } from '@/analysis/peiran/astroChart';
 import { ZodiacTile } from '@/components/astrology/ZodiacGlyphs';
 import { judgeChart, type VerdictLevel } from '@/analysis/peiran/judgement';
-import { rectifyBirthTime, EVENT_NAMES_ZH, type LifeEvent, type LifeEventType, type RectificationResult } from '@/analysis/peiran/rectify';
+import {
+  rectifyBirthTime,
+  EVENT_NAMES_ZH,
+  suggestEvents,
+  assessEventCoverage,
+  stageLabel,
+  type LifeEvent,
+  type LifeEventType,
+  type RectificationResult,
+} from '@/analysis/peiran/rectify';
 import { assessStability, levelDistribution, type StabilityReport } from '@/analysis/peiran/stability';
 import {
   DEGREE_ASPECT_LABELS,
@@ -32,20 +41,24 @@ import {
 
 const PLANET_ORDER: readonly Planet[] = ['sun', 'moon', 'mercury', 'venus', 'mars', 'jupiter', 'saturn'];
 
-/** 出生时间校准面板：录入人生事件，扫描最相容时刻 */
-function RectifyPanel({ chart }: { chart: AstroChart }) {
-  const [rows, setRows] = useState<Array<{ year: string; type: LifeEventType }>>([
-    { year: '2015', type: 'marriage' },
-    { year: '2018', type: 'child' },
-    { year: '2021', type: 'career' },
-  ]);
+/** 出生时间校准面板：按年龄给默认三条，可展开补充，覆盖度不足时提示 */
+function RectifyPanel({ chart, age }: { chart: AstroChart; age: number }) {
+  const [openMore, setOpenMore] = useState(false);
+  const [rows, setRows] = useState<Array<{ year: string; type: LifeEventType }>>(() =>
+    suggestEvents(age).map((t) => ({ year: '', type: t })),
+  );
   const [result, setResult] = useState<RectificationResult | null>(null);
 
+  const events: LifeEvent[] = rows
+    .map((r) => ({ year: parseInt(r.year, 10), type: r.type }))
+    .filter((e) => Number.isFinite(e.year) && e.year > 1900);
+  const coverage = assessEventCoverage(events.map((e) => e.type));
+  const otherTypes = (Object.keys(EVENT_NAMES_ZH) as LifeEventType[]).filter(
+    (t) => !rows.some((r) => r.type === t),
+  );
+
   const run = () => {
-    const events: LifeEvent[] = rows
-      .map((r) => ({ year: parseInt(r.year, 10), type: r.type }))
-      .filter((e) => Number.isFinite(e.year) && e.year > 1900);
-    if (events.length === 0) return;
+    if (events.length < 2) return;
     setResult(
       rectifyBirthTime(
         {
@@ -65,7 +78,7 @@ function RectifyPanel({ chart }: { chart: AstroChart }) {
   return (
     <div className="p-4 md:p-6">
       <p className="cosmos-prose mb-4 text-center !text-[12px]">
-        录入你能确认年份的人生事件，系统会在出生时刻前后 20 分钟内扫描，找与这批事件最相容的时点。
+        按你的阶段（{stageLabel(age)}）给出三件事，能填几条填几条，不确定就跳过。
       </p>
 
       <div className="space-y-2">
@@ -112,20 +125,47 @@ function RectifyPanel({ chart }: { chart: AstroChart }) {
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={() => setRows([...rows, { year: '', type: 'career' }])}
+          onClick={() => setOpenMore((v) => !v)}
           className="label-mono border border-border px-3 py-1.5 transition-colors hover:bg-accent"
         >
-          添加事件
+          {openMore ? '收起补充' : '补充更多事件'}
         </button>
         <button
           type="button"
           onClick={run}
-          className="label-mono border px-3 py-1.5 transition-colors"
+          disabled={events.length < 2}
+          className="label-mono border px-3 py-1.5 transition-colors disabled:opacity-40"
           style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }}
         >
           开始校准
         </button>
       </div>
+
+      {openMore && otherTypes.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {otherTypes.map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setRows([...rows, { year: '', type: t }])}
+              className="label-mono border border-border px-2 py-1 text-[10px] transition-colors hover:bg-accent"
+            >
+              + {EVENT_NAMES_ZH[t]}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {coverage.warning && (
+        <div className="mt-3 text-[11px] leading-relaxed" style={{ color: 'var(--primary)' }}>
+          {coverage.warning}
+        </div>
+      )}
+      {!coverage.warning && events.length >= 2 && (
+        <div className="mt-3 text-[11px]" style={{ color: 'var(--muted-foreground)' }}>
+          已覆盖 {coverage.distinctHouses} 个宫位，区分度足够。
+        </div>
+      )}
 
       {result && (
         <div className="mt-4 border-t border-border pt-4">
@@ -778,7 +818,7 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
 
       {/* 10 出生时间校准 */}
       <FoldSection no="10" title="出生时间校准" en="RECTIFICATION" meta="验前事">
-        <RectifyPanel chart={chart} />
+        <RectifyPanel chart={chart} age={model.age} />
       </FoldSection>
     </div>
   );
