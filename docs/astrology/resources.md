@@ -190,12 +190,36 @@
 | 曲线图组件 | `DaYunCurveChart` | 可改为 ZR / profections 时间轴曲线 |
 | 回测脚手架 | esbuild 打包 TS + Node 脚本 | 可复用于占星评分器校准 |
 
-### 9.1 必须补齐的缺口（按阻塞程度排序）
+### 9.1 缺口状态（2026-11-03 更新）
 
-1. **纬度**：算 ASC / MC / 宫位必须同时有经纬度。现有 `BIRTH_REGION_CFG` 只有经度。
-2. **历史时区库**：境外出生、LMT 时代（标准时区普及前）、两次大战战时夏令时。caelus-birth 或 IANA tzdb 可补。
-3. **黄道坐标与星历**：八字线无行星黄经。caelus（VSOP87，MIT）可满足，且维持"本地纯前端计算"承诺。
-4. **占星案例库**：现有案例无地点/分钟时间，需另行积累（建议 Astro-Databank AA/A 级起步）。
+| # | 缺口 | 状态 | 落地方式 |
+| --- | --- | --- | --- |
+| 1 | 缺纬度（算不出 ASC / 宫位） | **已补齐** | `src/data/cityData.ts` 187 城经纬度；未收录城市一律按北京（39.90°N / 116.41°E） |
+| 2 | 无历史时区库 | **已补齐** | `resolveUtcOffsetMinutes`：中国 1949 前五时区 / 1986–1991 夏令时 / 主要国家 DST 规则，结果带 exact·approx·rough 精度标记 |
+| 3 | 无行星黄历 | **已补齐** | 自研 `ephemeris.ts`（VSOP87 / Meeus），对 JPL DE441 ≤3 角分；因本机 npm 权限拦截未采用 caelus |
+| 4 | 占星案例库缺地点与分钟时间 | **未解决** | 需另行积累；建议从 Astro-Databank 的 AA/A 级数据起步 |
+
+### 9.2 已落地的规则与其来源
+
+| 模块 | 规则 | 来源 |
+| --- | --- | --- |
+| `tables.ts` | 庙 / 旺 / 陷 / 落 | Ptolemy《Tetrabiblos》I.17–19 与通行表 |
+| `tables.ts` | 三分主星（昼 / 夜 / 参与） | Dorotheus / Ptolemy 传统 |
+| `tables.ts` | 埃及界（5 段 × 12 星座） | Dorotheus 传统（Brennan、George 采此版） |
+| `tables.ts` | 36 面 | 迦勒底面序，自白羊 0° 为火星 |
+| `tables.ts` | 喜乐宫 | Paulus Alexandrinus |
+| `tables.ts` | 七虚点公式 | Paulus《Introductory Matters》22–23 章 |
+| `tables.ts` | 黄道释放年数（15/8/20/25/19/20/8/15/12/27/30/12） | Vettius Valens《Anthology》IV |
+| `tables.ts` | 法尔达利亚（昼 / 夜 75 年） | 波斯 / 阿拉伯传统 |
+| `dignity.ts` | 尊贵计分（5/4/3/2/1） | Ibn Ezra / Lilly 五点制 |
+
+### 9.3 明确未落地（口径分歧未决）
+
+| 技法 | 原因 |
+| --- | --- |
+| 主方向 primary directions | 多种口径（Ptolemaic / Placidian / Naibod），未取得可靠对照前不写入引擎 |
+| 阿拉伯扩展虚点（婚姻 / 子女 / 疾病等） | 不同阿拉伯作者公式存在实质分歧 |
+| 卜卦 / 择时 | 需独立的提问时刻与「有效盘」判定模型，不属于本命盘管线 |
 
 ---
 

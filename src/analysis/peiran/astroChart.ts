@@ -196,6 +196,30 @@ export function buildAstroChart(input: AstroChartInput): AstroChart {
   const { year, month, day, hour, minute, city } = input;
   const tz = resolveUtcOffsetMinutes(city, year, month, day);
   const utc = toUtcParts(year, month, day, hour, minute, tz.offsetMinutes);
+  return buildAstroChartFromUtc(utc, city, {
+    local: { year, month, day, hour, minute },
+    utcOffsetMinutes: tz.offsetMinutes,
+    timezoneNote: tz.note,
+    timezoneAccuracy: tz.accuracy,
+  });
+}
+
+export interface AstroChartUtcMeta {
+  local: { year: number; month: number; day: number; hour: number; minute: number };
+  utcOffsetMinutes: number;
+  timezoneNote: string;
+  timezoneAccuracy: 'exact' | 'approx' | 'rough';
+}
+
+/**
+ * 直接由 UTC 时刻构建星盘（不经过时区换算）。
+ * 用于太阳返照、主方向等需要「先解算 UTC 时刻」的场景。
+ */
+export function buildAstroChartFromUtc(
+  utc: { year: number; month: number; day: number; hour: number; minute: number },
+  city: CityRecord,
+  meta: AstroChartUtcMeta,
+): AstroChart {
   // 两套日数：行星算法用 Schlyter d（历元 1999-12-31 00:00），
   // 恒星时 / 黄赤交角用真 J2000 日数（历元 2000-01-01 12:00）。
   const days = daysSinceJ2000(utc.year, utc.month, utc.day, utc.hour, utc.minute);
@@ -241,12 +265,12 @@ export function buildAstroChart(input: AstroChartInput): AstroChart {
   }
 
   return {
-    local: { year, month, day, hour, minute },
+    local: meta.local,
     city,
     utc,
-    utcOffsetMinutes: tz.offsetMinutes,
-    timezoneNote: tz.note,
-    timezoneAccuracy: tz.accuracy,
+    utcOffsetMinutes: meta.utcOffsetMinutes,
+    timezoneNote: meta.timezoneNote,
+    timezoneAccuracy: meta.timezoneAccuracy,
     days,
     daysJ2000,
     ramc,

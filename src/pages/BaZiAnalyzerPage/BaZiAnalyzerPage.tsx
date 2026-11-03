@@ -25,7 +25,7 @@ import { toast } from 'sonner';
 import MingJuFieldChart from '@/components/MingJuFieldChart';
 import ChangShengRingChart from '@/components/ChangShengRingChart';
 import PeiranReport from '@/pages/PeiranLine/PeiranReport';
-import { buildAstroChart } from '@/analysis/peiran/astroChart';
+import { buildPeiranModelFromChart, buildAstroChart } from '@/analysis/peiran';
 
 import {
   calculateBaZi,
@@ -1069,11 +1069,12 @@ export default function BaZiAnalyzerPage() {
     [chart, currentYear],
   );
 
-  // 希腊占星线：星盘基础。仅在排盘完成后计算，输入阶段不跑星历。
-  const astroChart = useMemo(() => {
+  // 希腊占星线：完整事实模型（星盘 → 尊贵 → 虚点 → 状态 → 相位 → 时间主星 → 自检）
+  // 仅在排盘完成后计算，输入阶段不跑星历。
+  const peiranModel = useMemo(() => {
     if (!analyzed) return null;
     const city = findCity(birthCity) ?? (findCity(CITY_DEFAULT_KEY) as CityRecord);
-    return buildAstroChart({
+    const chart = buildAstroChart({
       year: parseInt(year, 10) || 2000,
       month: parseInt(month, 10) || 1,
       day: parseInt(day, 10) || 1,
@@ -1081,7 +1082,8 @@ export default function BaZiAnalyzerPage() {
       minute: parseInt(minute, 10) || 0,
       city,
     });
-  }, [analyzed, year, month, day, hour, minute, birthCity]);
+    return buildPeiranModelFromChart(chart, { currentYear });
+  }, [analyzed, year, month, day, hour, minute, birthCity, currentYear]);
   const monthQi = analysis?.monthQi ?? null;
   const yongJi = analysis?.yongJi ?? null;
   const elementPower = analysis?.elementPower ?? null;
@@ -1970,14 +1972,20 @@ export default function BaZiAnalyzerPage() {
                           }}
                           onFocus={() => setCityOpen(true)}
                           onBlur={() => {
-                            // 失焦容错：输入名恰好等于某城市则直接采用，否则回退已选城市
+                            // 失焦容错：命中城市则采用；未收录的城市一律回退北京经纬度并提示
                             const hit = findCity(cityQuery.trim());
                             if (hit) {
                               selectCity(hit);
-                            } else {
-                              setCityQuery(selectedCity.key);
-                              setCityOpen(false);
+                              return;
                             }
+                            const typed = cityQuery.trim();
+                            if (typed && typed !== selectedCity.key) {
+                              toast.warning(`未收录「${typed}」，已按北京经纬度（39.90°N / 116.41°E）计算`);
+                              selectCity(findCity(CITY_DEFAULT_KEY) as CityRecord);
+                              return;
+                            }
+                            setCityQuery(selectedCity.key);
+                            setCityOpen(false);
                           }}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' && cityMatches.length > 0) {
@@ -2026,7 +2034,7 @@ export default function BaZiAnalyzerPage() {
                         {cityOffset.note}
                       </div>
                       <div className="mt-1 text-[11px] leading-snug text-muted-foreground/80">
-                        阴阳线只需经度做真太阳时；<strong className="font-bold text-foreground">希腊占星线需要城市经纬度与准确到分钟的出生时刻</strong>，未填城市时按北京默认值计算。
+                        阴阳线只需经度做真太阳时；<strong className="font-bold text-foreground">希腊占星线需要城市经纬度与准确到分钟的出生时刻</strong>。未收录的城市一律按北京经纬度（39.90°N / 116.41°E）计算。
                       </div>
                     </div>
 
@@ -3837,9 +3845,9 @@ export default function BaZiAnalyzerPage() {
               )}
 
 
-              {/* 沛然堂线：希腊占星星盘基础 */}
+              {/* 沛然堂线：希腊占星事实面板 */}
               {activeLine === 'peiran' && (
-                <PeiranReport astro={astroChart} />
+                <PeiranReport model={peiranModel} />
               )}
 
 
