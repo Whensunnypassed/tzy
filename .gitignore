@@ -56,6 +56,8 @@ scripts/batch-verify-celebs.mjs
 scripts/compare-celebs.mjs
 scripts/nightly-verify.mjs
 scripts/spot-check.mjs
+scripts/reverse-birth.mjs
+scripts/reverse-minghai.mjs
 
 # 飞书案例回测（含飞书 Base token，不入库）
 scripts/backtest-lark.mjs

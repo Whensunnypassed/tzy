@@ -130,7 +130,7 @@ for (const c of CASES) {
     }
   }
 
-  // 判读层校验：六个主题齐全、每条结论有依据、档位合法
+  // 判读层校验：七个主题齐全、每条结论有依据、档位合法
   const judgement = core.judgeChart(model);
   const validLevels = new Set(['strong', 'moderate', 'mixed', 'weak']);
   const jBad = judgement.verdicts.filter(

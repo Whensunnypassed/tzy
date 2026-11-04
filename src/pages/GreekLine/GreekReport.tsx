@@ -247,7 +247,14 @@ function VerdictCard({ v }: { v: Verdict }) {
           {v.score}
         </div>
       </div>
-      <div className="cosmos-panel-title mt-1 !text-[15px]">{v.title}</div>
+      <div className="cosmos-panel-title mt-1 !text-[15px]">
+        {v.title}
+        {v.tag && (
+          <span className="label-mono ml-2 align-middle text-[8.5px]" style={{ color: '#E8A24A', border: '1px solid #E8A24A55', padding: '1px 4px' }}>
+            {v.tag}
+          </span>
+        )}
+      </div>
 
       {/* 区间谱条：六段，高亮大概率区间 */}
       <div className="mt-3">

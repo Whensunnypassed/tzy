@@ -2,7 +2,7 @@
 // 希腊线 · 判读引擎（Judgement）
 // ------------------------------------------------------------
 // 输入：结构化事实模型（GreekModel）
-// 输出：六个主题的判读结论，每条结论必须挂「依据」。
+// 输出：七个主题的判读结论，每条结论必须挂「依据」。
 //
 // 方法论约束（不可违反）：
 //   1. 结论只能来自事实 + 规则，不得凭空生成；
@@ -12,13 +12,14 @@
 //   4. 判读是传统口径的复现，不是事实，页面必须标注。
 //
 // 规则来源：Lilly《Christian Astrology》宫主与尊贵判读框架 +
-//          希腊占星的主题宫（1 性格 / 2 财 / 6 健康 / 7 婚 / 10 事业）。
+//          希腊占星的主题宫（1 性格 / 3·9 学业 / 2 财 / 6 健康 / 7 婚 / 10 事业）。
 // ============================================================
 
 import { PLANET_NAMES_ZH, SIGN_RULERS, SIGN_NAMES_ZH, type Planet } from './tables';
+import { DEGREE_ASPECT_LABELS, type DegreeAspectType } from './aspects';
 import type { GreekModel } from './analysis';
 
-export type VerdictKey = 'temperament' | 'career' | 'wealth' | 'relationship' | 'health' | 'annual';
+export type VerdictKey = 'temperament' | 'education' | 'career' | 'wealth' | 'relationship' | 'health' | 'annual';
 
 export type VerdictLevel = 'strong' | 'moderate' | 'mixed' | 'weak';
 
@@ -51,6 +52,8 @@ export interface Verdict {
   /** 判读依据（每条都可回溯到事实） */
   evidence: string[];
   significators: SignificatorFact[];
+  /** 可选的校准状态标记（如「未校准」） */
+  tag?: string;
 }
 
 export interface VerdictBand {
@@ -79,6 +82,12 @@ export const OBSERVABLE_CRITERIA: Record<VerdictKey, Record<VerdictLevel, string
     moderate: '性格平稳，能适应多数环境',
     mixed: '性格在不同场合差异明显，状态起伏较大',
     weak: '长期内在耗损，易受环境牵制',
+  },
+  education: {
+    strong: '最终学历为硕士及以上，或有同等强度的长期专业训练',
+    moderate: '最终学历为本科或大专',
+    mixed: '学历路径有中断或转轨（如高中后升学、工作后补学历）',
+    weak: '最终学历为高中及以下',
   },
   career: {
     strong: '担任管理或专业岗，职业路径连续向上',
@@ -127,6 +136,7 @@ const BAD_HOUSES = [6, 8, 12];
  */
 const BANDS: Record<VerdictKey, readonly [string, string, string, string, string, string]> = {
   temperament: ['内耗', '顺从', '平稳', '有主见', '能扛事', '掌局'],
+  education: ['初中', '高中', '大专', '本科', '硕士', '博士'],
   career: ['无业', '基层', '职员', '骨干', '管理', '高层'],
   wealth: ['贫困', '温饱', '小康', '小富', '富裕', '大富'],
   relationship: ['单身', '短期', '磨合', '稳定', '成家', '长久'],
@@ -170,6 +180,24 @@ const READING_TEXT: Record<VerdictKey, Record<VerdictLevel, { gist: string; watc
     weak: {
       gist: '对外部节奏比较敏感，容易被环境推着走。',
       watch: '需要稳定的外部结构（固定作息、长期同伴）才能把能力发挥出来。',
+    },
+  },
+  education: {
+    strong: {
+      gist: '学习能力与高等教育的缘分偏强，读到研究生阶段或具备同等强度的长期专业训练。',
+      watch: '学历高不等于路径顺，方向选错时沉没成本也更高。',
+    },
+    moderate: {
+      gist: '学业路径平稳，本科或大专是大概率落点，继续深造需要外部推力。',
+      watch: '中段最容易被「还行」耽误，关键节点要主动争取。',
+    },
+    mixed: {
+      gist: '学业受环境影响大，路径可能有中断或转轨，最终学历取决于后段发力。',
+      watch: '转轨本身不是问题，反复换方向才会消耗积累。',
+    },
+    weak: {
+      gist: '早期学业阻力较大，学历多停在中等教育或职业教育。',
+      watch: '学历之外还有技能路径，尽早找到能长期积累的手艺或方向。',
     },
   },
   career: {
@@ -309,6 +337,38 @@ export function setLevelThresholds(next: Partial<typeof LEVEL_THRESHOLDS>): void
   LEVEL_THRESHOLDS = { ...LEVEL_THRESHOLDS, ...next };
 }
 
+/**
+ * 学业主题的分档阈值。
+ * 学业分由水星 / 木星 / 月亮与三九宫主合成，量程与其余主题不同，故单独一组。
+ * 标定结果（59 条视频案例 × 每时辰 4 切 = 236 盘，其中 19 条有明确最终学历）：
+ *   · 按标签最优网格只能到 52.6% 全中，而「一律判本科」基线为 47.4%，
+ *     差异在 19 例样本量内属噪声，故不按标签硬调；
+ *   · 改用分数分布分位（236 盘 p50=17 / p75=23），取 23 / 8 / 0，
+ *     使强档约 27%、中档约 47%、起伏档约 18%、弱档约 8%。
+ *   · 命海 1053 条（按最近候选年定年）复测：全中 38.4%，低于「一律判中档」
+ *     50.8% 基线；该复测受 60 年歧义污染，只作参考，不作校准依据。
+ * 结论：本主题是传统规则的复现，未获外部验证，页面必须按「未校准」呈现。
+ */
+export let EDUCATION_THRESHOLDS = {
+  strong: 23,
+  moderate: 8,
+  mixed: 0,
+};
+
+/** 仅供校准脚本使用；运行期不改 */
+export function setEducationThresholds(next: Partial<typeof EDUCATION_THRESHOLDS>): void {
+  EDUCATION_THRESHOLDS = { ...EDUCATION_THRESHOLDS, ...next };
+}
+
+/** 相位对学业的加减分（水木 / 水月 / 水土） */
+const EDUCATION_ASPECT_WEIGHT: Record<DegreeAspectType, number> = {
+  conjunction: 3,
+  sextile: 4,
+  trine: 6,
+  square: -3,
+  opposition: -2,
+};
+
 /** 落宫修正后的综合分（与档位判定同一口径，供区间定位显示） */
 function adjustedScore(score: number, house?: number): number {
   let s = score;
@@ -354,6 +414,10 @@ export function judgeChart(model: GreekModel): JudgementReport {
     };
   };
 
+  /** 两星之间的度相位（有则取最精确的一条） */
+  const aspectBetween = (a: Planet, b: Planet) =>
+    model.degreeAspects.find((x) => (x.a === a && x.b === b) || (x.a === b && x.b === a));
+
   const verdicts: Verdict[] = [];
 
   // ---------- 1. 性格与天赋 ----------
@@ -388,7 +452,69 @@ export function judgeChart(model: GreekModel): JudgementReport {
     });
   }
 
-  // ---------- 2. 事业与地位 ----------
+  // ---------- 2. 学业与学历 ----------
+  {
+    const mer = sig('mercury', '水星 · 学习');
+    const jup = sig('jupiter', '木星 · 高等教育');
+    const moon = sig('moon', '月亮 · 心智与记忆');
+    const lord3 = lordOf(3);
+    const lord9 = lordOf(9);
+    const l3 = sig(lord3, '三宫主 · 基础学业');
+    const l9 = sig(lord9, '九宫主 · 高等教育');
+    const mj = aspectBetween('mercury', 'jupiter');
+    const mm = aspectBetween('mercury', 'moon');
+    const ms = aspectBetween('mercury', 'saturn');
+
+    // 学业分：水星为主（学习本身），木星次之（高等教育），月亮为心力，
+    // 三 / 九宫主只按本质尊贵轻量计入；相位单列，避免与 Lilly 重复计分。
+    // 宫位只给「木星落九宫 / 水星落三九宫」两条传统旁证，权重低于行星本身。
+    let score = mer.score
+      + Math.round(jup.score * 0.7)
+      + Math.round(moon.score * 0.3)
+      + Math.round(model.dignities[lord9].score * 0.4)
+      + Math.round(model.dignities[lord3].score * 0.2);
+    if (mj) score += EDUCATION_ASPECT_WEIGHT[mj.type];
+    if (mm) score += Math.round(EDUCATION_ASPECT_WEIGHT[mm.type] * 0.6);
+    if (ms && (ms.type === 'square' || ms.type === 'opposition')) score -= 2;
+    if (jup.house === 9) score += 4;
+    if (mer.house === 3 || mer.house === 9) score += 3;
+
+    const level: VerdictLevel =
+      score >= EDUCATION_THRESHOLDS.strong
+        ? 'strong'
+        : score >= EDUCATION_THRESHOLDS.moderate
+          ? 'moderate'
+          : score >= EDUCATION_THRESHOLDS.mixed
+            ? 'mixed'
+            : 'weak';
+    const sigs = [mer, jup, moon, l9, l3];
+
+    verdicts.push({
+      key: 'education',
+      title: '学业与学历',
+      en: 'EDUCATION',
+      level,
+      tag: '未校准',
+      headline: `水星${mer.score > 0 ? '+' : ''}${mer.score} 分，木星${jup.score > 0 ? '+' : ''}${jup.score} 分；九宫主${PLANET_NAMES_ZH[lord9]}落第 ${l9.house} 宫。`,
+      band: bandOf('education', level),
+      score,
+      reading: READING_TEXT.education[level],
+      drivers: driversOf(sigs),
+      observable: OBSERVABLE_CRITERIA.education[level],
+      evidence: [
+        `水星（学习之星）：Lilly ${mer.score > 0 ? '+' : ''}${mer.score} 分，${mer.grade}，落第 ${mer.house} 宫（${houseNote(mer.house)}${mer.house === 3 || mer.house === 9 ? '，学业宫 +3' : ''}）`,
+        `木星（高等教育之星）：Lilly ${jup.score > 0 ? '+' : ''}${jup.score} 分，${jup.grade}，落第 ${jup.house} 宫（${houseNote(jup.house)}${jup.house === 9 ? '，九宫得地 +4' : ''}）`,
+        `月亮（心智与记忆）：Lilly ${moon.score > 0 ? '+' : ''}${moon.score} 分，${model.lilly.moonWaxing ? '增光' : '减光'}`,
+        `水木相位：${mj ? `${DEGREE_ASPECT_LABELS[mj.type]}（偏差 ${mj.deviation.toFixed(1)}°）` : '无'}；水月相位：${mm ? `${DEGREE_ASPECT_LABELS[mm.type]}（偏差 ${mm.deviation.toFixed(1)}°）` : '无'}`,
+        `三宫（${SIGN_NAMES_ZH[houseSign(3)]}）主${PLANET_NAMES_ZH[lord3]}：本质尊贵 ${model.dignities[lord3].score > 0 ? '+' : ''}${model.dignities[lord3].score} 分，落第 ${l3.house} 宫`,
+        `九宫（${SIGN_NAMES_ZH[houseSign(9)]}）主${PLANET_NAMES_ZH[lord9]}：本质尊贵 ${model.dignities[lord9].score > 0 ? '+' : ''}${model.dignities[lord9].score} 分，落第 ${l9.house} 宫`,
+        '口径：出生时刻只到时辰，上升与宫位可浮动约 ±1 宫；三 / 九宫主只作旁证，主判据是水星、木星与水木相位',
+      ],
+      significators: sigs,
+    });
+  }
+
+  // ---------- 3. 事业与地位 ----------
   {
     const lord10 = lordOf(10);
     const mcLord = sig(lord10, '十宫主 · 事业载体');
@@ -421,7 +547,7 @@ export function judgeChart(model: GreekModel): JudgementReport {
     });
   }
 
-  // ---------- 3. 财富与资源 ----------
+  // ---------- 4. 财富与资源 ----------
   {
     const lord2 = lordOf(2);
     const lord = sig(lord2, '二宫主 · 财源');
@@ -453,7 +579,7 @@ export function judgeChart(model: GreekModel): JudgementReport {
     });
   }
 
-  // ---------- 4. 关系与婚姻 ----------
+  // ---------- 5. 关系与婚姻 ----------
   {
     const lord7 = lordOf(7);
     const lord = sig(lord7, '七宫主 · 伴侣');
@@ -485,7 +611,7 @@ export function judgeChart(model: GreekModel): JudgementReport {
     });
   }
 
-  // ---------- 5. 健康与体质 ----------
+  // ---------- 6. 健康与体质 ----------
   {
     const lord6 = lordOf(6);
     const lord = sig(lord6, '六宫主 · 疾患');
@@ -518,7 +644,7 @@ export function judgeChart(model: GreekModel): JudgementReport {
     });
   }
 
-  // ---------- 6. 流年与应期 ----------
+  // ---------- 7. 流年与应期 ----------
   {
     const yearLord = model.profections.lord;
     const yl = sig(yearLord, '年主星');

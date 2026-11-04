@@ -34,7 +34,7 @@ export interface StabilityReport {
   slices: number;
   windowMinutes: number;
   themes: ThemeStability[];
-  /** 六主题平均一致率 */
+  /** 各主题平均一致率 */
   overall: number;
   note: string;
 }
