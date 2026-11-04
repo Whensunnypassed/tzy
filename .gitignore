@@ -77,3 +77,9 @@ data/
 # 个人长期参考资料（自己看的，不作为项目文档入库）
 docs/命理源流考.md
 docs/tuibu-blindtest.md
+
+# 大杂烩线外部标定与临时工具（引用命海/本地临时数据，不入库）
+scripts/zalu-calibrate.mjs
+scripts/zalu-tune.mjs
+scripts/zalu-arena.mjs
+.dsh-temp/

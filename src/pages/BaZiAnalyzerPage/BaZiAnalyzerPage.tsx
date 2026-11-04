@@ -25,7 +25,8 @@ import { toast } from 'sonner';
 import MingJuFieldChart from '@/components/MingJuFieldChart';
 import ChangShengRingChart from '@/components/ChangShengRingChart';
 import GreekReport from '@/pages/GreekLine/GreekReport';
-import TuibuReport from '@/pages/TuibuLine/TuibuReport';
+import { ZaluReport } from '@/pages/ZaluLine/ZaluReport';
+import { SCHOOLS } from '@/analysis/zalu';
 import { buildGreekModelFromChart, buildAstroChart, type TimePrecision } from '@/analysis/greek';
 import InkScenery from '@/components/scenery/InkScenery';
 import StarField from '@/components/scenery/StarField';
@@ -227,11 +228,11 @@ const REPORT_SECTIONS = [
 const SECTION_META: Record<string, { no: string; label: string; en: string; title: string }> =
   Object.fromEntries(REPORT_SECTIONS.map((s) => [s.id, s]));
 
-/** 分析线显示名：键名与线名一致（yinyang / greek / tuibu） */
+/** 分析线显示名：键名与线名一致（yinyang / greek / zalu） */
 const LINE_LABELS: Record<AnalysisLineKey, { name: string; sub: string }> = {
   yinyang: { name: '阴阳线', sub: '原体系' },
   greek: { name: '希腊线', sub: '希腊占星' },
-  tuibu: { name: '推步线', sub: '占位 · 构筑中' },
+  zalu: { name: '大杂烩线', sub: '断学业 · 爱情 · 财富' },
 };
 
 // ============ 版块「正文 + 侧注」分栏（论文批注式） ============
@@ -937,7 +938,7 @@ export default function BaZiAnalyzerPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // 主题皮肤：阴阳线/推步线走宣纸水墨（ink），希腊线走希腊夜空（cosmos）
+  // 主题皮肤：阴阳线走宣纸水墨（ink），希腊线走希腊夜空（cosmos）
   // 同时挂到 <html> 与 <body>：html 供全局变量回落，body 承载底色与过渡
   useEffect(() => {
     const root = document.documentElement;
@@ -1127,7 +1128,7 @@ export default function BaZiAnalyzerPage() {
 
   // 阴阳线上下文：原整套逻辑；推步线以 taiji 判据同源跑（全链路同源，见 context.ts）
   const analysis = useMemo(
-    () => (chart ? buildYinyangAnalysis(chart, currentYear, activeLine === 'tuibu' ? { yongJiMode: 'taiji' } : {}) : null),
+    () => (chart ? buildYinyangAnalysis(chart, currentYear) : null),
     [chart, currentYear, activeLine],
   );
 
@@ -1398,8 +1399,8 @@ export default function BaZiAnalyzerPage() {
     if (mark === 'taboo') return <Badge className={base} style={{ background: '#FFFFFF', color: '#E31C29', border: '1.5px solid #E31C29', boxShadow: 'none' }}>忌</Badge>;
     return <Badge className={base} style={{ background: '#FFFFFF', color: '#64748B', border: '1.5px solid #94A3B8', boxShadow: 'none' }}>中</Badge>;
   };
-  // 希腊线已转为希腊占星：01 共用排盘在该线模式下不显示用/忌角标
-  const showYongJiMarks = activeLine !== 'greek';
+  // 希腊线/大杂烩线不套阴阳线的用忌：希腊是异源，大杂烩只登记
+  const showYongJiMarks = activeLine !== 'greek' && activeLine !== 'zalu';
   // 四柱徽章取值：优先月令逐字资料库（xi/ji 定论），dai 待定或缺字回退引擎用忌 marks
   const pillarStemMark = (c: string, fallback: 'useful' | 'taboo' | 'neutral'): PillarMark => {
     const z = zhuZiXiJi?.stems.find((r) => r.char === c)?.mark;
@@ -2163,7 +2164,7 @@ export default function BaZiAnalyzerPage() {
                         {cityOffset.note}
                       </div>
                       <div className="mt-1 text-[11px] leading-snug text-muted-foreground/80">
-                        阴阳线与推步线只需经度做真太阳时；<strong className="font-bold text-foreground">希腊占星线需要城市经纬度与准确到分钟的出生时刻</strong>。未收录的城市一律按北京经纬度（39.90°N / 116.41°E）计算。
+                        阴阳线只需经度做真太阳时；<strong className="font-bold text-foreground">希腊占星线需要城市经纬度与准确到分钟的出生时刻</strong>。未收录的城市一律按北京经纬度（39.90°N / 116.41°E）计算。
                       </div>
                     </div>
 
@@ -2517,16 +2518,16 @@ export default function BaZiAnalyzerPage() {
                         rightValue: '已就绪',
                       },
                       {
-                        key: 'tuibu' as const,
-                        name: '推步线',
-                        en: 'TUIBU LINE',
-                        tone: '#31669B',
-                        badge: '构筑中',
-                        desc: '月令二气 · 消息卦先验 · 三元结构 · 应期窗口',
-                        leftLabel: '判据 / JUDGEMENT',
-                        leftValue: '二气配比',
+                        key: 'zalu' as const,
+                        name: '大杂烩线',
+                        en: 'ZALU LINE',
+                        tone: '#B98C31',
+                        badge: '断法',
+                        desc: '各派取一条 · 判学业 · 爱情 · 财富',
+                        leftLabel: '判据 / BASIS',
+                        leftValue: '四柱 · 十神 · 宫位',
                         rightLabel: '状态 / STATUS',
-                        rightValue: '占位 · 未接入',
+                        rightValue: '已接入',
                       },
                     ]).map((line) => {
                       const on = activeLine === line.key;
@@ -3991,11 +3992,8 @@ export default function BaZiAnalyzerPage() {
                 <GreekReport model={greekModel} />
               )}
 
-
-              {/* 推步线：占位面板（只声明判据结构，不输出吉凶） */}
-              {activeLine === 'tuibu' && (
-                <TuibuReport chart={chart} analysis={analysis} />
-              )}
+              {/* 大杂烩线：断法（学业/爱情/财富） */}
+              {activeLine === 'zalu' && <ZaluReport chart={chart} analysis={analysis ?? undefined} />}
 
 
             {/* 底部操作区 */}

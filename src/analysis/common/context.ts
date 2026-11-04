@@ -19,7 +19,7 @@ import {
   type YongJiResult,
 } from '../yinyang/engine';
 
-export type AnalysisLineKey = 'yinyang' | 'greek' | 'tuibu';
+export type AnalysisLineKey = 'yinyang' | 'greek' | 'zalu';
 
 export type ElementPower = { wood: number; fire: number; earth: number; metal: number; water: number };
 
@@ -42,7 +42,7 @@ export interface YinyangAnalysis {
 export interface YinyangOptions {
   /**
    * 判据来源覆盖。缺省沿用 YONG_JI_MODE（逐月灰度 > 全局开关）。
-   * 推步线传 'taiji'，其余线传 undefined。
+   * 保留接口，默认不传（推步线已下线）。
    */
   yongJiMode?: 'taiji' | 'binary';
 }

@@ -13,7 +13,7 @@
 - 品牌：沛然堂（页头 `PEIRANTANG BAZI SYSTEM · RUNS FULLY LOCAL`）。
 - 产品名：天枢。
 - 上线地址：GitHub Pages（仓库 `Whensunnypassed/tzy`）。
-- 三条分析线共用同一份排盘结果：**阴阳线**（现行，元素级）、**希腊线**（希腊占星，异源对照）、**推步线**（占位，二气级，2026-11 立项）。
+- 三条线共用同一份排盘结果：**阴阳线**（现行，元素级）、**希腊线**（希腊占星，异源对照）、**大杂烩线**（门派登记 + 断学业/爱情/财富）。推步线已于 2026-11-05 整体下线并删除代码。
 
 ---
 
@@ -48,9 +48,9 @@ src/
     greek/      希腊线：ephemeris / astroChart / tables / dignity / lots / planetaryState /
                 aspects / timeLords / selfCheck / analysis / judgement / rectify / stability /
                 structuredData / lilly；index.ts 出 GREEK_LINE 与全部 API
-    tuibu/      推步线：占位（仅 UI 骨架，未接判据；立项与任务拆分见 docs/推步线·定义与1.3任务.md）
+    zalu/       大杂烩线：门派登记（SCHOOLS）/ 书目（BOOKS）/ 断法（judge.ts：学业·爱情·财富）
   data/         baziData.ts（干支/藏干/十神/月气等静态规则）、cityData.ts（187 城经纬度 + 历史时区，唯一真源）
-  pages/        BaZiAnalyzerPage（主页面，三线切换与渲染）、GreekLine/GreekReport（星盘事实面板）
+  pages/        BaZiAnalyzerPage（主页面，三线切换与渲染）、GreekLine/GreekReport（星盘事实面板）、ZaluLine/ZaluReport（门派登记 + 断法）
   styles/       themes.css（宣纸水墨 / 希腊星空双主题）
 ```
 
@@ -62,11 +62,11 @@ src/
 |---|---|---|
 | 阴阳线 | 月令用阴 / 用阳（二分） | 已上线，`APP_VERSION` 1.2.0，125 项断言 |
 | 希腊线 | 希腊占星事实层（庙旺、相位、宗派、时间主星） | 引擎完整，判读层未启用，只出事实与结构化面板 |
-| 推步线 | 月令太极二气配比（连续量） | 占位：UI 骨架 + 声明「未接入判据不输出吉凶」 |
+| 大杂烩线 | 各派取一条可落成规则的判据：印星/月令/宫位/财官/冲合 | 登记 20 门 + 21 本书目；断学业 / 爱情 / 财富；库内回测学业相邻档 81.3%、财富 41.7%（库内 10/12 为富，全猜富基线 83.3%） |
 
-线键：`AnalysisLineKey = 'yinyang' | 'greek' | 'tuibu'`。三线**共用** `AnalysisContext`、排盘、节气、大运表；线是口径，不是平行宇宙。
+线键：`AnalysisLineKey = 'yinyang' | 'greek' | 'zalu'`。三线**共用** `AnalysisContext`、排盘、节气、大运表；线是口径，不是平行宇宙。
 
-推步线的定义句：**以月令太极二气之消长为唯一判据，以三元结构承载，以可回测为验。**
+推步线已于 2026-11-05 整体删除（代码与页面）；其研究文档保留在 `docs/推步线·定义与1.3任务.md`，顶部标废案。
 
 ---
 
@@ -82,7 +82,7 @@ src/
 
 ---
 
-## 6. 防偏离硬规则（推步线与后续改造共用）
+## 6. 防偏离硬规则
 
 1. 单一判据源：任何吉凶结论都要能反查到月令二气配比或现行月气二分，不允许第三条判据。
 2. 标记层不进总分：旬空、月破、伏吟、返吟、神煞、天将等只标窗口，不并入用忌与评分。
@@ -132,5 +132,5 @@ src/
 - 先读本文 → `docs/架构与版本.md` → `CHANGELOG.md`，再动代码。
 - 排盘层是命脉：改 `baziCalculator` / `solarTermsCalc` 必须跑 `typecheck` 并手工比对 3–5 个边界命例（立春前后、节气前后、夏令时区间）。
 - 任何「加新神煞 / 加新断语 / 接 AI 生成」的提议，先对照第 6 节六条硬规则；违反即拒。
-- 推步线未接入前，UI 上不得出现吉凶字样；验收以 `docs/推步线·定义与1.3任务.md` 的闸门 P1–P3 为准。
+- 判定类输出必须可回测、可标来源；不得借十神/财星/旺衰等别家判据冒充自有逻辑。
 - 提交信息用中文，动词开头，说明「为什么」而不是「改了什么」。
