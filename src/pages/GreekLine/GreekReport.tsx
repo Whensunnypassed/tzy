@@ -5,9 +5,9 @@ import {
   formatArc,
   SIGN_ASPECT_NAMES,
   type AstroChart,
-} from '@/analysis/peiran/astroChart';
+} from '@/analysis/greek/astroChart';
 import { ZodiacTile } from '@/components/astrology/ZodiacGlyphs';
-import { judgeChart, type Verdict, type VerdictLevel } from '@/analysis/peiran/judgement';
+import { judgeChart, type Verdict, type VerdictLevel } from '@/analysis/greek/judgement';
 import {
   rectifyBirthTime,
   EVENT_NAMES_ZH,
@@ -17,8 +17,8 @@ import {
   type LifeEvent,
   type LifeEventType,
   type RectificationResult,
-} from '@/analysis/peiran/rectify';
-import { assessStability, levelDistribution, type StabilityReport } from '@/analysis/peiran/stability';
+} from '@/analysis/greek/rectify';
+import { assessStability, levelDistribution, type StabilityReport } from '@/analysis/greek/stability';
 import {
   DEGREE_ASPECT_LABELS,
   MOTION_LABELS,
@@ -27,12 +27,12 @@ import {
   SPEED_LABELS,
   PLANET_NAMES_ZH,
   houseTone,
-  type PeiranModel,
+  type GreekModel,
   type Planet,
-} from '@/analysis/peiran';
+} from '@/analysis/greek';
 
 // ============================================================
-// 沛然堂线 · 希腊占星
+// 希腊线 · 希腊占星
 // ------------------------------------------------------------
 // 面向用户只保留两块基础内容：星盘（上升 / 中天 / 宗派）与十二宫图。
 // 其余专业数据（七政状态、尊贵、虚点、阿拉伯点、相位、时间主星）
@@ -369,7 +369,7 @@ function KeyValue({ label, value, mono = false }: { label: string; value: string
   );
 }
 
-export default function PeiranReport({ model }: { model: PeiranModel | null }) {
+export default function GreekReport({ model }: { model: GreekModel | null }) {
   const [stability, setStabilityState] = useState<StabilityReport | null>(null);
 
   if (!model) {
@@ -378,7 +378,7 @@ export default function PeiranReport({ model }: { model: PeiranModel | null }) {
         <div className="cosmos-rule mb-4">
           <span className="cosmos-rule-diamond" />
         </div>
-        <div className="cosmos-title text-[10px]">PEIRAN LINE · HELLENISTIC</div>
+        <div className="cosmos-title text-[10px]">GREEK LINE · HELLENISTIC</div>
         <h2 className="cosmos-title mt-3 text-3xl md:text-4xl">等 待 排 盘</h2>
         <p className="cosmos-subtitle mt-3 text-[12px] leading-loose">
           请在上方填写出生日期、时刻与出生城市

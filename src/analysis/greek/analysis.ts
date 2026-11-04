@@ -1,5 +1,5 @@
 // ============================================================
-// 沛然堂线 · 汇总装配
+// 希腊线 · 汇总装配
 // ------------------------------------------------------------
 // 一次调用产出完整「事实模型」（不含任何吉凶断语）：
 //   星盘 → 尊贵 → 虚点 → 行星状态 → 相位 → 时间主星 → 自检
@@ -45,7 +45,7 @@ export interface AlmutenFact {
   table: Array<{ planet: Planet; score: number }>;
 }
 
-export interface PeiranModel {
+export interface GreekModel {
   chart: AstroChart;
   dignities: Record<Planet, PlanetDignity>;
   almutenAsc: AlmutenFact;
@@ -72,7 +72,7 @@ export interface PeiranModel {
   selfCheck: SelfCheckReport;
 }
 
-export interface BuildPeiranOptions {
+export interface BuildGreekOptions {
   /** 目标年份（用于年龄、推运与返照） */
   currentYear?: number;
   /** 目标日期（UTC 月 / 日，默认取当年今天） */
@@ -84,12 +84,12 @@ export interface BuildPeiranOptions {
 }
 
 /** 由出生信息直接构建完整事实模型 */
-export function buildPeiranModel(input: AstroChartInput, options: BuildPeiranOptions = {}): PeiranModel {
-  return buildPeiranModelFromChart(buildAstroChart(input), options);
+export function buildGreekModel(input: AstroChartInput, options: BuildGreekOptions = {}): GreekModel {
+  return buildGreekModelFromChart(buildAstroChart(input), options);
 }
 
 /** 由已算好的星盘构建完整事实模型（返照、批量校验用） */
-export function buildPeiranModelFromChart(chart: AstroChart, options: BuildPeiranOptions = {}): PeiranModel {
+export function buildGreekModelFromChart(chart: AstroChart, options: BuildGreekOptions = {}): GreekModel {
   const nowTs = new Date();
   const now: UtcParts = options.now ?? {
     year: options.currentYear ?? nowTs.getUTCFullYear(),

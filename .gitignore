@@ -73,3 +73,7 @@ docs/视频案例库.md
 # 视频案例原始素材与回测中间产物（含未公开案例，不入库）
 data/
 .tmp-bili-frames/
+
+# 个人长期参考资料（自己看的，不作为项目文档入库）
+docs/命理源流考.md
+docs/tuibu-blindtest.md

@@ -1,5 +1,5 @@
 // ============================================================
-// 沛然堂线 · 结构化数据契约（structured data contract）
+// 希腊线 · 结构化数据契约（structured data contract）
 // ------------------------------------------------------------
 // 借鉴 vedic-astro-skills 的 single-source contract 思路：
 //   计算层产出本契约 → 校验层读它 → 判读层只读它，不重算。
@@ -11,7 +11,7 @@
 //   · 数据质量单独成块（dataQuality），判读层必须先看这块。
 // ============================================================
 
-import type { PeiranModel } from './analysis';
+import type { GreekModel } from './analysis';
 import { PLANETS, PLANET_NAMES_ZH, type Planet } from './tables';
 import { DIGNITY_LABELS } from './dignity';
 import { SIGN_ELEMENT_OF } from '@/components/astrology/ZodiacGlyphs';
@@ -28,7 +28,7 @@ export interface DataQualityFlag {
 export interface StructuredData {
   meta: {
     version: string;
-    line: 'peiran';
+    line: 'greek';
     system: 'hellenistic';
     generatedAt: string;
   };
@@ -101,7 +101,7 @@ export interface StructuredData {
 }
 
 /** 从模型生成结构化契约（纯数据，可直接 JSON.stringify） */
-export function buildStructuredData(model: PeiranModel, gender?: 'male' | 'female'): StructuredData {
+export function buildStructuredData(model: GreekModel, gender?: 'male' | 'female'): StructuredData {
   const { chart } = model;
   const p2 = (n: number) => Number(n.toFixed(2));
 
@@ -170,7 +170,7 @@ export function buildStructuredData(model: PeiranModel, gender?: 'male' | 'femal
   return {
     meta: {
       version: STRUCTURED_DATA_VERSION,
-      line: 'peiran',
+      line: 'greek',
       system: 'hellenistic',
       generatedAt: new Date().toISOString(),
     },

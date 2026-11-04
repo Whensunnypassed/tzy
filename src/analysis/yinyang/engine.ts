@@ -338,7 +338,7 @@ export interface YongJiResult {
   description: string;
 }
 
-export function analyzeYongJi(chart: BaZiChart, monthQi: MonthQiResult): YongJiResult {
+export function analyzeYongJi(chart: BaZiChart, monthQi: MonthQiResult, modeOverride?: 'taiji' | 'binary'): YongJiResult {
   let usefulElements: string[] = [];
   let tabooElements: string[] = [];
 
@@ -347,14 +347,8 @@ export function analyzeYongJi(chart: BaZiChart, monthQi: MonthQiResult): YongJiR
   //   'taiji'  → 以 computeTaiJiQi 的太极二气配比定方向（阳过用阴、阴过用阳；均衡则回退本月固有口径）；
   //   'binary' → 沿用逐月固化的 usageDirection 二分（旧口径，一键回退）。
   // 两种来源最终仍只产出 metal/water 与 wood/fire 两组元素（形状不变）；逐字用忌一律以月令逐字资料库（monthCharMark）为唯一真源。
-  const directionSource: 'taiji' | 'binary' = resolveYongJiMode(chart.month.branch);
-  let direction: 'yang' | 'yin';
-  if (directionSource === 'taiji') {
-    const tq = computeTaiJiQi(chart, monthQi);
-    direction = tq.recommendedDirection === 'balanced' ? monthQi.usageDirection : tq.recommendedDirection;
-  } else {
-    direction = monthQi.usageDirection;
-  }
+  const directionSource: 'taiji' | 'binary' = resolveYongJiMode(chart.month.branch, modeOverride);
+  const direction: 'yang' | 'yin' = resolveDirection(chart, monthQi, modeOverride);
   if (direction === 'yin') {
     usefulElements = ['metal', 'water'];
     tabooElements = ['wood', 'fire'];
@@ -1387,9 +1381,27 @@ export interface TaiJiQiResult {
   verdict: string;
 }
 
-// 用忌大方向判据来源：逐月灰度覆盖 > 全局开关
-export function resolveYongJiMode(monthBranch: string): 'taiji' | 'binary' {
+// 用忌大方向判据来源：调用方显式覆盖 > 逐月灰度覆盖 > 全局开关
+export function resolveYongJiMode(monthBranch: string, override?: 'taiji' | 'binary'): 'taiji' | 'binary' {
+  if (override) return override;
   return YONG_JI_MODE.months[monthBranch] ?? YONG_JI_MODE.mode;
+}
+
+/**
+ * 全链路唯一的方向判据。
+ *
+ * 供 yongJi / 格局 / 富贵 / 大运流年等所有下游模块共用，避免「yongJi 用太极、格局用月令」
+ * 两套判据并存（方案 B 文档记录的原风险）。balanced 时回退本月逐字口径。
+ */
+export function resolveDirection(
+  chart: BaZiChart,
+  monthQi: MonthQiResult,
+  modeOverride?: 'taiji' | 'binary',
+): 'yang' | 'yin' {
+  const source = resolveYongJiMode(chart.month.branch, modeOverride);
+  if (source === 'binary') return monthQi.usageDirection;
+  const tq = computeTaiJiQi(chart, monthQi);
+  return tq.recommendedDirection === 'balanced' ? monthQi.usageDirection : tq.recommendedDirection;
 }
 
 const TAI_JI_MODE_LABEL: Record<ITaiJiQiPair['mode'], string> = {

@@ -1,5 +1,5 @@
 // ============================================================
-// 沛然堂线 · 判读稳定性评估
+// 希腊线 · 判读稳定性评估
 // ------------------------------------------------------------
 // 背景：出生时刻只要差几分钟，ASC 就会移动，宫位整体平移，
 // 依赖宫主的判读结论可能翻转。与其假装结论确定，不如把
@@ -15,7 +15,7 @@
 // ============================================================
 
 import { buildAstroChart, type AstroChart, type AstroChartInput } from './astroChart';
-import { buildPeiranModelFromChart } from './analysis';
+import { buildGreekModelFromChart } from './analysis';
 import { judgeChart, type VerdictKey, type VerdictLevel } from './judgement';
 
 export interface ThemeStability {
@@ -89,7 +89,7 @@ export function assessStability(input: AstroChartInput, options: StabilityOption
 
   for (const off of offsets) {
     const chart: AstroChart = buildAstroChart(shiftMinutes(input, off));
-    const model = buildPeiranModelFromChart(chart, {
+    const model = buildGreekModelFromChart(chart, {
       currentYear,
       gender: options.gender,
     });

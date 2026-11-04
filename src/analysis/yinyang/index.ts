@@ -5,10 +5,10 @@
 // ============================================================
 
 import type { BaZiChart } from '../common/baziCalculator';
-import { buildYinyangContext, type YinyangAnalysis } from '../common/context';
+import { buildYinyangContext, type YinyangAnalysis, type YinyangOptions } from '../common/context';
 
-export type { YinyangAnalysis };
+export type { YinyangAnalysis, YinyangOptions };
 
-export function buildYinyangAnalysis(chart: BaZiChart, currentYear: number): YinyangAnalysis {
-  return buildYinyangContext(chart, currentYear);
+export function buildYinyangAnalysis(chart: BaZiChart, currentYear: number, options: YinyangOptions = {}): YinyangAnalysis {
+  return buildYinyangContext(chart, currentYear, options);
 }

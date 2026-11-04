@@ -3,7 +3,7 @@
  * 希腊占星基础自检（星历 + 轴点）
  *
  * 目的：在没有单测框架的前提下，给自研星历一个可重复的护栏。
- *   · 打包 src/analysis/peiran/astroChart.ts；
+ *   · 打包 src/analysis/greek/astroChart.ts；
  *   · 打印若干已知案例的七政黄经、上升点、中天、宫位；
  *   · 可选地读取 dist/_astro_expected.json（由外部权威星历填入）做误差比对。
  *
@@ -25,7 +25,7 @@ function loadAstro() {
   fs.writeFileSync(
     entry,
     `
-import { buildAstroChart, formatZodiac, ZODIAC_SIGNS } from '@/analysis/peiran/astroChart';
+import { buildAstroChart, formatZodiac, ZODIAC_SIGNS } from '@/analysis/greek/astroChart';
 import { findCity, resolveUtcOffsetMinutes } from '@/data/cityData';
 export { buildAstroChart, formatZodiac, ZODIAC_SIGNS, findCity, resolveUtcOffsetMinutes };
 `,

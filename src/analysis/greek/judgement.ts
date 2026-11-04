@@ -1,7 +1,7 @@
 // ============================================================
-// 沛然堂线 · 判读引擎（Judgement）
+// 希腊线 · 判读引擎（Judgement）
 // ------------------------------------------------------------
-// 输入：结构化事实模型（PeiranModel）
+// 输入：结构化事实模型（GreekModel）
 // 输出：六个主题的判读结论，每条结论必须挂「依据」。
 //
 // 方法论约束（不可违反）：
@@ -16,7 +16,7 @@
 // ============================================================
 
 import { PLANET_NAMES_ZH, SIGN_RULERS, SIGN_NAMES_ZH, type Planet } from './tables';
-import type { PeiranModel } from './analysis';
+import type { GreekModel } from './analysis';
 
 export type VerdictKey = 'temperament' | 'career' | 'wealth' | 'relationship' | 'health' | 'annual';
 
@@ -336,7 +336,7 @@ function houseTone(house: number): string {
   return '落中宫，力量平常';
 }
 
-export function judgeChart(model: PeiranModel): JudgementReport {
+export function judgeChart(model: GreekModel): JudgementReport {
   const { chart } = model;
   const houseSign = (house: number) => chart.houseSigns[house - 1];
   const lordOf = (house: number): Planet => SIGN_RULERS[houseSign(house)];

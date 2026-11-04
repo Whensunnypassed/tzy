@@ -1,5 +1,5 @@
 // ============================================================
-// 沛然堂线 · 希腊占星（Hellenistic Astrology）
+// 希腊线 · 希腊占星（Hellenistic Astrology）
 // ------------------------------------------------------------
 // 路线：希腊占星为主干，阿拉伯中世纪技法为扩展层。
 // 资料台账：docs/astrology/resources.md
@@ -20,9 +20,9 @@
 // 待接入：主方向（口径分歧未决）、阿拉伯扩展虚点（公式分歧未决）。
 // ============================================================
 
-export const PEIRAN_LINE = {
-  key: 'peiran',
-  label: '沛然堂线',
+export const GREEK_LINE = {
+  key: 'greek',
+  label: '希腊线',
   system: 'hellenistic',
   status: 'engine',
 } as const;
@@ -32,8 +32,8 @@ export { buildAstroChart, buildAstroChartFromUtc } from './astroChart';
 export type { AstroChart, AstroChartInput, BodyFact, SignAspect, TimePrecision } from './astroChart';
 
 // 汇总
-export { buildPeiranModel, buildPeiranModelFromChart } from './analysis';
-export type { PeiranModel, BuildPeiranOptions, AlmutenFact } from './analysis';
+export { buildGreekModel, buildGreekModelFromChart } from './analysis';
+export type { GreekModel, BuildGreekOptions, AlmutenFact } from './analysis';
 
 // 规则与判定
 export * from './tables';

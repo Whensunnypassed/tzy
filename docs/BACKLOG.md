@@ -18,7 +18,7 @@
 - **现状影响**：默认 `binary` 模式下两套判据同值，**当前无实际矛盾**；仅当某月灰度切为 `taiji` 时才出现同盘两套口径。
 - **条件**：切换任一月份为 `taiji` 之前，必须先让上述 4 处统一改为从同一判据来源取值（建议统一走 `resolveYongJiMode` + `computeTaiJiQi` 的出口）。
 - **状态**：未开始（切 taiji 的前置门槛）。
-- **锚点**：`src/utils/baziAnalyzer.ts`（`analyzeYongJi` L329 / `analyzeWealthNobility` L2718 / `analyzeSevenCategories` L2922 / `analyzeZhuZiXiJi` L888 / `resolveYongJiMode` L1738 / `computeTaiJiQi` L1751）；`src/pages/BaZiAnalyzerPage/BaZiAnalyzerPage.tsx` L2571；`src/data/baziData.ts`（`YONG_JI_MODE`）。
+- **锚点**：`src/analysis/yinyang/engine.ts`（`analyzeYongJi` L329 / `analyzeWealthNobility` L2718 / `analyzeSevenCategories` L2922 / `analyzeZhuZiXiJi` L888 / `resolveYongJiMode` L1738 / `computeTaiJiQi` L1751）；`src/pages/BaZiAnalyzerPage/BaZiAnalyzerPage.tsx` L2571；`src/data/baziData.ts`（`YONG_JI_MODE`）。
 
 ### A2 · 逐月灰度放行门槛（≥3 命例回放）
 - **来源**：方案 B 灰度策略（`YONG_JI_MODE.months` 覆盖全局 `mode`）。
@@ -46,7 +46,7 @@
 - **边界**：仅展示层扩展；大运调整分、九档评级、S+ 认证判定链路**均未改动**。
 - **验证（2026-10-20 浏览器实测，dist 构建）**：载入示例 → 开始排盘 → 展开第三步大运「甲申（27 岁起，2017-2026）」，双栏正常渲染（吉项 1 条 / 凶项 1 条），条目文本 `whitespace-normal` 无溢出卡片边框，页面 `hasHorizontalOverflow=false`，控制台无业务报错（仅首次导航的 `ERR_CONNECTION_REFUSED` 瞬时噪声）。
 - **状态**：✅ 已完成。
-- **锚点**：`src/utils/baziAnalyzer.ts`（`scoreGanZhiImpact` L3697 起、`DaYunFortuneEntry`、`analyzeDaYunLiuNian`）；`src/pages/BaZiAnalyzerPage/BaZiAnalyzerPage.tsx`（05 岁运展开区吉凶双栏）；`src/data/baziData.ts`（`LAO_GAO_KOU_JING_CFG.daYunYingQi.splitRule`）。
+- **锚点**：`src/analysis/yinyang/engine.ts`（`scoreGanZhiImpact` L3697 起、`DaYunFortuneEntry`、`analyzeDaYunLiuNian`）；`src/pages/BaZiAnalyzerPage/BaZiAnalyzerPage.tsx`（05 岁运展开区吉凶双栏）；`src/data/baziData.ts`（`LAO_GAO_KOU_JING_CFG.daYunYingQi.splitRule`）。
 
 ---
 
@@ -67,7 +67,7 @@
 - **现状**：20 例基准快照下，S+ 大运收敛为 4 个（3/20 盘），流年调整分全部在 ±4.4 内；权重与认证阈值均为初值。
 - **条件**：随命例积累校准 `yearWeight / yunHalfWeight / bingLinBonus` 与 S+ 认证四项；改动须重跑 `npm run audit:core` 并对比基准快照。
 - **状态**：初值已落地，待命例标定。
-- **锚点**：`src/data/baziData.ts`（`SCORING_CFG.suiYunMix` / `sPlusCert`）；`src/utils/baziAnalyzer.ts`（`calcLiuNian`、`analyzeDaYunLiuNian`、`certifyDaYunSPLUS`）。
+- **锚点**：`src/data/baziData.ts`（`SCORING_CFG.suiYunMix` / `sPlusCert`）；`src/analysis/yinyang/engine.ts`（`calcLiuNian`、`analyzeDaYunLiuNian`、`certifyDaYunSPLUS`）。
 
 ### C4 · 木克土按「两条路径」分化折算 → **已完成（2026-10-20）**
 - **来源**：老高 2026-10-20（`docs/学习笔记.md`）——木克土只有两条路径：①成气木温直克土（乙卯）；②木先被水寒控制再克土（癸卯）；甲木为生气布温**不直接克土**（唯坐支落地有根如甲寅时柱中带克土之象）。已入库为 `WOOD_KE_EARTH_CFG.paths` / `jiaDirect`。
@@ -76,7 +76,7 @@
 - **验证（12 例命例回放，2026-10-20）**：1990-05-15 男 / 1985-03-08 女 / 1992-07-20 男 / 1978-11-03 女 / 2000-01-25 男 / 1995-09-12 女 / 1988-04-02 男 / 2003-08-18 女 / 1970-06-30 男 / 1998-12-07 女 / 1982-02-14 男 / 2008-10-09 女，土占比**0 例变化** —— 原因是这些盘均含乙/卯/藏乙，或水与木同见，旧口径与新口径同时命中打折，故实际影响面仅为「孤甲无水且甲不坐寅卯」的少数盘，回归风险为零。
 - **后续**：`dampFactor`(0.8) 力度仍属待标定项，随命例积累再调（只改 `WOOD_KE_EARTH_CFG`，不动引擎）。
 - **状态**：✅ 已完成（口径已落地，力度待标定）。
-- **锚点**：`src/data/baziData.ts`（`WOOD_KE_EARTH_CFG` v1.2.0）；`src/utils/baziAnalyzer.ts`（`woodKeEarthDampFactor` / `calculateElementPower`）。
+- **锚点**：`src/data/baziData.ts`（`WOOD_KE_EARTH_CFG` v1.2.0）；`src/analysis/yinyang/engine.ts`（`woodKeEarthDampFactor` / `calculateElementPower`）。
 
 ---
 
@@ -97,7 +97,7 @@
 - **来源**：老高 2026-10-20 口径（`LAO_GAO_KOU_JING_CFG.relationNeutral`）——六合/三合/刑/冲本身不带吉凶，落阴阳才有；冲的吉凶看克的方向（`chongDirection`）。
 - **处置（用户「收敛」）**：逐字吉凶展示中，六合 / 六冲 / 六害 / 三刑（子卯·寅巳申·丑未戌·自刑）**全部改为 `score: 0`、`nature: '平'`**，判词保留克向与象义说明（「本身不带吉凶，落阴阳才见轻重」）；三合 / 三会改为**三全才成局**，两字「半合拱气 / 半会」一律不采用、不再出合局判词、不参与情缘应期与情缘打分。
 - **影响面**：仅象法「干支作用」与「情缘应期/打分」的展示与打分口径；**岁运评分链路、用忌 marks、九档评级均未改动**。
-- **锚点**：`src/utils/baziAnalyzer.ts`（`applyToBoth` 六合/六冲/六害/子卯刑、寅巳申/丑未戌/自刑、三合/三会；`analyzeDiZhiInteractions` 概述）；`src/utils/xiangfaAnalyzer.ts`（情缘 `isSanHe/isSanHui` 与 `sanHeBranches` 已移除）。
+- **锚点**：`src/analysis/yinyang/engine.ts`（`applyToBoth` 六合/六冲/六害/子卯刑、寅巳申/丑未戌/自刑、三合/三会；`analyzeDiZhiInteractions` 概述）；`src/analysis/yinyang/xiangfa.ts`（情缘 `isSanHe/isSanHui` 与 `sanHeBranches` 已移除）。
 - **状态**：✅ 已完成。
 
 ---
@@ -108,19 +108,19 @@
 - **处置**：大运评级改为本柱干支独立定档（移除 0.5/0.5 十年平均混合）；流年改为「流年本柱 × 0.7 + 大运当值半柱 × 0.3」，前五年取干、后五年取支；岁运并临 +0.6，最终钳制 ±4.4；`scoreGanZhiImpact` 增 `only` 模式只评半柱；S+ 认证上调为 4.2/0.2/1/4.0。
 - **验证（20 例固定基准快照）**：大运 160 步评级变化 119 步、平均 |Δ| 1.02；流年 1600 年变化 943 年、平均 |Δ| 0.71，全部在 ±4.4；S+ 由 11 收敛至 4 且同盘 ≤1；`adjustScore === selfCompress`。
 - **状态**：✅ 已完成（2026-10-27），权重与认证初值待 C3 标定。
-- **锚点**：`src/data/baziData.ts`（`SCORING_CFG.suiYunMix` / `sPlusCert`）；`src/utils/baziAnalyzer.ts`（`calcLiuNian`、`analyzeDaYunLiuNian`、`scoreGanZhiImpact` 的 `only` 参数）。
+- **锚点**：`src/data/baziData.ts`（`SCORING_CFG.suiYunMix` / `sPlusCert`）；`src/analysis/yinyang/engine.ts`（`calcLiuNian`、`analyzeDaYunLiuNian`、`scoreGanZhiImpact` 的 `only` 参数）。
 
 ### D5 · 逐字喜忌真源未入数据层
 - **现状（已处置）**：原硬编码在 `baziAnalyzer.ts` 的 `ZHUZI_XIJI_REF` / `ZHUZI_ROUND_MARKS` 已迁入 `baziData.ts`，成为版本化 `ZHUZI_XIJI_CFG`（`zhuzi-v1.0.0`），分析引擎只读消费；`scripts/audit-core.mjs` 增「12 月 × 10 干 + 12 支、标记合法、申月两局表存在」完整性校验。
 - **遗留**：`MOCK_MONTH_QI`（方向/文案）与 `MONTH_QI_EXPANDED`（页面原文）仍是另两层来源，尚未与逐字表做「方向一致性」自动比对（逐字表允许例外，需人工判定）。
 - **状态**：✅ 主体已完成（2026-10-27）。
-- **锚点**：`src/data/baziData.ts`（`ZHUZI_XIJI_CFG`）；`src/utils/baziAnalyzer.ts`（`monthCharMark` 消费）；`scripts/audit-core.mjs`。
+- **锚点**：`src/data/baziData.ts`（`ZHUZI_XIJI_CFG`）；`src/analysis/yinyang/engine.ts`（`monthCharMark` 消费）；`scripts/audit-core.mjs`。
 
 ### D6 · 起运精度与流年归属
 - **现状**：起运取 `floor(起运岁)` 后再 `startYear = 出生年 + 整数岁`，真实交运日期可晚近 1 年；`getCurrentDaYunIndex` 按公历年比较，交运年前后「当前大运」可能错一位；流年卡按公历年贴干支（1/1–立春仍属上一干支年）。
 - **条件**：存「交运日期」并按日期归属；流年改按立春区间或明确标注「公历年标签」。
 - **状态**：未开始。
-- **锚点**：`src/utils/baziCalculator.ts`（`getDaYun` L325-L334、`getCurrentDaYunIndex`、`getLiuNianList`）。
+- **锚点**：`src/analysis/common/baziCalculator.ts`（`getDaYun` L325-L334、`getCurrentDaYunIndex`、`getLiuNianList`）。
 
 ### D7 · `LAO_GAO_KOU_JING_CFG` 多数口径仍为纯文本
 - **分组定性（2026-10-27）**：
@@ -130,7 +130,7 @@
   - ⏸ 判词/流程层，暂不程序化：平衡阳气不伤阴气（需先判阳太极成立，属分析流程约束）、主干流程（已由分析顺序体现）。
 - **条件**：判词层不新增打分；若未来要进评分，先补命例回放。
 - **状态**：◐ 部分完成（2026-10-27）。
-- **锚点**：`src/data/baziData.ts`（`LAO_GAO_KOU_JING_CFG`）；`src/utils/baziAnalyzer.ts`（`stemKeQiGate`、`analyzeLaoGaoRules`）；`src/pages/BaZiAnalyzerPage/BaZiAnalyzerPage.tsx`（07「老高判据复核」卡）。
+- **锚点**：`src/data/baziData.ts`（`LAO_GAO_KOU_JING_CFG`）；`src/analysis/yinyang/engine.ts`（`stemKeQiGate`、`analyzeLaoGaoRules`）；`src/pages/BaZiAnalyzerPage/BaZiAnalyzerPage.tsx`（07「老高判据复核」卡）。
 
 ---
 
@@ -143,7 +143,7 @@
 - **已做（v6.0.0，本轮）**：按用户要求「注入不只是给某一个五行加固定名义权重，其它因素也要受影响、且**同一五行在不同命盘好坏不同**」——① 注入效果由「单格标量位移」升级为**作用向量**：注入字 e₀ 使自身格 `+w_add`、所生格 `+λ·w_add`、所克格 `−λ·w_add`（λ=`shengKeCoupling`=0.35），故**每个字同时带动三个五行节点**（自身 / 所生 / 所克）并各画一条作用箭头（增＝实线、克＝虚线）；② 新增**得失评定**：按本盘 `usefulElements/tabooElements` 取各格用忌，以得失口诀（增用吉 / 增忌凶 / 减忌吉 / 减用凶）评出每字 **吉 / 凶 / 杂 / 平** 徽章 —— **同一字在不同命盘结论不同**（如「甲」在此盘助忌为凶、「子」助用为吉）；③ 逐行读数条因此会显示非注入五行的「（注入 ±x）」联动变化。模型层/渲染层分离、仍为纯函数旁证层，不动核心用忌 marks 与评分。
 - **已做（v7.0.0，本轮·debug）**：针对用户反馈「箭头莫名其妙、理想线颜色不明确、喜用之字注入反离理想更远」——① **删除跨五行长箭头**（原「自身/所生/所克」三箭头自标签一点扇出、跨列交叉，且与节点实际位移不成比例，视觉混乱），改为**每个注入字只画一条短垂直箭头**指向其所属五行节点；所生/所克格的连带变化改由节点位移、逐行读数条与**节点悬停提示「注入影响（生克传导）」**承载；② **理想线改用专用色**（深青碧 `#0F766E`，与灰规线/原局灰框/实线均明显区分）+ **图内图例**「理想 f*（用神目标 · 固定参照）」；③ **理想函数 f\* 口径由「二气配平」改为「用神理想态」**（详见 E2-④）。
 - **状态**：单曲线重构（v4→v5）、跨五行作用向量 + 因盘而异得失（v6.0.0）、箭头精简 + 理想线身份（v7.0.0）**均已完成**。
-- **锚点**：`src/components/MingJuFieldChart.tsx`；`src/utils/mingJuFieldModel.ts`（`MINGJU_FIELD_CFG` v7.0.0、`shengKeCoupling`/`idealDelta`、`FIELD_SHENG_MAP`/`FIELD_KE_MAP`、`MingJuFieldEffect`）。
+- **锚点**：`src/components/MingJuFieldChart.tsx`；`src/components/MingJuFieldChart.tsx`（原 mingJuFieldModel.ts 已并入）（`MINGJU_FIELD_CFG` v7.0.0、`shengKeCoupling`/`idealDelta`、`FIELD_SHENG_MAP`/`FIELD_KE_MAP`、`MingJuFieldEffect`）。
 
 ### E2 · 命局函数场坐标/刻度细节
 - **来源**：随 E1 一并观察（2026-10 浏览器实测）。
@@ -164,7 +164,7 @@
 - **结论**：用户以「加入水了 那水有水的好 也有可能有他的坏，根据不同的命盘看到不同的加减变量调用，而不是每一个人都加这么多而别的因素都不受影响」拍板采纳。
 - **已做（v6.0.0 起，v7.0.0 调整）**：见 E1——注入字按五行生克对「自身 / 所生 / 所克」三类格产生作用向量，并按本盘用忌以得失口诀评出 吉/凶/杂/平 徽章（因盘而异）。v7.0.0 起三类格的传导不再以**跨列长箭头**呈现（原三点扇出、跨列交叉，视觉混乱），改由**节点位移 + 逐行读数条 + 悬停提示「注入影响（生克传导）」**承载；每个注入字仅保留一条指向其自身节点的短箭头。`shengKeCoupling` λ 初值 0.35 待随命例手感校准。
 - **状态**：**已完成**（v6.0.0）。
-- **锚点**：`src/utils/mingJuFieldModel.ts`（`buildEffects` / `computeEffects` 段、`shengKeCoupling`）；`src/components/MingJuFieldChart.tsx`（作用向量箭头段、`VERDICT_*`）。
+- **锚点**：`src/components/MingJuFieldChart.tsx`（原 mingJuFieldModel.ts 已并入）（`buildEffects` / `computeEffects` 段、`shengKeCoupling`）；`src/components/MingJuFieldChart.tsx`（作用向量箭头段、`VERDICT_*`）。
 
 ---
 
@@ -175,7 +175,7 @@
 - **决策理由**：本系统判定为非标准体系（月气定用阳/用阴、逐字喜忌带条件、得失口诀、两仪气机、岁运调整分九档），通用大模型不具备该体系知识，即使 system 硬约束「不得改判」，仍会按扶抑 / 调候 / 格局等通行先验渗透外行话；自由问答场景风险最高。且 BYOK 只解决算力与费用归属，不解决「AI 不懂」这一根本缺口。
 - **复启前置条件（缺一不可）**：① 已形成成体系的术语词典 + 惯用判词话术库（可直接作为 prompt 约束与验收基准）；② 命例回测通过——同一命盘重复生成 N 次，输出不得出现与引擎判定冲突的表述；③ AI 仅开放「润色 / 串联」档，不开放自由问答（问答若上，必须走自有规则问答层）。
 - **替代方向（已向用户呈现，待其选择）**：A 彻底放弃；B AI 降级为「朗读员 / 排版助手」，逐字复述引擎结论、禁止自主推演；C 换用途（术语解释 / FAQ）；D 搁置。执行者建议为「确定性长文解读生成器」（自有话术层产出长文，零 AI、零 Key、零隐私敞口），用户暂未采纳、暂不实施。
-- **状态**：**暂缓（未实施，无代码改动）**。备选方案已完整勘察，可直接复用：① 版本化常量层 `AI_CFG`（厂商预设 / 请求参数 / prompt 模板 / UI 文案，拟落 `src/data/baziData.ts`）；② 纯函数层 `src/utils/aiClient.ts`（`buildAiDigest` 报告→摘要 / `buildMessages` / SSE 流式解析 / 错误分流 401·429·CORS·超时）；③ 组件 `src/components/AiInterpretDrawer.tsx`（右侧全局抽屉，挂载于页面根，大屏 `xl:pr-[440px]` 让内容左移不遮挡）。
+- **状态**：**暂缓（未实施，无代码改动）**。备选方案已完整勘察，可直接复用：① 版本化常量层 `AI_CFG`（厂商预设 / 请求参数 / prompt 模板 / UI 文案，拟落 `src/data/baziData.ts`）；② 纯函数层 `src/analysis/common/aiClient.ts`（拟落）（`buildAiDigest` 报告→摘要 / `buildMessages` / SSE 流式解析 / 错误分流 401·429·CORS·超时）；③ 组件 `src/components/AiInterpretDrawer.tsx`（右侧全局抽屉，挂载于页面根，大屏 `xl:pr-[440px]` 让内容左移不遮挡）。
 - **锚点**：`src/data/baziData.ts`（拟增 `AI_CFG`）；`src/components/AiInterpretDrawer.tsx`（未建）；`src/pages/BaZiAnalyzerPage/BaZiAnalyzerPage.tsx`（拟挂载点：页根 L3700 附近 + 左栏 `工具 / TOOLS` L1486）。
 
 ---

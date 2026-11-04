@@ -24,8 +24,9 @@ import { toast } from 'sonner';
 
 import MingJuFieldChart from '@/components/MingJuFieldChart';
 import ChangShengRingChart from '@/components/ChangShengRingChart';
-import PeiranReport from '@/pages/PeiranLine/PeiranReport';
-import { buildPeiranModelFromChart, buildAstroChart, type TimePrecision } from '@/analysis/peiran';
+import GreekReport from '@/pages/GreekLine/GreekReport';
+import TuibuReport from '@/pages/TuibuLine/TuibuReport';
+import { buildGreekModelFromChart, buildAstroChart, type TimePrecision } from '@/analysis/greek';
 import InkScenery from '@/components/scenery/InkScenery';
 import StarField from '@/components/scenery/StarField';
 
@@ -225,6 +226,13 @@ const REPORT_SECTIONS = [
 
 const SECTION_META: Record<string, { no: string; label: string; en: string; title: string }> =
   Object.fromEntries(REPORT_SECTIONS.map((s) => [s.id, s]));
+
+/** 分析线显示名：键名与线名一致（yinyang / greek / tuibu） */
+const LINE_LABELS: Record<AnalysisLineKey, { name: string; sub: string }> = {
+  yinyang: { name: '阴阳线', sub: '原体系' },
+  greek: { name: '希腊线', sub: '希腊占星' },
+  tuibu: { name: '推步线', sub: '占位 · 构筑中' },
+};
 
 // ============ 版块「正文 + 侧注」分栏（论文批注式） ============
 // 左列 = 结论正文；右列 = 依据/口径/旁证，落在原右栏空置的横向空间；
@@ -929,12 +937,12 @@ export default function BaZiAnalyzerPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // 主题皮肤：阴阳线走宣纸水墨（ink），沛然堂线走希腊夜空（cosmos）
+  // 主题皮肤：阴阳线/推步线走宣纸水墨（ink），希腊线走希腊夜空（cosmos）
   // 同时挂到 <html> 与 <body>：html 供全局变量回落，body 承载底色与过渡
   useEffect(() => {
     const root = document.documentElement;
     const body = document.body;
-    const theme = activeLine === 'peiran' ? 'cosmos' : 'ink';
+    const theme = activeLine === 'greek' ? 'cosmos' : 'ink';
     root.dataset.theme = theme;
     body.classList.remove('theme-ink', 'theme-cosmos');
     body.classList.add(`theme-${theme}`);
@@ -1117,15 +1125,15 @@ export default function BaZiAnalyzerPage() {
     setCityOpen(false);
   };
 
-  // 阴阳线上下文：原整套逻辑，始终构建，供 01 排盘与阴阳线报告使用
+  // 阴阳线上下文：原整套逻辑；推步线以 taiji 判据同源跑（全链路同源，见 context.ts）
   const analysis = useMemo(
-    () => (chart ? buildYinyangAnalysis(chart, currentYear) : null),
-    [chart, currentYear],
+    () => (chart ? buildYinyangAnalysis(chart, currentYear, activeLine === 'tuibu' ? { yongJiMode: 'taiji' } : {}) : null),
+    [chart, currentYear, activeLine],
   );
 
   // 希腊占星线：完整事实模型（星盘 → 尊贵 → 虚点 → 状态 → 相位 → 时间主星 → 自检）
   // 仅在排盘完成后计算，输入阶段不跑星历。
-  const peiranModel = useMemo(() => {
+  const greekModel = useMemo(() => {
     if (!analyzed) return null;
     const city = findCity(birthCity) ?? (findCity(CITY_DEFAULT_KEY) as CityRecord);
     const chart = buildAstroChart({
@@ -1137,7 +1145,7 @@ export default function BaZiAnalyzerPage() {
       city,
       precision: timePrecision,
     });
-    return buildPeiranModelFromChart(chart, { currentYear, gender });
+    return buildGreekModelFromChart(chart, { currentYear, gender });
   }, [analyzed, year, month, day, hour, minute, birthCity, currentYear, gender, timePrecision]);
   const monthQi = analysis?.monthQi ?? null;
   const yongJi = analysis?.yongJi ?? null;
@@ -1350,7 +1358,7 @@ export default function BaZiAnalyzerPage() {
   const analyzedBoolean = analyzed && chart && monthQi && yongJi && elementPower && pattern && wealthNobility && daYunAnalysis;
   // 全量视图：依据类折叠块默认展开（结论视图默认收起）
   const fullView = reportView === 'full';
-  // 未选线或沛然堂线（空壳）时目录只保留 01；阴阳线展开 02–06
+  // 未选线或希腊线（空壳）时目录只保留 01；阴阳线展开 02–06
   const visibleSections = activeLine === 'yinyang' ? REPORT_SECTIONS : REPORT_SECTIONS.slice(0, 1);
 
   // 出生地 → 城市记录（经纬度 + 时区规则）
@@ -1390,8 +1398,8 @@ export default function BaZiAnalyzerPage() {
     if (mark === 'taboo') return <Badge className={base} style={{ background: '#FFFFFF', color: '#E31C29', border: '1.5px solid #E31C29', boxShadow: 'none' }}>忌</Badge>;
     return <Badge className={base} style={{ background: '#FFFFFF', color: '#64748B', border: '1.5px solid #94A3B8', boxShadow: 'none' }}>中</Badge>;
   };
-  // 沛然堂线已转为希腊占星：01 共用排盘在该线模式下不显示用/忌角标
-  const showYongJiMarks = activeLine !== 'peiran';
+  // 希腊线已转为希腊占星：01 共用排盘在该线模式下不显示用/忌角标
+  const showYongJiMarks = activeLine !== 'greek';
   // 四柱徽章取值：优先月令逐字资料库（xi/ji 定论），dai 待定或缺字回退引擎用忌 marks
   const pillarStemMark = (c: string, fallback: 'useful' | 'taboo' | 'neutral'): PillarMark => {
     const z = zhuZiXiJi?.stems.find((r) => r.char === c)?.mark;
@@ -1516,11 +1524,11 @@ export default function BaZiAnalyzerPage() {
   return (
     <>
       {/* 背景皮肤层：水墨剪影 / 希腊星空，交叉淡入淡出 */}
-      <InkScenery active={activeLine !== 'peiran'} />
-      <StarField active={activeLine === 'peiran'} />
+      <InkScenery active={activeLine !== 'greek'} />
+      <StarField active={activeLine === 'greek'} />
 
       <div
-        className={`theme-root relative z-10 min-h-screen ${activeLine === 'peiran' ? 'theme-cosmos' : 'theme-ink'}`}
+        className={`theme-root relative z-10 min-h-screen ${activeLine === 'greek' ? 'theme-cosmos' : 'theme-ink'}`}
         style={{
           ...themeVarsStyle,
         }}
@@ -2155,7 +2163,7 @@ export default function BaZiAnalyzerPage() {
                         {cityOffset.note}
                       </div>
                       <div className="mt-1 text-[11px] leading-snug text-muted-foreground/80">
-                        阴阳线只需经度做真太阳时；<strong className="font-bold text-foreground">希腊占星线需要城市经纬度与准确到分钟的出生时刻</strong>。未收录的城市一律按北京经纬度（39.90°N / 116.41°E）计算。
+                        阴阳线与推步线只需经度做真太阳时；<strong className="font-bold text-foreground">希腊占星线需要城市经纬度与准确到分钟的出生时刻</strong>。未收录的城市一律按北京经纬度（39.90°N / 116.41°E）计算。
                       </div>
                     </div>
 
@@ -2223,8 +2231,8 @@ export default function BaZiAnalyzerPage() {
                 </h2>
                 <p className="mt-2 text-sm text-muted-foreground">
                   {activeLine
-                    ? `当前分析线 · ${activeLine === 'yinyang' ? '阴阳线（原体系）' : '沛然堂线（希腊占星）'}`
-                    : '已排盘 · 请选择阴阳线或沛然堂线展开 02–06 完整报告'}
+                    ? `当前分析线 · ${LINE_LABELS[activeLine].name}（${LINE_LABELS[activeLine].sub}）`
+                    : '已排盘 · 请选择一条分析线展开完整报告'}
                 </p>
                 <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-3">
                   <span className="num-tabular text-sm font-bold text-foreground" style={{ fontFamily: 'var(--font-mono)' }}>{chart.birthInfo.solarDate}</span>
@@ -2468,7 +2476,7 @@ export default function BaZiAnalyzerPage() {
                     <div className="flex items-center gap-3">
                       <span className="label-mono text-muted-foreground">
                         {activeLine
-                          ? `当前 · ${activeLine === 'yinyang' ? '阴阳线' : '沛然堂线'}`
+                          ? `当前 · ${LINE_LABELS[activeLine].name}`
                           : '未选线 · 仅显示 01'}
                       </span>
                       {activeLine && (
@@ -2482,7 +2490,7 @@ export default function BaZiAnalyzerPage() {
                       )}
                     </div>
                   </div>
-                  <div className="grid gap-3 p-4 md:grid-cols-2 md:p-6">
+                  <div className="grid gap-3 p-4 md:grid-cols-3 md:p-6">
                     {([
                       {
                         key: 'yinyang' as const,
@@ -2497,9 +2505,9 @@ export default function BaZiAnalyzerPage() {
                         rightValue: analysis.yongJi.tabooElements.map((el) => ELEMENT_NAMES[el]).join(' · ') || '—',
                       },
                       {
-                        key: 'peiran' as const,
-                        name: '沛然堂线',
-                        en: 'PEIRAN LINE',
+                        key: 'greek' as const,
+                        name: '希腊线',
+                        en: 'GREEK LINE',
                         tone: '#788491',
                         badge: '希腊占星',
                         desc: '星盘 · 十二宫 · 尊贵 · 虚点 · 时间主星',
@@ -2507,6 +2515,18 @@ export default function BaZiAnalyzerPage() {
                         leftValue: 'Hellenistic',
                         rightLabel: '状态 / STATUS',
                         rightValue: '已就绪',
+                      },
+                      {
+                        key: 'tuibu' as const,
+                        name: '推步线',
+                        en: 'TUIBU LINE',
+                        tone: '#31669B',
+                        badge: '构筑中',
+                        desc: '月令二气 · 消息卦先验 · 三元结构 · 应期窗口',
+                        leftLabel: '判据 / JUDGEMENT',
+                        leftValue: '二气配比',
+                        rightLabel: '状态 / STATUS',
+                        rightValue: '占位 · 未接入',
                       },
                     ]).map((line) => {
                       const on = activeLine === line.key;
@@ -3966,9 +3986,15 @@ export default function BaZiAnalyzerPage() {
               )}
 
 
-              {/* 沛然堂线：希腊占星事实面板 */}
-              {activeLine === 'peiran' && (
-                <PeiranReport model={peiranModel} />
+              {/* 希腊线：希腊占星事实面板 */}
+              {activeLine === 'greek' && (
+                <GreekReport model={greekModel} />
+              )}
+
+
+              {/* 推步线：占位面板（只声明判据结构，不输出吉凶） */}
+              {activeLine === 'tuibu' && (
+                <TuibuReport chart={chart} analysis={analysis} />
               )}
 
 

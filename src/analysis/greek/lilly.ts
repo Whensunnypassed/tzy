@@ -1,5 +1,5 @@
 // ============================================================
-// 沛然堂线 · Lilly 计分（Christian Astrology, 1647, p.115）
+// 希腊线 · Lilly 计分（Christian Astrology, 1647, p.115）
 // ------------------------------------------------------------
 // 「A Table to Examine the Strength & Debility of Each Planet」
 // 本质尊贵 + 偶然尊贵两栏，合计范围约 −38 ~ +38。

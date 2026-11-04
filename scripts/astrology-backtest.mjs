@@ -30,11 +30,11 @@ function loadCore() {
   fs.writeFileSync(
     entry,
     `
-import { buildPeiranModelFromChart } from '@/analysis/peiran/analysis';
-import { buildAstroChart } from '@/analysis/peiran/astroChart';
-import { judgeChart, setLevelThresholds } from '@/analysis/peiran/judgement';
+import { buildGreekModelFromChart } from '@/analysis/greek/analysis';
+import { buildAstroChart } from '@/analysis/greek/astroChart';
+import { judgeChart, setLevelThresholds } from '@/analysis/greek/judgement';
 import { findCity } from '@/data/cityData';
-export { buildPeiranModelFromChart, buildAstroChart, judgeChart, setLevelThresholds, findCity };
+export { buildGreekModelFromChart, buildAstroChart, judgeChart, setLevelThresholds, findCity };
 `,
   );
   esbuild.buildSync({
@@ -120,7 +120,7 @@ for (const c of cases) {
   const models = SLICE_OFFSETS.map((off) => {
     const t = shiftTime(c, off);
     const chart = core.buildAstroChart({ ...t, city });
-    return core.buildPeiranModelFromChart(chart, { currentYear: 2026, gender: c.gender });
+    return core.buildGreekModelFromChart(chart, { currentYear: 2026, gender: c.gender });
   });
   const midChart = core.buildAstroChart({
     year: c.year, month: c.month, day: c.day, hour: c.hour, minute: c.minute, city,
@@ -129,7 +129,7 @@ for (const c of cases) {
     id: c.id,
     label,
     models,
-    midModel: core.buildPeiranModelFromChart(midChart, { currentYear: 2026, gender: c.gender }),
+    midModel: core.buildGreekModelFromChart(midChart, { currentYear: 2026, gender: c.gender }),
   });
 }
 

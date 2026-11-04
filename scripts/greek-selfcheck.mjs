@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 沛然堂线 · 引擎自检
+ * 希腊线 · 引擎自检
  *
  * 覆盖：
  *   1) 规则表全称性（界位覆盖、三分、庙旺、面、喜乐宫、ZR 年数、法尔达利亚、虚点）
@@ -8,7 +8,7 @@
  *   3) 跨模块一致性（虚点镜像、尊贵互斥、界位无空隙）
  *   4) 多案例批量跑（不同纬度、不同宗派、不同年代）
  *
- * 运行：node scripts/peiran-selfcheck.mjs
+ * 运行：node scripts/greek-selfcheck.mjs
  * 退出码：0 = 全通过；1 = 有失败项
  */
 import fs from 'node:fs';
@@ -19,23 +19,23 @@ import esbuild from 'esbuild';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-function loadPeiran() {
+function loadGreek() {
   const distDir = path.join(ROOT, 'dist');
   if (!fs.existsSync(distDir)) fs.mkdirSync(distDir, { recursive: true });
-  const entry = path.join(distDir, '_peiran_entry.ts');
-  const outfile = path.join(distDir, '_peiran_core.cjs');
+  const entry = path.join(distDir, '_greek_entry.ts');
+  const outfile = path.join(distDir, '_greek_core.cjs');
   fs.writeFileSync(
     entry,
     `
-import { buildPeiranModelFromChart } from '@/analysis/peiran/analysis';
-import { buildAstroChart } from '@/analysis/peiran/astroChart';
-import { runSelfCheck } from '@/analysis/peiran/selfCheck';
-import { judgeChart, OBSERVABLE_CRITERIA } from '@/analysis/peiran/judgement';
-import { rectifyBirthTime } from '@/analysis/peiran/rectify';
-import { assessStability } from '@/analysis/peiran/stability';
-import { buildStructuredData } from '@/analysis/peiran/structuredData';
+import { buildGreekModelFromChart } from '@/analysis/greek/analysis';
+import { buildAstroChart } from '@/analysis/greek/astroChart';
+import { runSelfCheck } from '@/analysis/greek/selfCheck';
+import { judgeChart, OBSERVABLE_CRITERIA } from '@/analysis/greek/judgement';
+import { rectifyBirthTime } from '@/analysis/greek/rectify';
+import { assessStability } from '@/analysis/greek/stability';
+import { buildStructuredData } from '@/analysis/greek/structuredData';
 import { findCity } from '@/data/cityData';
-export { buildPeiranModelFromChart, buildAstroChart, runSelfCheck, judgeChart, OBSERVABLE_CRITERIA, rectifyBirthTime, assessStability, buildStructuredData, findCity };
+export { buildGreekModelFromChart, buildAstroChart, runSelfCheck, judgeChart, OBSERVABLE_CRITERIA, rectifyBirthTime, assessStability, buildStructuredData, findCity };
 `,
   );
   esbuild.buildSync({
@@ -50,7 +50,7 @@ export { buildPeiranModelFromChart, buildAstroChart, runSelfCheck, judgeChart, O
   return createRequire(import.meta.url)(outfile);
 }
 
-const core = loadPeiran();
+const core = loadGreek();
 
 const CASES = [
   { label: '1990-05-15 12:00 北京（昼盘/北纬）', y: 1990, m: 5, d: 15, h: 12, mi: 0, city: '北京' },
@@ -77,7 +77,7 @@ for (const c of CASES) {
     minute: c.mi,
     city,
   });
-  const model = core.buildPeiranModelFromChart(chart, {
+  const model = core.buildGreekModelFromChart(chart, {
     currentYear: 2026,
     now: { year: 2026, month: 11, day: 3, hour: 0, minute: 0 },
   });
@@ -103,7 +103,7 @@ for (const c of CASES) {
   );
 
   const zr1 = model.zodiacalReleasing.level1;
-  const nowZr = core.buildPeiranModelFromChart(chart, {
+  const nowZr = core.buildGreekModelFromChart(chart, {
     currentYear: 2026,
     now: { year: 2026, month: 11, day: 3, hour: 0, minute: 0 },
   }).zodiacalReleasing.level1.find(

@@ -1,4 +1,4 @@
-# 沛然堂线（希腊占星）
+# 希腊线（希腊占星）
 
 状态：**随天枢 1.2.0 发布（2026-11-03）**。事实层与判读层均已落地。
 原纳音身命法路线判定为错误，相关数据书、五维评分与回测脚本已清空，本文档改为当前引擎索引。
@@ -21,19 +21,19 @@
 | `rectify.ts` | 验前事出生时间校准：按年龄分组事件、覆盖度检查、±20 分钟扫描排序 |
 | `stability.ts` | ±30 分钟 8 切片，统计六主题档位一致率 |
 | `selfCheck.ts` | 23 项自检（T1–T9 / C1–C5 / X1–X5 / L1–L4） |
-| `analysis.ts` | `buildPeiranModel` 单次装配，展示层只读 |
+| `analysis.ts` | `buildGreekModel` 单次装配，展示层只读 |
 
 ## 页面
 
-- 入口：[`src/pages/PeiranLine/PeiranReport.tsx`](../../src/pages/PeiranLine/PeiranReport.tsx)
+- 入口：[`src/pages/GreekLine/GreekReport.tsx`](../../src/pages/GreekLine/GreekReport.tsx)
 - 01 星盘基础 → 02 十二宫位（吉 / 平 / 凶角标与光效）→ 03 命理解读（六张区间卡）→ 04–10 详细数据折叠
-- 双主题：宣纸水墨（阴阳线）/ 希腊星空（沛然堂线），由 `src/styles/themes.css` 驱动
+- 双主题：宣纸水墨（阴阳线）/ 希腊星空（希腊线），由 `src/styles/themes.css` 驱动
 
 ## 验证
 
 ```powershell
 node scripts/astro-check.mjs        # 七政黄经对 JPL DE441 + ASC 自洽
-node scripts/peiran-selfcheck.mjs   # 5 案例 × 23 项 = 125 项断言
+node scripts/greek-selfcheck.mjs   # 5 案例 × 23 项 = 125 项断言
 ```
 
 ## 资料台账
