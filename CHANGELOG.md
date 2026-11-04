@@ -14,7 +14,7 @@
 
 ### 大杂烩线 / 推步线下线
 
-- 推步线整体下线：删除 `src/analysis/tuibu/*`、`src/pages/TuibuLine/*`、`scripts/tuibu-backtest.mjs`、`scripts/tuibu-prior-check.mjs` 与配图；研究文档保留并标废案
+- 推步线整体下线：删除 `src/analysis/tuibu/*`、`src/pages/TuibuLine/*`、`scripts/tuibu-backtest.mjs`、`scripts/tuibu-prior-check.mjs`、配图与研究文档，工作区不再保留任何推步线文件
 - 第三条线改为**大杂烩线**：`SCHOOLS` 登记 20 门（古法禄命 / 格局用神 / 调候病药 / 旺衰量化 / 象法盲派 / 近现代），逐门写明输入、判据、输出、可验证性与冲突
 - 新增 `books.ts`：21 本书目，逐条标注「已读原文 / 仅见目录 / 未见原文」，未见原文不引转述
 - 新增 `judge.ts`：只吃四柱，断学业（印星 / 官杀 / 食伤 / 财克印）、爱情（配偶宫 / 财官星 / 六合冲）、财富（财星 / 食伤生财 / 身旺任财 / 比劫夺财）
