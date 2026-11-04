@@ -64,7 +64,13 @@ let directionFlips = 0;
 let markFlips = 0;
 const rows = [];
 
-for (const sample of samples) {
+const skipped = samples.filter((s) => s.skipped);
+const active = samples.filter((s) => !s.skipped);
+if (skipped.length) {
+  console.log(`跳过 ${skipped.length} 例（标定分歧未裁定，不进闸门）：` + skipped.map((s) => s.id ?? '?').join('、') + '\n');
+}
+
+for (const sample of active) {
   const b = parseBirth(sample.birth);
   const chart = calculateBaZi(b.year, b.month, b.day, b.hour, b.minute, sample.gender ?? 'male', sample.place ?? '北京');
   const monthQi = analyzeMonthQi(chart.monthBranchIndex);
