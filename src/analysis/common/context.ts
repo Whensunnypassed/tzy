@@ -42,7 +42,7 @@ export interface YinyangAnalysis {
 export interface YinyangOptions {
   /**
    * 判据来源覆盖。缺省沿用 YONG_JI_MODE（逐月灰度 > 全局开关）。
-   * 保留接口，默认不传（推步线已下线）。
+   * 保留接口，默认不传。
    */
   yongJiMode?: 'taiji' | 'binary';
 }

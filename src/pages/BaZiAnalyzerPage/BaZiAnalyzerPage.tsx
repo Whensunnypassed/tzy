@@ -1126,7 +1126,7 @@ export default function BaZiAnalyzerPage() {
     setCityOpen(false);
   };
 
-  // 阴阳线上下文：原整套逻辑；推步线以 taiji 判据同源跑（全链路同源，见 context.ts）
+  // 阴阳线上下文：原整套逻辑
   const analysis = useMemo(
     () => (chart ? buildYinyangAnalysis(chart, currentYear) : null),
     [chart, currentYear, activeLine],
